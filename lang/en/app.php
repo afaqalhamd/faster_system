@@ -116,6 +116,7 @@ return [
     'encryption'                        => 'Encryption',
     'sign_in'                           => 'Sign in',
     'qty'                               => 'QTY',
+    'real_qty'                               => 'Real QTY',
     'price'                             => 'Price',
     'discount'                          => 'Discount',
     'total'                             => 'Total',

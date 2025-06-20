@@ -105,6 +105,7 @@ class ItemTransactionService{
         $warehouseId 		= $data['warehouse_id'];
         $trackingType 		= $data['tracking_type'];
         //$itemLocation 		= $data['item_location'];
+        $input_quantity 			= $data['input_quantity'];
         $quantity 			= $data['quantity'];
         $atPrice 			= $data['unit_price'];
         $tax_type           = $data['tax_type'];
@@ -128,6 +129,7 @@ class ItemTransactionService{
 
                     'mrp'                   =>  $mrp,
 
+                    'input_quantity'              =>  $input_quantity,
                     'quantity'              =>  $quantity,
                     'unit_price'            =>  $atPrice,
                     'unit_id'               =>  $unitId,

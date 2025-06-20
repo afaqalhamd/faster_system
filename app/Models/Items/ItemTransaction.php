@@ -36,18 +36,19 @@ class ItemTransaction extends Model
         'transaction_date',
         'unique_code',
         'warehouse_id',
-        'sku',
         'unit_id',
         'item_id',
         'description',
         'tracking_type',
-        'item_location',
+//        'item_location',
 
         'unit_price',
 
         'mrp',
 
         'quantity',
+        'input_quantity',
+        'status',
 
         'discount',
         'discount_type',

@@ -29,7 +29,6 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\StockTransferController;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Export\ExportController;
-use App\Http\Controllers\PushNotificationController;
 
 use App\Http\Controllers\Accounts\AccountController;
 use App\Http\Controllers\Accounts\AccountGroupController;
@@ -1206,6 +1205,7 @@ Route::middleware('auth')->group(function () {
                 ->middleware('can:purchase.order.edit')
                 ->name('purchase.order.edit'); //Edit
         Route::put('/update', [PurchaseOrderController::class, 'store'])->name('purchase.order.update'); //Update
+        Route::post('/row-save', [PurchaseOrderController::class, 'row_save'])->name('purchase.order.row_save'); //Update
         Route::get('/list', [PurchaseOrderController::class, 'list'])
                 ->middleware('can:purchase.order.view')
                 ->name('purchase.order.list'); //List
@@ -1419,6 +1419,7 @@ Route::middleware('auth')->group(function () {
                 ->middleware('can:sale.order.edit')
                 ->name('sale.order.edit'); //Edit
         Route::put('/update', [SaleOrderController::class, 'store'])->name('sale.order.update'); //Update
+        Route::post('/row-save', [SaleOrderController::class, 'row_save'])->name('sale.order.row_save'); //Update
         Route::get('/list', [SaleOrderController::class, 'list'])
                 ->middleware('can:sale.order.view')
                 ->name('sale.order.list'); //List
@@ -1793,14 +1794,14 @@ Route::middleware('auth')->group(function () {
  * Items Excel File
  * Download Excel files
  * */
-Route::get('/download-item-sheet', function() {
-    $filePath = 'public/download-sheet/download-item-sheet.xlsx';
-
-    if (Storage::exists($filePath)) {
-        return Storage::download($filePath, 'Items-Import-Format.xlsx');
-    }
-    abort(404);
-})->name('download-sale-sheet');
+//Route::get('/download-item-sheet', function() {
+//    $filePath = 'public/download-sheet/download-item-sheet.xlsx';
+//
+//    if (Storage::exists($filePath)) {
+//        return Storage::download($filePath, 'Items-Import-Format.xlsx');
+//    }
+//    abort(404);
+//})->name('download-sale-sheet');
 
 //Route::get('/download-item-sheet', [SaleController::class, 'downloadSample'])->name('download-sale-sheet');
 
@@ -1832,14 +1833,6 @@ Route::middleware(['auth'])->group(function () {
         auth()->user()->unreadNotifications->markAsRead();
         return redirect()->back();
     })->name('notifications.markAllAsRead');
-});
-Route::get('/send-notification', [PushNotificationController::class, 'sendPushNotification']);
-
-
-Route::middleware(['auth'])->group(function () {
-    // مسارات الإشعارات
-    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/send', [App\Http\Controllers\NotificationController::class, 'sendNotification'])->name('notifications.send');
 });
 Route::get('/download-contact-sheet', function() {
     $filePath = 'public/download-sheet/download-contact-sheet.xlsx';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sale;
 
 use App\Http\Controllers\Controller;
+use App\Models\Items\ItemTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Contracts\View\View;
@@ -404,6 +405,23 @@ class SaleOrderController extends Controller
 
     }
 
+    public function row_save(Request $request)
+    {
+//        $item_id = $request->item_id;
+//        $item_location = $request->item_location;
+        $t_id = $request->t_id;
+        $qty = $request->qty;
+        $item_Transaction = ItemTransaction::find($t_id);
+        $item_Transaction->update([
+            'quantity' => $qty,
+            'status' => 'save',
+        ]);
+        return response()->json([
+            'status' => true,
+            'message' => $request->all(),
+            'item_id' => $request->item_id,
+        ], 200);
+    }
 
     public function saveSaleOrderPayments($request)
     {
