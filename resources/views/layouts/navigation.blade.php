@@ -959,12 +959,7 @@
                 @csrf
             </form>
         </li>
-        <li class="nav-item">
-            <a href="{{ route('notifications.index') }}" class="nav-link">
-                <i class="nav-icon fas fa-bell"></i>
-                <p>إدارة الإشعارات</p>
-            </a>
-        </li>
+
 
     </ul>
     <!--end navigation-->
