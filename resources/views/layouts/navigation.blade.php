@@ -71,7 +71,12 @@
                             </a>
                         </li>
                     @endcan
-
+                    {{-- @can('purchase.order.view')
+                    <li class="{{ request()->is('purchase/order/*') ? 'mm-active' : '' }}">
+                        <a href="{{ route('sale.sale-return.list') }}"><i
+                                class='bx bx-radio-circle'></i>{{ __('purchase.order.order') }}</a>
+                    </li>
+                @endcan --}}
                     @can('sale.invoice.view')
                         <li class="{{ request()->is('sale/invoice/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('sale.invoice.list') }}"><i
@@ -106,6 +111,12 @@
                                     class='bx bx-radio-circle'></i>{{ __('sale.return.return') }}</a>
                         </li>
                     @endcan
+                    {{-- @can('sale.return.order.view')
+                    <li class="{{ request()->is('sale/return/order/*') ? 'mm-active' : '' }}">
+                        <a href="{{ route('sale.return.order.list') }}"><i
+                                class='bx bx-radio-circle'></i>{{ __('sale.return.return') }}</a>
+                    </li>
+                @endcan --}}
                 </ul>
             </li>
         @endcanany

@@ -1788,7 +1788,22 @@ Route::middleware('auth')->group(function () {
 });
 
 
+// ... existing code ...
 
+// Sale Return Order Routes
+// Sale Return Order Routes
+Route::prefix('sale-return-order')->name('sale-return-order.')->middleware(['auth'])->group(function () {
+    Route::get('/create', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'create'])->name('create');
+    Route::get('/edit/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'edit'])->name('edit');
+    Route::get('/list', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'list'])->name('list');
+    Route::post('/store', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'store'])->name('store');
+    Route::post('/update', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'update'])->name('update');
+    Route::get('/datatable-list', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'datatableList'])->name('datatable.list');
+    Route::get('/delete/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'delete'])->name('delete');
+    Route::get('/print/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'print'])->name('print');
+});
+
+// ... existing code ...
 
 /**
  * Items Excel File
