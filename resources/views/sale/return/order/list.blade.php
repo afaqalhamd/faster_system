@@ -9,8 +9,8 @@
         <div class="page-wrapper">
             <div class="page-content">
                     <x-breadcrumb :langArray="[
-                                            'sale.return.order',
-                                            'sale.return.order.list',
+                                            'purchase.order.or',
+                                            'purchase.order.st',
                                         ]"/>
 
                     <div class="card">
@@ -18,15 +18,15 @@
                     <div class="card-header px-4 py-3 d-flex justify-content-between">
                         <!-- Other content on the left side -->
                         <div>
-                            <h5 class="mb-0 text-uppercase">{{ __('purchase.order.list') }}</h5>
+                            <h5 class="mb-0 text-uppercase">{{ __('purchase.order.st') }}</h5>
                         </div>
                         <div class="d-flex gap-2">
                             @can('purchase.order.import')
-                            <a href="{{ route('import.purchase') }}" class="btn btn-outline-primary px-5"><i class="bx bx-import me-1"></i> {{ __("app.import_purch") }}</a>
+                            <a href="{{ route('import.purchase') }}" class="btn btn-outline-primary px-5"><i class="bx bx-import me-1"></i> {{ __("app.oi") }}</a>
                             @endcan
-                            @can('sale.return.order.create')
+                            @can('purchase.order.create')
                             <!-- Button pushed to the right side -->
-                            <x-anchor-tag href="{{ route('sale.return.order.create') }}" text="{{ __('purchase.order.create') }}" class="btn btn-primary px-5" />
+                            <x-anchor-tag href="{{ route('sale.return.order.create') }}" text="{{ __('purchase.order.oc') }}" class="btn btn-primary px-5" />
                             @endcan
 
                         </div>

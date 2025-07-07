@@ -111,12 +111,12 @@
                                     class='bx bx-radio-circle'></i>{{ __('sale.return.return') }}</a>
                         </li>
                     @endcan
-                    {{-- @can('sale.return.order.view')
+                    @can('sale.return.order.view')
                     <li class="{{ request()->is('sale/return/order/*') ? 'mm-active' : '' }}">
                         <a href="{{ route('sale.return.order.list') }}"><i
-                                class='bx bx-radio-circle'></i>{{ __('sale.return.return') }}</a>
+                                class='bx bx-radio-circle'></i>{{ __('purchase.order.or') }}</a>
                     </li>
-                @endcan --}}
+                    @endcan
                 </ul>
             </li>
         @endcanany

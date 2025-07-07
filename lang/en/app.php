@@ -203,6 +203,7 @@ return [
     'import'                            => 'Import',
     'import_order'                            => 'Import sale Order',
     'import_purchase'                            => 'Import purchase Order',
+    'oi'=>'Import Return Order',
     'phone'                             => 'Phone',
     'opening_balance'                   => 'Opening Balance',
     'opening_balance_is'                => 'Opening Balance is',

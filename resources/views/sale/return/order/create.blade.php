@@ -1,17 +1,17 @@
 @extends('layouts.app')
-@section('title', __('purchase.order.order'))
+@section('title', __('purchase.order.or'))
 
         @section('content')
         <!--start page wrapper -->
         <div class="page-wrapper">
             <div class="page-content">
                 <x-breadcrumb :langArray="[
-                                            'purchase.purchase',
-                                            'purchase.order.list',
-                                            'purchase.order.create',
+                                            'sale.sale',
+                                            'purchase.order.st',
+                                            'purchase.order.oc',
                                         ]"/>
                 <div class="row">
-                    <form class="g-3 needs-validation" id="invoiceForm" action="{{ route('purchase.order.store') }}" enctype="multipart/form-data">
+                    <form class="g-3 needs-validation" id="invoiceForm" action="{{ route('sale.return.order.store') }}" enctype="multipart/form-data">
                         {{-- CSRF Protection --}}
                         @csrf
                         @method('POST')
@@ -25,7 +25,7 @@
                             <div class="col-12 col-lg-12">
                                 <div class="card">
                                     <div class="card-header px-4 py-3">
-                                        <h5 class="mb-0">{{ __('purchase.order.details') }}</h5>
+                                        <h5 class="mb-0">{{ __('purchase.order.od') }}</h5>
                                     </div>
                                     <div class="card-body p-4 row g-3">
                                             <div class="col-md-4">

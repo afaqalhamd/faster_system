@@ -64,6 +64,7 @@ use App\Http\Controllers\Reports\ProfitReportController;
 use App\Http\Controllers\Reports\CustomerReportController;
 use App\Http\Controllers\Reports\SupplierReportController;
 use App\Http\Controllers\Reports\StockReportController;
+use App\Http\Controllers\Sale\SaleReturnOrderController;
 
 use App\Http\Controllers\Sale\SaleOrderController;
 use App\Http\Controllers\Sale\SaleController;
@@ -1792,16 +1793,7 @@ Route::middleware('auth')->group(function () {
 
 // Sale Return Order Routes
 // Sale Return Order Routes
-Route::prefix('sale-return-order')->name('sale-return-order.')->middleware(['auth'])->group(function () {
-    Route::get('/create', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'create'])->name('create');
-    Route::get('/edit/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'edit'])->name('edit');
-    Route::get('/list', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'list'])->name('list');
-    Route::post('/store', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'store'])->name('store');
-    Route::post('/update', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'update'])->name('update');
-    Route::get('/datatable-list', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'datatableList'])->name('datatable.list');
-    Route::get('/delete/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'delete'])->name('delete');
-    Route::get('/print/{id}', [App\Http\Controllers\Sale\SaleReturnOrderController::class, 'print'])->name('print');
-});
+
 
 // ... existing code ...
 
@@ -1821,6 +1813,50 @@ Route::prefix('sale-return-order')->name('sale-return-order.')->middleware(['aut
 //Route::get('/download-item-sheet', [SaleController::class, 'downloadSample'])->name('download-sale-sheet');
 
 // Sale Import Routes
+    /**
+     * Sale Return Order
+     * */
+    Route::group(['prefix' => 'sale-retrun/order'], function () {
+
+        Route::get('/create', [SaleReturnOrderController::class, 'create'])
+                ->middleware('can:sale.return.order.create')
+                ->name('sale.return.order.create');//View
+        Route::get('/edit/{id}', [SaleReturnOrderController::class, 'edit'])
+                ->middleware('can:sale.return.order.edit')
+                ->name('sale.return.order.edit'); //Edit
+        Route::put('/update', [SaleReturnOrderController::class, 'store'])->name('sale.return.order.update'); //Update
+        Route::post('/row-save', [SaleReturnOrderController::class, 'row_save'])->name('sale.return.order.row_save'); //Update
+        Route::get('/list', [SaleReturnOrderController::class, 'list'])
+                ->middleware('can:sale.return.order.view')
+                ->name('sale.return.order.list'); //List
+        Route::get('/details/{id}', [SaleReturnOrderController::class, 'details'])
+                    ->middleware('can:sale.return.order.view')
+                    ->name('sale.return.order.details');
+        Route::get('/print/{id}', [SaleReturnOrderController::class, 'print'])
+                    ->middleware('can:sale.return.order.view')
+                    ->name('purchase.order.print');
+        Route::get('/pdf/{id}', [SaleReturnOrderController::class, 'generatePdf'])
+                    ->middleware('can:sale.return.order.view')
+                    ->name('purchase.order.pdf');
+        Route::get('/datatable-list', [SaleReturnOrderController::class, 'datatableList'])->name('sale.return.order.datatable.list'); //Datatable List
+        Route::post('/store', [SaleReturnOrderController::class, 'store'])->name('sale.return.order.store');//Save operation
+        Route::post('/delete/', [SaleReturnOrderController::class, 'delete'])->middleware('can:sale.return.order.delete')->name('sale.return.order.delete');//delete operation
+
+        /**
+         * Email
+         * */
+        Route::get('/email/get-content/{id}', [SaleReturnOrderController::class, 'getEmailContent'])
+                ->middleware('can:sale.return.order.create');
+
+        /**
+         * SMS
+         * */
+        Route::get('/sms/get-content/{id}', [SaleReturnOrderController::class, 'getSMSContent'])
+                ->middleware('can:sale.return.order.create');
+
+
+
+    });
 // Sale Import Routes
 Route::middleware(['auth'])->group(function () {
     // Sale import routes

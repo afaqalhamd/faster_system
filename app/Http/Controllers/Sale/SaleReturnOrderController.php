@@ -187,7 +187,7 @@ class SaleReturnOrderController extends Controller
     }
 
     /**
-     * 
+     *
      * View Purchase Order details
      *
      * @param int $id , the ID of the order
@@ -693,7 +693,7 @@ class SaleReturnOrderController extends Controller
             ->addColumn('action', function ($row) {
                 $id = $row->id;
 
-                $editUrl = route('purchase.order.edit', ['id' => $id]);
+                $editUrl = route('sale.return.order.edit', ['id' => $id]);
 
                 //Verify is it converted or not
                 if ($row->purchase) {

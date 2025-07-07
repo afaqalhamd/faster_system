@@ -57,8 +57,14 @@ return [
                     'list'          => 'Purchase Order List',
                     'update'        => 'Update Purchase Order',
                     'print'         => 'Purchase Order Print',
-                    'pending'         => 'Pending Purchase Orders',
-                    'completed'         => 'Completed Purchase Orders',
+                    'pending'       => 'Pending Purchase Orders',
+                    'completed'     => 'Completed Purchase Orders',
+                    'st'             =>'Order Return List',
+                    'or'             =>'Order Return',
+                    'oc'=>'Create Return Order',
+                    'od'=>'Return Order Details',
+                    'uo'        => 'Update Return Order',
+
                 ],
 
     //1.4
