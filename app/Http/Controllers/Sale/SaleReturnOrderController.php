@@ -89,7 +89,7 @@ class SaleReturnOrderController extends Controller
         $lastCountId = $this->getLastCountId();
         $selectedPaymentTypesArray = json_encode($this->paymentTypeService->selectedPaymentTypesArray());
         $data = [
-            'prefix_code' => $prefix->purchase_order,
+            'prefix_code' => $prefix->sale_order,
             'count_id' => ($lastCountId + 1),
         ];
         return view('sale.return.order.create', compact('data', 'selectedPaymentTypesArray'));
@@ -100,7 +100,10 @@ class SaleReturnOrderController extends Controller
      * */
     public function getLastCountId()
     {
-        return PurchaseOrder::select('count_id')->orderBy('id', 'desc')->first()?->count_id ?? 0;
+        return PurchaseOrder::select('count_id')
+            ->where('order_type', 'return') // تمت إضافة هذا السطر
+            ->orderBy('id', 'desc')
+            ->first()?->count_id ?? 0;
     }
 
     /**
@@ -268,7 +271,7 @@ class SaleReturnOrderController extends Controller
          * Downloadn PDF
          * 'D'
          * */
-        $mpdf->Output('Purchase-Order-' . $id . '.pdf', 'D');
+        $mpdf->Output('Return-Order-' . $id . '.pdf', 'D');
     }
 
     /**
@@ -280,6 +283,7 @@ class SaleReturnOrderController extends Controller
             DB::beginTransaction();
             // Get the validated data from the expenseRequest
             $validatedData = $request->validated();
+            $validatedData['order_type'] = 'return';
 
             if ($request->operation == 'save') {
                 // Create a new expense record using Eloquent and save it
@@ -619,7 +623,8 @@ class SaleReturnOrderController extends Controller
             })
             ->when(!auth()->user()->can('purchase.order.can.view.other.users.purchase.orders'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
-            });
+            })
+            ->where('order_type', 'return');
 
         return DataTables::of($data)
             ->filter(function ($query) use ($request) {

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', __('purchase.order.list'))
+@section('title', __('purchase.order.st'))
 
 @section('css')
 <link href="{{ asset('assets/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
@@ -22,7 +22,7 @@
                         </div>
                         <div class="d-flex gap-2">
                             @can('purchase.order.import')
-                            <a href="{{ route('import.purchase') }}" class="btn btn-outline-primary px-5"><i class="bx bx-import me-1"></i> {{ __("app.oi") }}</a>
+                            <a href="{{ route('import.sale-return') }}" class="btn btn-outline-primary px-5"><i class="bx bx-import me-1"></i> {{ __("app.oi") }}</a>
                             @endcan
                             @can('purchase.order.create')
                             <!-- Button pushed to the right side -->
@@ -35,11 +35,11 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <x-label for="party_id" name="{{ __('supplier.suppliers') }}" />
+                                <x-label for="party_id" name="{{ __('customer.customer') }}" />
 
                                 <a tabindex="0" class="text-primary" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Search by name, mobile, phone, whatsApp, email"><i class="fadeIn animated bx bx-info-circle"></i></a>
 
-                                <select class="party-ajax form-select" data-party-type='supplier' data-placeholder="Select Supplier" id="party_id" name="party_id"></select>
+                                <select class="party-ajax form-select" data-party-type='supplier' data-placeholder="Select Customer" id="party_id" name="party_id"></select>
                             </div>
                             <div class="col-md-3">
                                 <x-label for="user_id" name="{{ __('user.user') }}" />
@@ -105,7 +105,7 @@
 <script src="{{ versionedAsset('assets/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ versionedAsset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
-<script src="{{ versionedAsset('custom/js/purchase/purchase-order-list.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/sale-return-order-list.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/status-history/status-history.js') }}"></script>

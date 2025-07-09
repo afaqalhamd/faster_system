@@ -29,12 +29,12 @@
                                     </div>
                                     <div class="card-body p-4 row g-3">
                                             <div class="col-md-4">
-                                                <x-label for="party_id" name="{{ __('supplier.supplier') }}" />
+                                                <x-label for="party_id" name="{{ __('customer.customer') }}" />
 
                                                 <a tabindex="0" class="text-primary" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Search by name, mobile, phone, whatsApp, email"><i class="fadeIn animated bx bx-info-circle"></i></a>
 
                                                 <div class="input-group">
-                                                    <select class="form-select party-ajax" data-party-type='supplier' data-placeholder="Select Supplier" id="party_id" name="party_id">
+                                                    <select class="form-select party-ajax" data-party-type='supplier' data-placeholder="Select Customer" id="party_id" name="party_id">
                                                         <x-option-default-party-selected partyType='supplier' />
                                                     </select>
                                                     <button type="button" class="input-group-text open-party-model" data-party-type='supplier'>

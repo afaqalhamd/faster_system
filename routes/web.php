@@ -1816,7 +1816,7 @@ Route::middleware('auth')->group(function () {
     /**
      * Sale Return Order
      * */
-    Route::group(['prefix' => 'sale-retrun/order'], function () {
+    Route::group(['prefix' => 'sale-return/order'], function () {
 
         Route::get('/create', [SaleReturnOrderController::class, 'create'])
                 ->middleware('can:sale.return.order.create')
@@ -1863,10 +1863,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/import/sale', [App\Http\Controllers\Import\SaleController::class, 'index'])->name('import.sale');
     Route::post('/import/sale/store', [App\Http\Controllers\Import\SaleController::class, 'store'])->name('import.sale.upload');
     Route::get('/import/sale/download/sample', [App\Http\Controllers\Import\SaleController::class, 'downloadSample'])->name('download-sale-sheet');
+    Route::get('/import/sale-return/download/sample', [App\Http\Controllers\Import\SaleController::class, 'downloadSaleReturnSample'])->name('download-sale-return-sheet');
 
     // Purchase import routes
     Route::get('/import/purchase', [App\Http\Controllers\Import\SaleController::class, 'purchaseIndex'])->name('import.purchase');
     Route::post('/import/purchase/store', [App\Http\Controllers\Import\SaleController::class, 'purchaseStore'])->name('import.purchase.upload');
+    Route::get('/import/sale-return', [App\Http\Controllers\Import\SaleController::class, 'saleReturnIndex'])->name('import.sale-return');
+    Route::post('/import/sale-return/store', [App\Http\Controllers\Import\SaleController::class, 'saleReturnStore'])->name('import.sale-return.upload');
     Route::get('/import/purchase/download/sample', [App\Http\Controllers\Import\SaleController::class, 'downloadPurchaseSample'])->name('download-purchase-sheet');
 });
 

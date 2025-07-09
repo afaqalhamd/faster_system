@@ -100,7 +100,10 @@ class PurchaseOrderController extends Controller
      * */
     public function getLastCountId()
     {
-        return PurchaseOrder::select('count_id')->orderBy('id', 'desc')->first()?->count_id ?? 0;
+        return PurchaseOrder::select('count_id')
+            ->where('order_type', 'purchase') // تمت إضافة هذا السطر
+            ->orderBy('id', 'desc')
+            ->first()?->count_id ?? 0;
     }
 
     /**
@@ -618,7 +621,8 @@ class PurchaseOrderController extends Controller
             })
             ->when(!auth()->user()->can('purchase.order.can.view.other.users.purchase.orders'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
-            });
+            })
+            ->where('order_type', 'purchase');
 
         return DataTables::of($data)
             ->filter(function ($query) use ($request) {
