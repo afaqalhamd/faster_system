@@ -921,6 +921,14 @@
                         </li>
                     </ul>
                 @endcanany
+ <!-- Stock Movement Report -->
+ {{-- <ul>
+    {{-- <li class="{{ request()->is('reports/stock-movement*') ? 'mm-active' : '' }}">
+        <a href="{{ route('reports.stock-movement.index') }}"><i
+                class='bx bx-radio-circle'></i>{{ __('reports.stock_movement_24h') }}</a>
+    </li>
+</ul> --}}
+
                 @canany(['unit.view'])
                     <ul>
                         <li class="{{ request()->is('unit*') ? 'mm-active' : '' }}">

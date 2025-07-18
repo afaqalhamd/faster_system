@@ -1857,6 +1857,12 @@ Route::middleware('auth')->group(function () {
 
 
     });
+// تقرير حركة المخزون خلال 24 ساعة
+Route::prefix('reports/stock-movement')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Reports\StockMovementReportController::class, 'index'])->name('reports.stock-movement.index');
+    Route::get('/incoming-items', [App\Http\Controllers\Reports\StockMovementReportController::class, 'getIncomingItems'])->name('reports.stock-movement.incoming');
+    Route::get('/outgoing-items', [App\Http\Controllers\Reports\StockMovementReportController::class, 'getOutgoingItems'])->name('reports.stock-movement.outgoing');
+});
 // Sale Import Routes
 Route::middleware(['auth'])->group(function () {
     // Sale import routes
