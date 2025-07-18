@@ -26,7 +26,7 @@
                                     <h5 class="mb-0">{{ __('order.details') }}</h5>
                                 </div>
                                 <div class="card-body p-4 row g-3">
-                                    
+
                                         <div class="col-md-6">
                                             <x-label for="party_id" name="{{ __('customer.customer') }}" />
                                             <div class="input-group">
@@ -52,7 +52,7 @@
                                                 <x-input type="text" name="count_id" :required="true" placeholder="Serial Number" value="{{ $order->count_id }}"/>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="col-md-6">
                                             <x-label for="order_status" name="{{ __('app.status') }}" />
                                             <x-dropdown-order-status selected="" dropdownName='order_status'/>
@@ -191,7 +191,7 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="col-md-6">
                                             <x-label for="payment_note" name="{{ __('payment.note') }}" />
                                             <x-textarea name="payment_note" value=""/>

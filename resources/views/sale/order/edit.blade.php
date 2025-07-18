@@ -113,6 +113,7 @@
                                                         <tr class="text-uppercase">
                                                             <th scope="col">{{ __('app.action') }}</th>
                                                             <th scope="col">{{ __('item.item') }}</th>
+                                                            <th scope="col">{{ __('item.sku') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_serial_tracking'] ? 'd-none':'' }}">{{ __('item.serial') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_batch_tracking'] ? 'd-none':'' }}">{{ __('item.batch_no') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_mfg_date'] ? 'd-none':'' }}">{{ __('item.mfg_date') }}</th>
@@ -121,12 +122,16 @@
                                                             <th scope="col" class="{{ !app('company')['show_mrp'] ? 'd-none':'' }}">{{ __('item.mrp') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">{{ __('item.color') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_size'] ? 'd-none':'' }}">{{ __('item.size') }}</th>
+                                                            <th scope="col" class="d-none">{{ __('unit.unit') }}</th>
+                                                            <th scope="col" class="d-none2">{{ __('app.price_per_unit') }}</th>
                                                             <th scope="col">{{ __('app.qty') }}</th>
-                                                            <th scope="col">{{ __('unit.unit') }}</th>
-                                                            <th scope="col">{{ __('app.price_per_unit') }}</th>
+                                                            <th scope="col">{{ __('app.real_qty') }}</th>
                                                             <th scope="col" class="{{ !app('company')['show_discount'] ? 'd-none':'' }}">{{ __('app.discount') }}</th>
                                                             <th scope="col" class="{{ (app('company')['tax_type'] == 'no-tax') ? 'd-none':'' }}">{{ __('tax.tax') }}</th>
-                                                            <th scope="col">{{ __('app.total') }}</th>
+                                                            <th scope="col">{{ __('app.location') }}</th>
+                                                            <th scope="col">{{ __('app.status') }}</th>
+                                                            <th scope="col">{{ __('app.action') }}</th>
+                                                            <th scope="col" class="d-none">{{ __('app.total') }}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
