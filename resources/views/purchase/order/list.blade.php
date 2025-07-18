@@ -26,7 +26,7 @@
                             @endcan
                             @can('purchase.order.create')
                             <!-- Button pushed to the right side -->
-                            <x-anchor-tag href="{{ route('purchase.order.create') }}" text="{{ __('purchase.order.create') }}" class="btn btn-primary px-5" />
+{{--                            <x-anchor-tag href="{{ route('purchase.order.create') }}" text="{{ __('purchase.order.create') }}" class="btn btn-primary px-5" />--}}
                             @endcan
 
                         </div>
