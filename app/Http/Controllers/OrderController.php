@@ -100,7 +100,7 @@ class OrderController extends Controller
      * Update Job code
      * @return boolean
      * */
-    public function updateJobCode($orderId) 
+    public function updateJobCode($orderId)
     {
         $prefix = Prefix::findOrNew($this->companyId);
 
@@ -117,7 +117,7 @@ class OrderController extends Controller
             return true;
         }
     }
-    
+
     /**
      * Return JsonResponse
      * */
@@ -259,7 +259,7 @@ class OrderController extends Controller
                     $notificationResponse = $this->orderNotificationService->orderCreatedEmailNotification($orderModel->id);
                     $emailResponseMessage = $notificationResponse['message'];
                 }
-                
+
                 session(['record' => [
                                     'type' => 'success',
                                     'status' => null, //Save or update
@@ -318,7 +318,7 @@ class OrderController extends Controller
                 //End: Order Code related
                 $orderModel = Order::whereId($orderId)->update($validatedData);
 
-                
+
                 /**
                  * Code for table records
                  * */
@@ -345,7 +345,7 @@ class OrderController extends Controller
                     }
                     $orderedProductId = $request->input('ordered_product_id.'.$i);
                     $orderRecord = $orderedProducts->where('id', '=', $orderedProductId)->first();
-                    
+
                     $insertOrderedProducts[] = [
                         'order_id'              => $orderId,
                         'service_id'            => $request->input('service_id.'.$i),
@@ -456,7 +456,7 @@ class OrderController extends Controller
         }
     }
     /**
-     * Get the corrected or incremented order code if given 
+     * Get the corrected or incremented order code if given
      * order_code already exist
      * */
     public function makeOrderCode($prefixCode=null, $countId=null): ?int {
@@ -485,7 +485,7 @@ class OrderController extends Controller
     }
 
     public function datatableList(Request $request){
-        
+
         $data = Order::query();
 
         return DataTables::of($data)
@@ -568,7 +568,7 @@ class OrderController extends Controller
         ]);
     }
 
-    
+
      /**
       * Delete Payaments
       * @return JsonResponse
@@ -615,7 +615,7 @@ class OrderController extends Controller
 
         /**
          * If no records
-         * @return JsonResponse 
+         * @return JsonResponse
          * */
         if($orderedProducts->count() == 0){
             return response()->json([
@@ -650,8 +650,8 @@ class OrderController extends Controller
                 'taxList'           => Tax::all(),
             ];
         }
-        
-        
+
+
         return response()->json([
                     'status'    => true,
                     'message' => null,
@@ -677,7 +677,7 @@ class OrderController extends Controller
         $recordsArray = [];
 
         foreach ($preparedData as $order) {
-            $recordsArray[] = [  
+            $recordsArray[] = [
                                 'order_date' => $order->order_date,
                                 'customer_name' => $order->party->first_name . ' ' . $order->party->last_name,
                                 'order_status' => $order->order_status,
@@ -686,7 +686,7 @@ class OrderController extends Controller
                                 'balance' => $order->total_amount - $order->paid_amount,
                             ];
         }
-        
+
         return response()->json([
                     'status'    => true,
                     'message' => null,
@@ -718,7 +718,7 @@ class OrderController extends Controller
         $recordsArray = [];
 
         foreach ($preparedData as $payment) {
-            $recordsArray[] = [  
+            $recordsArray[] = [
                             'order_date' => $payment->payment_date,
                             'order_code' => $payment->order->order_code,
                             'customer_name' => $payment->order->party->first_name .' '. $payment->order->party->last_name,
@@ -727,7 +727,7 @@ class OrderController extends Controller
                             'note' => $payment->note??'',
                         ];
         }
-        
+
         return response()->json([
                     'status'    => true,
                     'message' => null,
