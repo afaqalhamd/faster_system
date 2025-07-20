@@ -23,8 +23,10 @@ return [
     'purchase_bill_number'          => 'Purchase Bill Number',
     'convert_to_bill'               => 'Convert to Bill',
     'item_purchase'                 => 'Item Purchase',
+    'item_purchase_today'                 => 'Purchases Within 24',
     'purchase_report'               => 'Purchase Report',
     'item_purchase_report'          => 'Item Purchase Report',
+    'item_purchase_report_today'          => 'Item Purchase Report 24 hours',
     'purchase_payment_report'       => 'Purchase Payment Report',
     'purchase_payment'              => 'Purchase Payment',
 

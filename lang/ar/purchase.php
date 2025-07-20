@@ -27,8 +27,13 @@ return [
 'purchase_bill_number' => 'رقم فاتورة الشراء',
 'convert_to_bill' => 'تحويل إلى فاتورة',
 'item_purchase' => 'شراء عنصر',
+'item_purchase_today' => ' المشتريات خلال 24 ساعة',
+
 'purchase_report' => 'تقرير الشراء',
 'item_purchase_report' => 'تقرير شراء عنصر',
+'item_purchase_report' => 'تقرير شراء عنصر',
+'item_purchase_report_today' => '  تقرير المشتريات خلال 24 ',
+
 'purchase_payment_report' => 'تقرير دفع الشراء',
 'purchase_payment' => 'دفع ثمن الشراء',
 

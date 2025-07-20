@@ -23,8 +23,10 @@ return [
 
     'convert_to_invoice'            => 'Convert to Invoice',
     'item_sale'                     => 'Item Sale',
+    'sale_item_today'               => 'Sales Within 24',
     'sale_report'                   => 'Sale Report',
     'item_sale_report'              => 'Item Sale Report',
+    'sale_report_today'             => 'Sales report Within 24 hours',
     'sale_payment_report'           => 'Sale Payment Report',
     'sale_payment'                  => 'Sale Payment',
     'pos'                           => 'POS',

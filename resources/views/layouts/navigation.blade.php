@@ -665,6 +665,14 @@
                                                 class='bx bx-radio-circle'></i>{{ __('purchase.item_purchase') }}</a>
                                     </li>
                                 @endcan
+
+                                @can('report.purchase.item')
+                                <li class="{{ request()->is('report/purchase/item-today') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('report.purchase.item.today') }}"><i
+                                            class='bx bx-radio-circle'></i>{{ __('purchase.item_purchase_today') }}</a>
+                                </li>
+                            @endcan
+
                                 @can('report.purchase.payment')
                                     <li class="{{ request()->is('report/purchase/payment') ? 'mm-active' : '' }}">
                                         <a href="{{ route('report.purchase.payment') }}"><i
@@ -690,6 +698,12 @@
                                                 class='bx bx-radio-circle'></i>{{ __('sale.item_sale') }}</a>
                                     </li>
                                 @endcan
+                                @can('report.sale.item')
+                                <li class="{{ request()->is('report/sale/item-today') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('report.sale.item.today') }}"><i
+                                            class='bx bx-radio-circle'></i>{{ __('sale.sale_item_today') }}</a>
+                                </li>
+                            @endcan
                                 @can('report.sale.payment')
                                     <li class="{{ request()->is('report/sale/payment') ? 'mm-active' : '' }}">
                                         <a href="{{ route('report.sale.payment') }}"><i

@@ -26,7 +26,9 @@ return [
 
 'convert_to_invoice' => 'تحويل إلى فاتورة',
 'item_sale' => 'بيع عنصر',
+'sale_item_today' => ' المبيعات خلال 24',
 'sale_report' => 'تقرير البيع',
+'sale_report_today' => '   تقرير البيع خلال 24 ساعة',
 'item_sale_report' => 'تقرير بيع عنصر',
 'sale_payment_report' => 'تقرير دفع البيع',
 'sale_payment' => 'دفع البيع',
