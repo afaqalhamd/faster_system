@@ -587,6 +587,8 @@
             </li>
         @endcanany
 
+
+
         @canany(['report.*'])
             <li>
                 <a href="javascript:;" class="has-arrow">
@@ -843,6 +845,12 @@
                                                 class='bx bx-radio-circle'></i>{{ __('app.general') }}</a>
                                     </li>
                                 @endcan
+                                @can('report.stock_report.item.general')
+                                <li class="{{ request()->is('report/stock-report/general-stock') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('report.stock_report.item.general.stock') }}"><i
+                                            class='bx bx-radio-circle'></i>{{ __('item.general_stock') }}</a>
+                                </li>
+                            @endcan
                             </ul>
                         </li>
                     @endcanany
@@ -963,6 +971,30 @@
         @endcanany
 
         <li class="menu-label">OTHER</li>
+
+        @canany(['report.sale.item', 'report.purchase.item'])
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon"><i class="bx bx-time-five"></i>
+                    </div>
+                    <div class="menu-title">{{ __('app.today_reports') }}</div>
+                </a>
+                <ul>
+                    @can('report.sale.item')
+                        <li class="{{ request()->is('report/sale/item-today') ? 'mm-active' : '' }}">
+                            <a href="{{ route('report.sale.item.today') }}"><i
+                                    class='bx bx-radio-circle'></i>{{ __('sale.sale_item_today') }}</a>
+                        </li>
+                    @endcan
+                    @can('report.purchase.item')
+                        <li class="{{ request()->is('report/purchase/item-today') ? 'mm-active' : '' }}">
+                            <a href="{{ route('report.purchase.item.today') }}"><i
+                                    class='bx bx-radio-circle'></i>{{ __('purchase.item_purchase_today') }}</a>
+                        </li>
+                    @endcan
+                </ul>
+            </li>
+        @endcanany
 
         <li class="bg-light">
             <a href="javascript:void(0);" id="clearCache">

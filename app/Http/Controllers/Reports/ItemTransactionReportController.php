@@ -435,54 +435,90 @@ class ItemTransactionReportController extends Controller
         }
     }
 
-    function getReorderItemRecords(Request $request): JsonResponse{
-        try{
-            $itemId             = $request->input('item_id');
-            $brandId             = $request->input('brand_id');
-            $categoryId         = $request->input('item_category_id');
+    // function getReorderItemRecords(Request $request): JsonResponse{
+    //     try{
+    //         $itemId             = $request->input('item_id');
+    //         $brandId             = $request->input('brand_id');
+    //         $categoryId         = $request->input('item_category_id');
 
-            $preparedData = Item::with('baseUnit')->when($itemId, function ($query) use ($itemId) {
-                                                    return $query->where('id', $itemId);
-                                                })
-                                                ->when($categoryId, function ($query) use ($categoryId) {
-                                                    return $query->where('item_category_id', $categoryId);
-                                                })
-                                                ->when($brandId, function ($query) use ($brandId) {
-                                                    $query->where('brand_id', $brandId); // Corrected to `brand_id`
-                                                })
-                                                ->where('current_stock','<=', 'min_stock')
-                                                ->get();
+    //         $preparedData = Item::with('baseUnit')->when($itemId, function ($query) use ($itemId) {
+    //                                                 return $query->where('id', $itemId);
+    //                                             })
+    //                                             ->when($categoryId, function ($query) use ($categoryId) {
+    //                                                 return $query->where('item_category_id', $categoryId);
+    //                                             })
+    //                                             ->when($brandId, function ($query) use ($brandId) {
+    //                                                 $query->where('brand_id', $brandId); // Corrected to `brand_id`
+    //                                             })
+    //                                             ->where('current_stock','<=', 'min_stock')
+    //                                             ->get();
 
 
-            if($preparedData->count() == 0){
-                throw new \Exception('No Records Found!!');
-            }
+    //         if($preparedData->count() == 0){
+    //             throw new \Exception('No Records Found!!');
+    //         }
 
-            $recordsArray = [];
+    //         $recordsArray = [];
 
-            foreach ($preparedData as $data) {
-                $recordsArray[] = [
-                                    'item_name'             => $data->name,
-                                    'brand_name'            => $data->brand->name??'',
-                                    'category_name'         => $data->category->name,
-                                    'min_stock'             => $data->min_stock,
-                                    'quantity'              => $this->formatWithPrecision($data->current_stock, comma:false),
-                                    'unit_name'             => $data->baseUnit->name,
-                                ];
-            }
+    //         foreach ($preparedData as $data) {
+    //             $recordsArray[] = [
+    //                                 'item_name'             => $data->name,
+    //                                 'brand_name'            => $data->brand->name??'',
+    //                                 'category_name'         => $data->category->name,
+    //                                 'min_stock'             => $data->min_stock,
+    //                                 'quantity'              => $this->formatWithPrecision($data->current_stock, comma:false),
+    //                                 'unit_name'             => $data->baseUnit->name,
+    //                             ];
+    //         }
 
-            return response()->json([
-                        'status'    => true,
-                        'message' => "Records are retrieved!!",
-                        'data' => $recordsArray,
-                    ]);
-        } catch (\Exception $e) {
-                return response()->json([
-                    'status' => false,
-                    'message' => $e->getMessage(),
-                ], 409);
+    //         return response()->json([
+    //                     'status'    => true,
+    //                     'message' => "Records are retrieved!!",
+    //                     'data' => $recordsArray,
+    //                 ]);
+    //     } catch (\Exception $e) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => $e->getMessage(),
+    //             ], 409);
 
+    //     }
+    // }
+    // ////
+    function getReorderItemRecords(Request $request): JsonResponse
+{
+    try {
+        $preparedData = Item::with(['baseUnit', 'brand', 'category'])
+                            ->get();
+
+        if ($preparedData->count() == 0) {
+            throw new \Exception('No Records Found!!');
         }
-    }
 
+        $recordsArray = [];
+
+        foreach ($preparedData as $data) {
+            $recordsArray[] = [
+                'item_name'     => $data->sku,
+                'category_name' => $data->category->name ?? '',
+                'min_stock'    => $data->min_stock,
+                'quantity'      => $this->formatWithPrecision($data->current_stock, comma: false),
+                'unit_name'     => $data->baseUnit->name ?? '',
+            ];
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => "Records are retrieved!!",
+            'data'    => $recordsArray,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => false,
+            'message' => $e->getMessage(),
+        ], 409);
+    }
 }
+}
+
+

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', __('item.reorder_item_report'))
+@section('title', __('item.zero_stock_last_24h'))
 
         @section('content')
         <!--start page wrapper -->
@@ -7,10 +7,10 @@
             <div class="page-content">
                 <x-breadcrumb :langArray="[
                                             'app.reports',
-                                            'item.reorder_item_report',
+                                            'item.zero_stock_last_24h',
                                         ]"/>
                 <div class="row">
-                    <form class="row g-3 needs-validation" id="reportForm" action="{{ route('report.reorder.item.ajax') }}" enctype="multipart/form-data">
+                    <form class="row g-3 needs-validation" id="reportForm" action="{{ route('report.stock_report.item.general-stock.ajax') }}" enctype="multipart/form-data">
                         {{-- CSRF Protection --}}
                         @csrf
                         @method('POST')
@@ -21,15 +21,9 @@
                         <div class="col-12 col-lg-12">
                             <div class="card">
                                 <div class="card-header px-4 py-3">
-                                    <h5 class="mb-0">{{ __('item.reorder_item_report') }}</h5>
+                                    <h5 class="mb-0">{{ __('item.zero_stock_last_24h') }}</h5>
                                 </div>
-                                <div class="card-body p-4 row g-3">
-                                        <div class="col-md-12">
-                                            <div class="d-md-flex d-grid align-items-center gap-3">
-                                                <!-- Close button removed -->
-                                            </div>
-                                        </div>
-                                </div>
+
                             </div>
                         </div>
                         <div class="col-12 col-lg-12">
@@ -58,11 +52,11 @@
                                                 <thead>
                                                     <tr class="text-uppercase text-center">
                                                         <th class="text-center">#</th>
+                                                        <th class="text-center">{{ __('warehouse.warehouse') }}</th>
                                                         <th class="text-center">{{ __('item.sku') }}</th>
-                                                        <th class="text-center">{{ __('item.category.category') }}</th>
-                                                        <th class="text-center">{{ __('item.min_stock') }}</th>
-                                                        <th class="text-center">{{ __('item.current_stock') }}</th>
+                                                        <th class="text-center">{{ __('item.quantity') }}</th>
                                                         <th class="text-center">{{ __('unit.unit') }}</th>
+                                                        <th class="text-center">{{ __('app.date_reached_zero') }}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -84,10 +78,10 @@
 @section('js')
     @include("plugin.export-table")
     <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
-    <script src="{{ versionedAsset('custom/js/reports/item-reorder.js') }}"></script>
+    <script src="{{ versionedAsset('custom/js/reports/stock/general-stock.js') }}"></script>
     <script>
         $(document).ready(function() {
-            // Automatically submit the form when the page loads
+            // Automatically load the report when the page loads
             $("#reportForm").submit();
         });
     </script>

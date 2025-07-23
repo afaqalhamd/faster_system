@@ -79,7 +79,7 @@
                                                     <tr class="text-uppercase">
                                                         <th>#</th>
                                                         <th>{{ __('warehouse.warehouse') }}</th>
-                                                        <th>{{ __('item.item_name') }}</th>
+                                                        <th>{{ __('item.sku') }}</th>
                                                         <th>{{ __('item.brand.brand') }}</th>
                                                         <th>{{ __('item.quantity') }}</th>
                                                         <th>{{ __('unit.unit') }}</th>

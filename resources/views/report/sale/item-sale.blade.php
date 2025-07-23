@@ -97,7 +97,7 @@
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
                                                         <th>{{ __('supplier.supplier') }}</th>
                                                         <th>{{ __('warehouse.warehouse') }}</th>
-                                                        <th>{{ __('item.item_name') }}</th>
+                                                        <th>{{ __('item.sku') }}</th>
                                                         <th>{{ __('item.brand.brand') }}</th>
                                                         <th>{{ __('app.unit_price') }}</th>
                                                         <th>{{ __('item.quantity') }}</th>

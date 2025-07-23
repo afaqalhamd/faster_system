@@ -239,4 +239,59 @@ class PurchaseTransactionReportController extends Controller
 
         }
     }
+        /**
+     * Get incoming stock transactions from the last 24 hours
+     */
+    function getLastDayIncomingStock(Request $request): JsonResponse{
+        try{
+            // Calculate date range for last 24 hours
+            $toDate = now();
+            $fromDate = now()->subHours(24);
+
+            // If warehouseId is not provided, fetch warehouses accessible to the user
+            $warehouseIds = User::find(auth()->id())->getAccessibleWarehouses()->pluck('id');
+
+            $preparedData = Purchase::with('party', 'itemTransaction.item.brand', 'itemTransaction.warehouse')
+                                ->with(['itemTransaction' => function($q) use ($warehouseIds) {
+                                    $q->whereIn('warehouse_id', $warehouseIds);
+                                }])
+                                ->whereBetween('purchase_date', [$fromDate, $toDate])
+                                ->get();
+
+            if($preparedData->count() == 0){
+                throw new \Exception('No Records Found!!');
+            }
+
+            $recordsArray = [];
+
+            foreach ($preparedData as $data) {
+                foreach($data->itemTransaction as $transaction){
+                    $recordsArray[] = [
+                        'purchase_date'         => $this->toUserDateFormat($data->purchase_date),
+                        'invoice_or_bill_code'  => $data->purchase_code,
+                        'party_name'            => $data->party->getFullName(),
+                        'warehouse'             => $transaction->warehouse->name,
+                        'item_name'             => $transaction->item->sku,
+                        'brand_name'            => $transaction->item->brand->name ?? '',
+                        'unit_price'            => $this->formatWithPrecision($transaction->unit_price, comma:false),
+                        'quantity'              => $this->formatWithPrecision($transaction->quantity, comma:false),
+                        'discount_amount'       => $this->formatWithPrecision($transaction->discount_amount, comma:false),
+                        'tax_amount'            => $this->formatWithPrecision($transaction->tax_amount, comma:false),
+                        'total'                 => $this->formatWithPrecision($transaction->total, comma:false),
+                    ];
+                }
+            }
+
+            return response()->json([
+                'status'    => true,
+                'message'   => "Records are retrieved!!",
+                'data'      => $recordsArray,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => $e->getMessage(),
+            ], 409);
+        }
+    }
 }

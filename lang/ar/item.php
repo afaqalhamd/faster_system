@@ -119,6 +119,10 @@ return [
 'batch_transaction_report' => 'تقرير معاملة الدفعة',
 'serial_transaction_report' => 'تقرير المعاملات التسلسلية',
 'general_transaction_report' => 'تقرير المعاملات العامة',
+'general_stock_report_all' => 'تقرير المخزون العام',
+'zero_stock_last_24h'           => 'نفدت الكمية 24 ساعة',
+
+'general_stock' => ' المخزون ',
 'in_stock' => 'متوفر في المخزون',
 'barcode' => 'رمز شريطي',
 'generate_barcode' => 'إنشاء رمز شريطي',

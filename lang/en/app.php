@@ -51,6 +51,7 @@ return [
     'host'                              => 'Host',
     'port'                              => 'Port',
     'status'                            => 'Status',
+    'date_reached_zero'                 => 'Date Zero',
 
     'app_cache_cleared'                 => 'The application cache has been cleared!',
 
@@ -145,6 +146,7 @@ return [
     'slug'                              => 'Slug',
     'direction'                         => 'Direction',
     'short_code'                        => 'Short Code',
+    'today_reports'                     => 'Today Reports',
 
     'emoji'                             => 'Emoji',
     'emoji_flag'                        => 'Emoji Flag',

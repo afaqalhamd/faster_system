@@ -10,7 +10,7 @@
                                             'purchase.item_purchase_report_today',
                                         ]"/>
                 <div class="row">
-                    <form class="row g-3 needs-validation" id="reportForm" action="{{ route('report.purchase.item.ajax') }}" enctype="multipart/form-data">
+                    <form class="row g-3 needs-validation" id="reportForm" action="{{ route('report.purchase.item.today.ajax') }}" enctype="multipart/form-data">
                         {{-- CSRF Protection --}}
                         @csrf
                         @method('POST')
@@ -22,48 +22,6 @@
                             <div class="card">
                                 <div class="card-header px-4 py-3">
                                     <h5 class="mb-0">{{ __('purchase.item_purchase_report_today') }}</h5>
-                                </div>
-                                <div class="card-body p-4 row g-3">
-
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="from_date" name="{{ __('app.from_date') }}" />
-                                            <div class="input-group">
-                                                <x-input type="text" additionalClasses="datepicker" name="from_date" :required="true" value=""/>
-                                                <span class="input-group-text" id="input-near-focus" role="button"><i class="fadeIn animated bx bx-calendar-alt"></i></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="to_date" name="{{ __('app.to_date') }}" />
-                                            <div class="input-group">
-                                                <x-input type="text" additionalClasses="datepicker" name="to_date" :required="true" value=""/>
-                                                <span class="input-group-text" id="input-near-focus" role="button"><i class="fadeIn animated bx bx-calendar-alt"></i></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="party_id" name="{{ __('supplier.supplier') }}" />
-                                            <select class="form-select party-ajax" data-party-type='supplier' data-placeholder="Select Supplier" id="party_id" name="party_id"></select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="item_id" name="{{ __('item.item_name') }}" />
-                                            <select class="item-ajax form-select" data-placeholder="Select Item" id="item_id" name="item_id"></select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="brand_id" name="{{ __('item.brand.brand') }}" />
-                                            <select class="brand-ajax form-select" data-placeholder="Select Brand" id="brand_id" name="brand_id"></select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <x-label for="warehouse_id" name="{{ __('warehouse.warehouse') }}" />
-                                            <select class="warehouse-ajax form-select" data-placeholder="Select Warehouse" id="warehouse_id" name="warehouse_id"></select>
-                                        </div>
-                                </div>
-
-                                <div class="card-body p-4 row g-3">
-                                        <div class="col-md-12">
-                                            <div class="d-md-flex d-grid align-items-center gap-3">
-                                                <x-button type="submit" class="primary px-4" text="{{ __('app.submit') }}" />
-                                                <x-anchor-tag href="{{ route('dashboard') }}" text="{{ __('app.close') }}" class="btn btn-light px-4" />
-                                            </div>
-                                        </div>
                                 </div>
                             </div>
                         </div>
@@ -97,7 +55,7 @@
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
                                                         <th>{{ __('supplier.supplier') }}</th>
                                                         <th>{{ __('warehouse.warehouse') }}</th>
-                                                        <th>{{ __('item.item_name') }}</th>
+                                                        <th>{{ __('item.sku') }}</th>
                                                         <th>{{ __('item.brand.brand') }}</th>
                                                         <th>{{ __('app.unit_price') }}</th>
                                                         <th>{{ __('item.quantity') }}</th>
@@ -128,5 +86,10 @@
     @include("plugin.export-table")
     <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
     <script src="{{ versionedAsset('custom/js/reports/purchase/item-purchase.js') }}"></script>
-
+    <script>
+        $(document).ready(function() {
+            // Automatically submit the form when the page loads
+            $("#reportForm").submit();
+        });
+    </script>
 @endsection

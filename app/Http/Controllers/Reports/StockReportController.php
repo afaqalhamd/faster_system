@@ -201,7 +201,7 @@ class StockReportController extends Controller
             foreach ($preparedData as $data) {
                 $recordsArray[] = [
                                     'warehouse'             => $data->warehouse->name,
-                                    'item_name'             => $data->item->name,
+                                    'item_name'             => $data->item->sku,
                                     'brand_name'            => $data->item->brand->name??'',
                                     'category_name'         => $data->item->category->name,
                                     'quantity'              => $this->formatWithPrecision($data->quantity, comma:false),
@@ -222,6 +222,119 @@ class StockReportController extends Controller
         //         ], 409);
 
         // }
+    }
+        /**
+     * Report -> Stock Report -> All Stock
+     * @return JsonResponse
+     * */
+    function getAllStockRecords(Request $request): JsonResponse{
+        try{
+            // Get all warehouses accessible to the user
+            $warehouseIds = User::find(auth()->id())->getAccessibleWarehouses()->pluck('id');
+
+            // Get all stock data without filters
+            $preparedData = ItemGeneralQuantity::with('item', 'warehouse')
+                                                ->whereIn('warehouse_id', $warehouseIds)
+                                                ->get();
+
+            if($preparedData->count() == 0){
+                throw new \Exception('No Records Found!!');
+            }
+
+            $recordsArray = [];
+
+            foreach ($preparedData as $data) {
+                $recordsArray[] = [
+                                    'warehouse'             => $data->warehouse->name,
+                                    'item_name'             => $data->item->sku,
+                                    'brand_name'            => $data->item->brand->name??'',
+                                    'category_name'         => $data->item->category->name,
+                                    'quantity'              => $this->formatWithPrecision($data->quantity, comma:false),
+                                    'unit_name'             => $data->item->baseUnit->name,
+                                    'stock_impact_color'    => ($data->quantity <= 0) ? 'danger' : '',
+                                ];
+            }
+
+            return response()->json([
+                        'status'    => true,
+                        'message' => "All stock records retrieved successfully!",
+                        'data' => $recordsArray,
+                    ]);
+        } catch (\Exception $e) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage(),
+                ], 409);
+        }
+    }
+    /**
+     * Report -> Stock Report -> Zero Stock in Last 24 Hours
+     * @return JsonResponse
+     * */
+        /**
+     * Report -> Stock Report -> Zero Stock in Last 24 Hours
+     * @return JsonResponse
+     * */
+    function getZeroStockLast24Hours(Request $request): JsonResponse{
+        try{
+            // Get all warehouses accessible to the user
+            $warehouseIds = User::find(auth()->id())->getAccessibleWarehouses()->pluck('id');
+
+            // Calculate date range for last 24 hours
+            $toDate = now();
+            $fromDate = now()->subHours(24);
+
+            // Get all items with zero stock in the last 24 hours
+            // First, get all transactions in the last 24 hours
+            $recentTransactions = ItemTransaction::with('item', 'warehouse')
+                                ->whereIn('warehouse_id', $warehouseIds)
+                                ->whereBetween('created_at', [$fromDate, $toDate])
+                                ->get()
+                                ->pluck('item_id')
+                                ->unique();
+
+            // Then get all items with zero quantity
+            $zeroStockItems = ItemGeneralQuantity::with('item.baseUnit', 'item.category', 'item.brand', 'warehouse')
+                                ->whereIn('item_id', $recentTransactions)
+                                ->whereIn('warehouse_id', $warehouseIds)
+                                ->where('quantity', '<=', 0)
+                                ->get();
+
+            if($zeroStockItems->count() == 0){
+                throw new \Exception('No zero stock items found in the last 24 hours!');
+            }
+
+            $recordsArray = [];
+
+            foreach ($zeroStockItems as $item) {
+                // Get the most recent transaction for this item
+                $latestTransaction = ItemTransaction::where('item_id', $item->item_id)
+                                    ->where('warehouse_id', $item->warehouse_id)
+                                    ->whereBetween('created_at', [$fromDate, $toDate])
+                                    ->latest()
+                                    ->first();
+
+                $recordsArray[] = [
+                    'warehouse'             => $item->warehouse->name,
+                    'item_name'             => $item->item->sku,
+                    'quantity'              => $this->formatWithPrecision($item->quantity, comma:false),
+                    'unit_name'             => $item->item->baseUnit->name,
+                    'stock_impact_color'    => 'danger',
+                    'date_reached_zero'     => $latestTransaction ? $latestTransaction->created_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                ];
+            }
+
+            return response()->json([
+                'status'    => true,
+                'message'   => "Zero stock items in the last 24 hours retrieved successfully!",
+                'data'      => $recordsArray,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => $e->getMessage(),
+            ], 409);
+        }
     }
 
 }

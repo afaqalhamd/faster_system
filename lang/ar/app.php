@@ -117,6 +117,8 @@ return [
     'fevicon'                           => 'فافيكون',
     'picture'                           => 'الصورة',
     'timezone'                          => 'المنطقة الزمنية',
+    'today_reports'                     => 'تقارير اليوم',
+    'date_reached_zero'                 => 'تاريخ التصفير',
 
     'encryption'            => 'التشفير',
     'sign_in'               => 'تسجيل الدخول',

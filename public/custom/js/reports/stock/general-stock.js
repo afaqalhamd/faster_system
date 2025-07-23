@@ -108,15 +108,15 @@ $(function() {
 
              tr += "<tr class='text-center'>"
              tr += "<td>" + id++ + "</td>";
+             tr += "<td>" + item.warehouse + "</td>";
              tr += "<td>" + item.item_name + "</td>";
-             tr += "<td>" + item.category_name + "</td>";
-             tr += "<td class='text-center'>" + _parseQuantity(item.min_stock) + "</td>";
-             tr += "<td class='text-center'>" + _parseQuantity(item.quantity) + "</td>";
+             tr += `<td class='text-${item.stock_impact_color}'>` + _parseQuantity(item.quantity) + "</td>";
              tr += "<td>" + item.unit_name + "</td>";
+             tr += "<td>" + (item.date_reached_zero || '') + "</td>";
              tr += "</tr>"
         });
 
-        tr += "<tr class='fw-bold text-center'>";
+        tr += "<tr class='fw-bold'>";
         tr += `<td colspan='0' class='text-center tfoot-first-td'>${_lang.total}</td>"`;
         tr += "<td class='text-center'>" + _parseQuantity(totalQuantity) + "</td>";
         tr += "<td></td>";
@@ -129,7 +129,7 @@ $(function() {
         /**
          * Set colspan of the table bottom
          * */
-        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(2));
+        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(1)-1);
     }
 
     function showNoRecordsMessageOnTableBody() {
@@ -164,11 +164,4 @@ $(function() {
         tableId.tableExport({type:'xlsx',escape:'false'});
     });
 
-    $(document).on('change', 'select[name="item_category_id"]', function() {
-        emptyItemSelection();
-    });
-
-    function emptyItemSelection() {
-        $('#item_id').val(null).trigger('change');
-    }
 });//main function

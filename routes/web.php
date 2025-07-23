@@ -771,14 +771,15 @@ Route::middleware('auth')->group(function () {
                     return view('report.purchase.item-purchase');
                     })->middleware('can:report.purchase.item')
                     ->name('report.purchase.item');//View
+                    Route::post('/purchase/item/get-records', [PurchaseTransactionReportController::class, 'getPurchaseItemRecords'])->name('report.purchase.item.ajax');
+
 
                     Route::get('/purchase/item-today', function () {
                         return view('report.purchase.item-purchase-today');
                         })->middleware('can:report.purchase.item')
                         ->name('report.purchase.item.today');//View
 
-        Route::post('/purchase/item/get-records', [PurchaseTransactionReportController::class, 'getPurchaseItemRecords'])->name('report.purchase.item.ajax');
-
+                        Route::post('/purchase/item-today/get-records', [PurchaseTransactionReportController::class, 'getLastDayIncomingStock'])->name('report.purchase.item.today.ajax');
         /*Report -> Purchase -> Payment  */
         Route::get('/purchase/payment', function () {
                     return view('report.purchase.payment');
@@ -800,6 +801,7 @@ Route::middleware('auth')->group(function () {
                     return view('report.sale.item-sale');
                     })->middleware('can:report.sale.item')
                     ->name('report.sale.item');//View
+                    Route::post('/sale/item/get-records', [SaleTransactionReportController::class, 'getSaleItemRecords'])->name('report.sale.item.ajax');
 
                     //Sale Today
                     Route::get('/sale/item-today', function () {
@@ -807,8 +809,7 @@ Route::middleware('auth')->group(function () {
                         })->middleware('can:report.sale.item')
                         ->name('report.sale.item.today');
 
-        Route::post('/sale/item/get-records', [SaleTransactionReportController::class, 'getSaleItemRecords'])->name('report.sale.item.ajax');
-
+                        Route::post('/sale/item-today/get-records', [SaleTransactionReportController::class, 'getLastDayOutgoingStock'])->name('report.sale.item.today.ajax');
         /*Report -> Sale -> Payment  */
         Route::get('/sale/payment', function () {
                     return view('report.sale.payment');
@@ -953,6 +954,14 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/stock-report/general/get-records', [StockReportController::class, 'getGeneralStockRecords'])->name('report.stock_report.item.general.ajax');
 
+                 /*Report -> Stock Report -> General Stock (All)  */
+        Route::get('/stock-report/general-stock', function () {
+            return view('report.stock.general-stock');
+        })->middleware('can:report.stock_report.item.general')
+          ->name('report.stock_report.item.general.stock');//View
+
+        Route::post('/stock-report/general-stock/get-records', [StockReportController::class, 'getZeroStockLast24Hours'])
+              ->name('report.stock_report.item.general-stock.ajax');
     });
 
 
