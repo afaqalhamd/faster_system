@@ -59,13 +59,18 @@ $(function() {
                         return '';
                     }
                 },
-                {data: 'sku', name: 'sku'},
+                {
+                    data: 'sku',
+                    name: 'sku',
+                    searchable: true
+                },
                 {
                     data: 'asin',
                     name: 'asin',
+                    searchable: true,
                     render: function(data, type, row) {
                         if (data) {
-                            return '<div class="text-nowrap overflow-auto" style="max-width: 220px; white-space: nowrap;">' + data + '</div>';
+                            return '<div class="text-nowrap overflow-auto copy-asin" style="max-width: 220px; white-space: nowrap; cursor: pointer;" data-asin="' + data + '">' + data + '</div>';
                         }
                         return '';
                     }
@@ -82,6 +87,27 @@ $(function() {
                 {data: 'action', name: 'action', orderable: false, searchable: false},
             ],
 
+            // Add search functionality for SKU and ASIN
+            initComplete: function() {
+                var api = this.api();
+
+                // Apply the search for SKU and ASIN
+                api.columns([3, 4]).every(function() {
+                    var column = this;
+
+                    // Get the search input from the main search box
+                    var searchInput = $('div.dataTables_filter input');
+
+                    // Add event listener for the main search box
+                    searchInput.unbind().bind('keyup', function() {
+                        var searchTerm = this.value;
+
+                        // Search in both SKU and ASIN columns
+                        api.search(searchTerm).draw();
+                    });
+                });
+            },
+
             dom: "<'row' "+
                     "<'col-sm-12' "+
                         "<'float-start' l"+
@@ -97,6 +123,8 @@ $(function() {
                   ">"+
             "<'row'<'col-sm-12'tr>>" +
             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+
+            lengthMenu: [[100, 500, 1000, -1], [100, 500, 1000, "All"]],
 
             buttons: [
                 {
@@ -143,6 +171,47 @@ $(function() {
                         columns: exportColumns,
                     },
                 },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns me-1"></i>columns ',
+                    className: 'btn btn-outline-info dropdown-toggle',
+                    titleAttr: ' Show/Hide Columns',
+                    autoClose: true,
+                    columns: ':not(.no-visible, .never-visible)',
+                    columnText: function (dt, idx, title) {
+                        return '<span class="column-visibility-item">' +
+                               '<i class="far fa-check-square me-2"></i>' +
+                               title + '</span>';
+                    },
+                    init: function (dt, node, config) {
+                        $(node).attr('data-bs-toggle', 'dropdown').addClass('dropdown-toggle');
+                    },
+                    attr: {
+                        'aria-haspopup': 'true',
+                        'aria-expanded': 'false'
+                    },
+                    dropdownOptions: {
+                        alignment: 'right',
+                        closeButton: true,
+                        dropdownClass: 'column-visibility-dropdown p-3 shadow-sm',
+                        itemBuilder: function(itemText, itemIndex, itemElement) {
+                            return $('<div class="form-check">').append(
+                                $('<input>', {
+                                    type: 'checkbox',
+                                    class: 'form-check-input',
+                                    id: 'colvis-' + itemIndex
+                                }),
+                                $('<label>', {
+                                    class: 'form-check-label',
+                                    for: 'colvis-' + itemIndex,
+                                    text: itemText
+                                })
+                            );
+                        }
+                    }
+                }
+
+
 
             ],
 
@@ -312,6 +381,29 @@ $(function() {
             const imgSrc = $(this).attr('src');
             $('#modalImage').attr('src', imgSrc);
             $('#imageModal').modal('show');
+        });
+
+        // Add ASIN copy functionality
+        $(document).on('click', '.copy-asin', function() {
+            const asin = $(this).data('asin');
+            navigator.clipboard.writeText(asin).then(function() {
+                iziToast.success({title: 'Success', layout: 2, message: 'ASIN copied to clipboard'});
+            }, function() {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = asin;
+                textarea.style.position = 'fixed';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    iziToast.success({title: 'Success', layout: 2, message: 'ASIN copied to clipboard'});
+                } catch (err) {
+                    iziToast.error({title: 'Error', layout: 2, message: 'Failed to copy ASIN'});
+                }
+                document.body.removeChild(textarea);
+            });
         });
     } );
 
