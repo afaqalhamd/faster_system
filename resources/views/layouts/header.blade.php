@@ -41,17 +41,17 @@
                         </div>
                     </li>
 
-                    @can('purchase.bill.create')
+                    @can('purchase.order.create')
                     <li class="nav-item">
-                        <a href="{{ route('purchase.bill.create') }}" class="btn btn-sm btn-outline-primary radius-30 px-4" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ __('purchase.add') }}">
+                        <a href="{{ route('purchase.order.list') }}" class="btn btn-sm btn-outline-primary radius-30 px-4" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ __('purchase.add') }}">
                             <i class="bx bx-plus-circle mr-1"></i>{{ __('purchase.purchase') }}
                         </a>
                     </li>
                     @endcan
 
-                    @can('sale.invoice.create')
+                    @can('sale.order.create')
                     <li class="nav-item">
-                        <a href="{{ route('sale.invoice.create') }}" class="btn btn-sm btn-outline-danger radius-30 px-4" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ __('sale.add') }}">
+                        <a href="{{ route('sale.order.list') }}" class="btn btn-sm btn-outline-danger radius-30 px-4" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ __('sale.add') }}">
                             <i class="bx bx-plus-circle mr-1"></i>{{ __('sale.sale') }}
                         </a>
                     </li>

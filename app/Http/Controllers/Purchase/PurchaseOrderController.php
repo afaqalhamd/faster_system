@@ -506,7 +506,7 @@ class PurchaseOrderController extends Controller
                 'warehouse_id' => $request->warehouse_id[$i],
                 'transaction_date' => $request->order_date,
                 'item_id' => $request->item_id[$i],
-                'description' => $request->description[$i],
+                'description' => $request->description[$i] ?? '',
 
                 'tracking_type' => $itemDetails->tracking_type,
 

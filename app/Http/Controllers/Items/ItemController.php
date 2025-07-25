@@ -104,6 +104,7 @@ class ItemController extends Controller
      */
     public function edit($id): View
     {
+
         $item = Item::find($id);
         $transaction = $item->itemTransaction()->get()->first();//Used Morph
         $transactionId = ($transaction) ? $transaction->id : null;
@@ -398,6 +399,7 @@ class ItemController extends Controller
             //'item_location'             => $request->item_location,
             'mrp' => 0,
             'quantity' => $request->opening_quantity,
+            'input_quantity' => $request->opening_quantity,
             'unit_id' => $request->base_unit_id,
             'unit_price' => $request->at_price,
             'discount_type' => 'percentage',
