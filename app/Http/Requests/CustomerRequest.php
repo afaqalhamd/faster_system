@@ -42,12 +42,13 @@ class CustomerRequest extends FormRequest
             $customerId                 = $this->input('id');
             $rulesArray['id']           = ['required'];
             $rulesArray['mobile']       = ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)];
-            $rulesArray['email']        = ['nullable', 'email', 'max:100', Rule::unique('customers')->ignore($customerId)];
+            $rulesArray['email']        = ['nullable', 'email', 'max:100', Rule::unique('customers')->ignore($customerId), 'regex:/^.+@.+\.com$/i'];
+
         }else{
              $rulesArray['mobile']      = ['nullable', 'string', 'max:20', 'unique:'.Customer::class];
-             $rulesArray['email']       = ['nullable', 'email', 'email', 'max:255', 'unique:'.Customer::class];
+             $rulesArray['email']       = ['nullable', 'email', 'max:255', 'unique:'.Customer::class, 'regex:/^.+@.+\.com$/i'];
         }
-        
+
         return $rulesArray;
 
     }
@@ -58,6 +59,7 @@ class CustomerRequest extends FormRequest
             'last_name.required'     => 'A Last name should not be empty',
             'status.required'   => 'Please Select Status',
             'mobile.max'        => 'Mobile number should be greater than 20 digits.',
+            'email.regex'       => 'Email must end with .com domain',
         ];
 
         if ($this->isMethod('PUT')) {

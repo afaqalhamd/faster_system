@@ -147,6 +147,8 @@ return [
     'direction'                         => 'Direction',
     'short_code'                        => 'Short Code',
     'today_reports'                     => 'Today Reports',
+    'example_email'                     => 'Example Email',
+    'email_must_end_with_com'            => 'Email must end with .com',
 
     'emoji'                             => 'Emoji',
     'emoji_flag'                        => 'Emoji Flag',
@@ -298,6 +300,7 @@ return [
     'a5_print'                          => 'A5 Print',
     //2.3
     'example'                           => 'Example',
+    'o_return'                          => 'Import Order Return'
 
 
 ];

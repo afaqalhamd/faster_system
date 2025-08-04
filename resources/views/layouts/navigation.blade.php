@@ -65,12 +65,12 @@
 						__('sale.sale') }}</div>
                 </a>
                 <ul>
-                    @can('sale.invoice.create')
+                    {{-- @can('sale.invoice.create')
                         <li class="{{ request()->is('pos*') ? 'mm-active' : '' }}">
                             <a href="{{ route('pos.create') }}"><i class='bx bx-radio-circle'></i>{{ __('sale.pos') }}
                             </a>
                         </li>
-                    @endcan
+                    @endcan --}}
                     {{-- @can('purchase.order.view')
                     <li class="{{ request()->is('purchase/order/*') ? 'mm-active' : '' }}">
                         <a href="{{ route('sale.sale-return.list') }}"><i
@@ -105,12 +105,12 @@
                         </li>
                     @endcan
 
-                    @can('sale.return.view')
+                    {{-- @can('sale.return.view')
                         <li class="{{ request()->is('sale/return/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('sale.return.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('sale.return.return') }}</a>
                         </li>
-                    @endcan
+                    @endcan --}}
                     @can('sale.return.order.view')
                     <li class="{{ request()->is('sale/return/order/*') ? 'mm-active' : '' }}">
                         <a href="{{ route('sale.return.order.list') }}"><i
@@ -151,12 +151,12 @@
                         </li>
                     @endcan
 
-                    @can('purchase.return.view')
+                    {{-- @can('purchase.return.view')
                         <li class="{{ request()->is('purchase/return/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('purchase.return.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('purchase.return.return') }}</a>
                         </li>
-                    @endcan
+                    @endcan --}}
                 </ul>
             </li>
         @endcanany
@@ -443,6 +443,16 @@
                         </a>
                 </li>
             @endcan
+            @can('import.purchase')
+            <li class="{{ request()->is('import/sale-return') ? 'mm-active' : '' }}">
+                <a href="{{ route('import.sale-return') }}"><i
+                        class='bx bx-radio-circle'></i>{{ __('app.o_return') }}
+                        &nbsp;<span
+                            class="badge bg-primary">{{__('app.new')}}</span>
+
+                    </a>
+            </li>
+        @endcan
 
 
                     @can('import.party')

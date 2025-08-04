@@ -3,12 +3,49 @@ $(function() {
 
     let originalButtonText;
 
+    // Email validation function
+    function validateEmail(email) {
+        if (!email) {
+            return true; // Email is not required
+        }
+
+        // Strict check for .com ending
+        if (!email.toLowerCase().endsWith('.com')) {
+            $('#emailError').text("يجب أن ينتهي البريد الإلكتروني بـ .com").show();
+            $('input[name="email"]').addClass('is-invalid');
+            return false;
+        }
+
+        // Validate email format with .com ending
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/i;
+        if (!emailRegex.test(email)) {
+            $('#emailError').text("صيغة البريد الإلكتروني غير صحيحة").show();
+            $('input[name="email"]').addClass('is-invalid');
+            return false;
+        }
+
+        $('#emailError').hide();
+        $('input[name="email"]').removeClass('is-invalid');
+        return true;
+    }
+
+    // Validate email on input
+    $('input[name="email"]').on('input', function() {
+        validateEmail($(this).val().trim());
+    });
 
     const partyType = $('input[name="party_type"]').val();
 
     $("#partyForm").on("submit", function(e) {
         e.preventDefault();
         const form = $(this);
+
+        // Validate email before form submission
+        const email = form.find('input[name="email"]').val().trim();
+        if (!validateEmail(email)) {
+            return false;
+        }
+
         const formArray = {
             formId: form.attr("id"),
             csrf: form.find('input[name="_token"]').val(),

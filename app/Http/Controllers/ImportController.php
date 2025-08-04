@@ -182,7 +182,7 @@ class ImportController extends Controller
                     'sale_price_discount_type' => '',
                     'is_purchase_price_with_tax' => 0,
                     'tax_id' => 1,
-                    'tracking_type' => 'general',
+                    'tracking_type' => 'regular',
                     'item_location' => $item_location,
                     'count_id' => 1,
                     'is_damaged' => $is_damaged,

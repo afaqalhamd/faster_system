@@ -152,6 +152,8 @@ return [
     'back_to_login'         => 'العودة لتسجيل الدخول',
     'slug'                  => 'Slug',
     'direction'             => 'الاتجاه',
+    'example_email'         => 'بريد إلكتروني مثال',
+    'email_must_end_with_com' => 'يجب أن ينتهي البريد الإلكتروني بـ com',
     'short_code'            => 'الرمز القصير',
 'stock_movement_24h' => 'حركة المخزون خلال 24 ساعة',
 'incoming_items_24h' => 'العناصر الداخلة خلال 24 ساعة',
@@ -313,4 +315,6 @@ return [
     'thermal_print' => 'طباعة حرارية',
     'a5_print' => 'طباعة A5',
     'example' => 'مثال',
+    'o_return'                          => 'استيراد طلبات الارجاع '
+
 ];

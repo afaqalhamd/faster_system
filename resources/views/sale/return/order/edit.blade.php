@@ -26,7 +26,7 @@
                             <div class="col-12 col-lg-12">
                                 <div class="card">
                                     <div class="card-header px-4 py-3">
-                                        <h5 class="mb-0">{{ __('purchase.order.do') }}</h5>
+                                        <h5 class="mb-0">{{ __('purchase.order.od') }}</h5>
                                     </div>
                                     <div class="card-body p-4 row g-3">
                                             <div class="col-md-4">

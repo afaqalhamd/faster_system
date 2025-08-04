@@ -33,7 +33,17 @@
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="email" name="{{ __('app.email') }}" />
-                                        <x-input type="email" name="email" :required="false" value=""/>
+                                        <x-input
+                                            type="email"
+                                            name="email"
+                                            :required="true"
+                                            value=""
+                                            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                                            title="{{ __('validation.email_invalid_format') }}"
+                                            id="emailInput"
+                                        />
+                                        <small class="text-muted d-block mt-1">{{ __('app.example_email') }}: example@gmail.com</small>
+                                        <div id="emailError" class="invalid-feedback">{{ __('validation.email_must_end_with_com') }}</div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="mobile" name="{{ __('app.mobile') }}" />
@@ -69,4 +79,37 @@
 
 @section('js')
 <script src="{{ versionedAsset('custom/js/customer/customer.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const customerForm = document.getElementById('customerForm');
+        const emailInput = document.getElementById('emailInput');
+        const emailError = document.getElementById('emailError');
+
+        customerForm.addEventListener('submit', function(event) {
+            // Check if email ends with .com
+            const email = emailInput.value.toLowerCase();
+            if (email && !email.endsWith('.com')) {
+                event.preventDefault();
+                emailInput.classList.add('is-invalid');
+                emailError.style.display = 'block';
+                return false;
+            }
+
+            // Additional check to ensure the domain is valid
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/;
+            if (email && !emailRegex.test(email)) {
+                event.preventDefault();
+                emailInput.classList.add('is-invalid');
+                emailError.style.display = 'block';
+                return false;
+            }
+        });
+
+        // Reset validation when email is changed
+        emailInput.addEventListener('input', function() {
+            emailInput.classList.remove('is-invalid');
+            emailError.style.display = 'none';
+        });
+    });
+</script>
 @endsection

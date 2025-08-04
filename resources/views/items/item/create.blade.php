@@ -18,8 +18,8 @@
                               <div class="btn-group">
                                 <input type="radio" class="btn-check" name="item_type_radio" id="product" value="product" autocomplete="off" checked>
                                 <label class="btn btn-outline-primary btn-sm" for="product">{{ __('item.product') }}</label>
-                                <input type="radio" class="btn-check" name="item_type_radio" id="service" value="service" autocomplete="off" >
-                                <label class="btn btn-outline-primary btn-sm" for="service">{{ __('service.service') }}</label>
+                                {{-- <input type="radio" class="btn-check" name="item_type_radio" id="service" value="service" autocomplete="off" >
+                                <label class="btn btn-outline-primary btn-sm" for="service">{{ __('service.service') }}</label> --}}
                               </div>
                             </div>
                             <div class="card-body p-4">
@@ -40,7 +40,7 @@
                                     @if(app('company')['show_sku'])
                                     <div class="col-md-4">
                                         <x-label for="sku" name="{{ __('item.sku') }}" />
-                                        <x-input type="text" name="sku" :required="false" value=""/>
+                                        <x-input type="text" name="sku" :required="true" value=""/>
                                     </div>
                                     @endif
                                     <div class="col-md-4">
@@ -100,11 +100,11 @@
     <div class="row">
         <div class="col-md-4">
             <x-label for="cust_num" name="{{ __('item.customer_number') }}" />
-            <x-input type="text" name="cust_num" :required="false" value=""/>
+            <x-input type="number" name="cust_num" :required="false" value=""/>
         </div>
         <div class="col-md-4">
             <x-label for="cust_num_t" name="{{ __('item.customer_number_t') }}" />
-            <x-input type="text" name="cust_num_t" :required="false" value=""/>
+            <x-input type="number" name="cust_num_t" :required="false" value=""/>
         </div>
         <div class="col-md-4">
             <div class="form-check">
@@ -237,7 +237,7 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <x-label for="cargo_fee" name="{{ __('item.cargo_fee') }}" />
-                                                    <x-input type="text" name="cargo_fee" :required="false" additionalClasses='cu_numeric' value="0"/>
+                                                    <x-input type="text" name="cargo_fee" :required="false" additionalClasses='cu_numeric' value="0.0"/>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <x-label for="weight" name="{{ __('item.weight') }}" />

@@ -1849,15 +1849,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/list', [SaleReturnOrderController::class, 'list'])
                 ->middleware('can:sale.return.order.view')
                 ->name('sale.return.order.list'); //List
-        Route::get('/details/{id}', [SaleReturnOrderController::class, 'details'])
-                    ->middleware('can:sale.return.order.view')
-                    ->name('sale.return.order.details');
-        Route::get('/print/{id}', [SaleReturnOrderController::class, 'print'])
-                    ->middleware('can:sale.return.order.view')
-                    ->name('purchase.order.print');
-        Route::get('/pdf/{id}', [SaleReturnOrderController::class, 'generatePdf'])
-                    ->middleware('can:sale.return.order.view')
-                    ->name('purchase.order.pdf');
+        // Route::get('/details/{id}', [SaleReturnOrderController::class, 'details'])
+        //             ->middleware('can:sale.return.order.view')
+        //             ->name('sale.return.order.details');
+        // Route::get('/prints/{id}', [SaleReturnOrderController::class, 'print'])
+        //             ->middleware('can:sale.return.order.view')
+        //             ->name('purchase.order.print');
+        // Route::get('/pdf/{id}', [SaleReturnOrderController::class, 'generatePdf'])
+        //             ->middleware('can:sale.return.order.view')
+        //             ->name('purchase.order.pdf');
         Route::get('/datatable-list', [SaleReturnOrderController::class, 'datatableList'])->name('sale.return.order.datatable.list'); //Datatable List
         Route::post('/store', [SaleReturnOrderController::class, 'store'])->name('sale.return.order.store');//Save operation
         Route::post('/delete/', [SaleReturnOrderController::class, 'delete'])->middleware('can:sale.return.order.delete')->name('sale.return.order.delete');//delete operation

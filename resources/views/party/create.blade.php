@@ -44,19 +44,66 @@
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="email" name="{{ __('app.email') }}" />
-                                        <x-input type="email" name="email" :required="false" value=""/>
+                                        <x-input type="email" name="email" id="emailInput" :required="false" value=""/>
+                                        <small class="text-muted d-block mt-1">{{ __('app.example_email') }}: example@gmail.com</small>
+                                        <div id="emailError" class="invalid-feedback">{{ __('app.email_must_end_with_com') }}</div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="phone" name="{{ __('app.phone') }}" />
-                                        <x-input type="number" name="phone" :required="false" value=""/>
+                                        <div class="input-group">
+                                            <select class="form-select country-code" name="phone_country_code" style="max-width: 120px;">
+                                                <option value="+966" selected>+966 (SA)</option>
+                                                <option value="+971">+971 (UAE)</option>
+                                                <option value="+20">+20 (EG)</option>
+                                                <option value="+962">+962 (JO)</option>
+                                                <option value="+965">+965 (KW)</option>
+                                                <option value="+968">+968 (OM)</option>
+                                                <option value="+973">+973 (BH)</option>
+                                                <option value="+974">+974 (QA)</option>
+                                                <option value="+961">+961 (LB)</option>
+                                                <option value="+963">+963 (SY)</option>
+                                                <option value="+964">+964 (IQ)</option>
+                                            </select>
+                                            <x-input type="number" name="phone" :required="false" value=""/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="mobile" name="{{ __('app.mobile') }}" />
-                                        <x-input type="number" name="mobile" :required="false" value=""/>
+                                        <div class="input-group">
+                                            <select class="form-select country-code" name="mobile_country_code" style="max-width: 120px;">
+                                                <option value="+966" selected>+966 (SA)</option>
+                                                <option value="+971">+971 (UAE)</option>
+                                                <option value="+20">+20 (EG)</option>
+                                                <option value="+962">+962 (JO)</option>
+                                                <option value="+965">+965 (KW)</option>
+                                                <option value="+968">+968 (OM)</option>
+                                                <option value="+973">+973 (BH)</option>
+                                                <option value="+974">+974 (QA)</option>
+                                                <option value="+961">+961 (LB)</option>
+                                                <option value="+963">+963 (SY)</option>
+                                                <option value="+964">+964 (IQ)</option>
+                                            </select>
+                                            <x-input type="number" name="mobile" :required="true" value=""/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="whatsapp" name="{{ __('app.whatsapp_number') }}" />
-                                        <x-input type="number" name="whatsapp" :required="false" value=""/>
+                                        <div class="input-group">
+                                            <select class="form-select country-code" name="whatsapp_country_code" style="max-width: 120px;">
+                                                <option value="+966" selected>+966 (SA)</option>
+                                                <option value="+971">+971 (UAE)</option>
+                                                <option value="+20">+20 (EG)</option>
+                                                <option value="+962">+962 (JO)</option>
+                                                <option value="+965">+965 (KW)</option>
+                                                <option value="+968">+968 (OM)</option>
+                                                <option value="+973">+973 (BH)</option>
+                                                <option value="+974">+974 (QA)</option>
+                                                <option value="+961">+961 (LB)</option>
+                                                <option value="+963">+963 (SY)</option>
+                                                <option value="+964">+964 (IQ)</option>
+                                            </select>
+                                            <x-input type="number" name="whatsapp" :required="true" value=""/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="tax_number" name="{{ __('tax.tax_number') }}" />
@@ -182,4 +229,65 @@
 
 @section('js')
 <script src="{{ versionedAsset('custom/js/party/party.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Email validation function
+        function validateEmail(email) {
+            if (!email) {
+                return true; // Email is not required
+            }
+
+            // Strict check for .com ending
+            if (!email.toLowerCase().endsWith('.com')) {
+                $('#emailError').text("يجب أن ينتهي البريد الإلكتروني بـ .com").show();
+                $('#emailInput').addClass('is-invalid');
+                return false;
+            }
+
+            // Validate email format with .com ending
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/i;
+            if (!emailRegex.test(email)) {
+                $('#emailError').text("صيغة البريد الإلكتروني غير صحيحة").show();
+                $('#emailInput').addClass('is-invalid');
+                return false;
+            }
+
+            $('#emailError').hide();
+            $('#emailInput').removeClass('is-invalid');
+            return true;
+        }
+
+        // Validate email on input
+        $('#emailInput').on('input', function() {
+            validateEmail($(this).val().trim());
+        });
+
+        // Handle form submission to combine country code with phone numbers
+        $('#partyForm').on('submit', function(e) {
+            // Validate email
+            const email = $('#emailInput').val().trim();
+            if (email && !validateEmail(email)) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Combine country codes with phone numbers
+            const phoneFields = ['phone', 'mobile', 'whatsapp'];
+
+            phoneFields.forEach(function(field) {
+                const countryCode = $(`select[name="${field}_country_code"]`).val();
+                const phoneNumber = $(`input[name="${field}"]`).val();
+
+                if (phoneNumber) {
+                    // Create a hidden field with the combined value
+                    $(`<input>`)
+                        .attr('type', 'hidden')
+                        .attr('name', `${field}_full`)
+                        .val(countryCode + phoneNumber)
+                        .appendTo('#partyForm');
+                }
+            });
+        });
+    });
+</script>
 @endsection
