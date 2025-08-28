@@ -22,9 +22,16 @@ $(function() {
             method:'get',
             ajax: {
                     url: baseURL+'/expense/datatable-list',
-                    data:{
-                            expense_category_id : $('#expense_category_id').val(),
-                        },
+                    data: function(d) {
+                        return $.extend({}, d, {
+                            expense_category_id: $('#expense_category_id').val(),
+                            expense_number: $('#expense_number').val()
+                        });
+                    }
+                },
+                search: {
+                    regex: true,
+                    smart: false
                 },
             columns: [
                 {targets: 0, data:'id', orderable:true, visible:false},
@@ -39,7 +46,9 @@ $(function() {
 
                 {data: 'expense_date', name: 'expense_date'},
 
-                {data: 'expense_number', name: 'expense_number'},
+                {data: 'expense_number', name: 'expense_number'
+                    ,searchable:true
+                },
                 {data: 'expense_category', name: 'expense_category'},
                 {data: 'expense_subcategory', name: 'expense_subcategory'},
                 {data: 'paid_amount'},
@@ -261,6 +270,9 @@ $(function() {
         loadDatatables();
 	} );
 
+    $(document).on("change keyup", '#expense_number', function() {
+        loadDatatables();
+    });
     $(document).on("change", '#expense_category_id', function function_name() {
         loadDatatables();
     });

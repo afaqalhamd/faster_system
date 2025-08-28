@@ -14,8 +14,8 @@ class SettingsSeeder extends Seeder
     public function run(): void
     {
         AppSettings::create([
-            'application_name'  => 'DeltaApp',
-            'footer_text'       => 'Copyright© DeltaApp - 2024',
+            'application_name'  => 'Faster-Weal',
+            'footer_text'       => 'Copyright© Faster-Weal - 2025',
             'language_id'       => 1,
         ]);
     }

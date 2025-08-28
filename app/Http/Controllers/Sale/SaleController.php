@@ -959,6 +959,17 @@ class SaleController extends Controller
             ->when($request->to_date, function ($query) use ($request) {
                 return $query->where('sale_date', '<=', $this->toSystemDateFormat($request->to_date));
             })
+            ->when($request->reference_no, function ($query) use ($request) {
+                return $query->where('reference_no', 'like', "%{$request->reference_no}%");
+            })
+            ->when($request->has('reference_nos'), function ($query) use ($request) {
+                $referenceNos = json_decode($request->reference_nos);
+                return $query->whereIn('reference_no', $referenceNos);
+            })
+            ->when($request->has('sale_codes'), function ($query) use ($request) {
+                $saleCodes = json_decode($request->sale_codes);
+                return $query->whereIn('sale_code', $saleCodes);
+            })
             ->when(!auth()->user()->can('sale.invoice.can.view.other.users.sale.invoices'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
             });
@@ -969,7 +980,7 @@ class SaleController extends Controller
                     $searchTerm = $request->search['value'];
                     $query->where(function ($q) use ($searchTerm) {
                         $q->where('sale_code', 'like', "%{$searchTerm}%")
-                            ->orWhere('grand_total', 'like', "%{$searchTerm}%")
+                        ->orWhere('reference_no', 'like', "%{$searchTerm}%")
                             ->orWhereHas('party', function ($partyQuery) use ($searchTerm) {
                                 $partyQuery->where('first_name', 'like', "%{$searchTerm}%")
                                     ->orWhere('last_name', 'like', "%{$searchTerm}%");

@@ -3,7 +3,7 @@
 return [
 
         'enter_item_name' => 'أدخل اسم المنتج',
-'item_name' => 'اسم المنتج',
+'item_name' => 'الاسم ',
 'item' => 'منتج',
 'item_category' => 'فئة المنتج',
 'details' => 'تفاصيل المنتج',

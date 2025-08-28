@@ -120,7 +120,7 @@ return [
     'real_qty'                               => 'Real QTY',
     'price'                             => 'Price',
     'discount'                          => 'Discount',
-    'total'                             => 'Total',
+    'total'                             => 'Total Price',
     'add_row'                           => 'Add Row',
     'record_not_found'                  => 'Record Not Found',
     'grand_total'                       => 'Grand Total',

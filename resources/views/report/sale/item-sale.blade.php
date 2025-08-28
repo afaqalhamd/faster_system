@@ -43,14 +43,15 @@
                                             <x-label for="party_id" name="{{ __('customer.customer') }}" />
                                             <select class="form-select party-ajax" data-party-type='Customer' data-placeholder="Select Customer" id="party_id" name="party_id"></select>
                                         </div>
-{{--                                        <div class="col-md-6 mb-3">--}}
-{{--                                            <x-label for="item_id" name="{{ __('item.item_name') }}" />--}}
-{{--                                            <select class="item-ajax form-select" data-placeholder="Select Item" id="item_id" name="item_id"></select>--}}
-{{--                                        </div>--}}
-{{--                                        <div class="col-md-6 mb-3">--}}
-{{--                                            <x-label for="brand_id" name="{{ __('item.brand.brand') }}" />--}}
-{{--                                            <select class="brand-ajax form-select" data-placeholder="Select Brand" id="brand_id" name="brand_id"></select>--}}
-{{--                                        </div>--}}
+                                        <div class="col-md-6 mb-3">
+                                            <x-label for="item_id" name="{{ __('item.item_name') }}" />
+                                            <select class="item-ajax form-select" data-placeholder="Select Item" id="item_id" name="item_id"></select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <x-label for="brand_id" name="{{ __('item.brand.brand') }}" />
+                                            <select class="brand-ajax form-select" data-placeholder="Select Brand" id="brand_id" name="brand_id"></select>
+                                        </div>
+
                                         <div class="col-md-6 mb-3">
                                             <x-label for="warehouse_id" name="{{ __('warehouse.warehouse') }}" />
                                             <select class="warehouse-ajax form-select" data-placeholder="Select Warehouse" id="warehouse_id" name="warehouse_id"></select>
@@ -95,7 +96,7 @@
                                                         <th>#</th>
                                                         <th>{{ __('app.date') }}</th>
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
-                                                        <th>{{ __('supplier.supplier') }}</th>
+                                                        <th>{{ __('customer.customer') }}</th>
                                                         <th>{{ __('warehouse.warehouse') }}</th>
                                                         <th>{{ __('item.sku') }}</th>
                                                         <th>{{ __('item.brand.brand') }}</th>

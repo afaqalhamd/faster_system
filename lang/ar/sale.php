@@ -14,6 +14,8 @@ return [
 'invoice' => 'فاتورة',
 'invoice_no' => 'رقم الفاتورة',
 'print' => 'طباعة بيع',
+'reference_no'                  => 'المرجع',
+
 
 
 'convert_to_sale' => 'تحويل للبيع',

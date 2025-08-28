@@ -283,7 +283,7 @@ class SaleReturnOrderController extends Controller
             DB::beginTransaction();
             // Get the validated data from the expenseRequest
             $validatedData = $request->validated();
-            $validatedData['order_type'] = 'return';
+            $validatedData['order_type'] = 'purchase';
 
             if ($request->operation == 'save') {
                 // Create a new expense record using Eloquent and save it
@@ -698,7 +698,7 @@ class SaleReturnOrderController extends Controller
             ->addColumn('action', function ($row) {
                 $id = $row->id;
 
-                $editUrl = route('sale.return.order.edit', ['id' => $id]);
+                $editUrl = route('purchase.order.edit', ['id' => $id]);
 
                 //Verify is it converted or not
                 if ($row->purchase) {
@@ -719,9 +719,7 @@ class SaleReturnOrderController extends Controller
                             <a class="dropdown-toggle dropdown-toggle-nocaret" href="#" data-bs-toggle="dropdown"><i class="bx bx-dots-vertical-rounded font-22 text-option"></i>
                             </a>
                             <ul class="dropdown-menu">
-                                <li>
-                                    <a class="dropdown-item" href="' . $editUrl . '"><i class="bx bx-edit"></i> ' . __('app.edit') . '</a>
-                                </li>
+
                                 <li>
                                     <a class="dropdown-item" href="' . $convertToPurchase . '"><i class="bx bx-' . $convertToPurchaseIcon . '"></i> ' . $convertToPurchaseText . '</a>
                                 </li>

@@ -51,58 +51,22 @@
                                     <div class="col-md-6">
                                         <x-label for="phone" name="{{ __('app.phone') }}" />
                                         <div class="input-group">
-                                            <select class="form-select country-code" name="phone_country_code" style="max-width: 120px;">
-                                                <option value="+966" selected>+966 (SA)</option>
-                                                <option value="+971">+971 (UAE)</option>
-                                                <option value="+20">+20 (EG)</option>
-                                                <option value="+962">+962 (JO)</option>
-                                                <option value="+965">+965 (KW)</option>
-                                                <option value="+968">+968 (OM)</option>
-                                                <option value="+973">+973 (BH)</option>
-                                                <option value="+974">+974 (QA)</option>
-                                                <option value="+961">+961 (LB)</option>
-                                                <option value="+963">+963 (SY)</option>
-                                                <option value="+964">+964 (IQ)</option>
-                                            </select>
-                                            <x-input type="number" name="phone" :required="false" value=""/>
+
+                                            <x-input type="tel" name="phone" :required="false" value="" minlength="8" maxlength="15"/>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="mobile" name="{{ __('app.mobile') }}" />
                                         <div class="input-group">
-                                            <select class="form-select country-code" name="mobile_country_code" style="max-width: 120px;">
-                                                <option value="+966" selected>+966 (SA)</option>
-                                                <option value="+971">+971 (UAE)</option>
-                                                <option value="+20">+20 (EG)</option>
-                                                <option value="+962">+962 (JO)</option>
-                                                <option value="+965">+965 (KW)</option>
-                                                <option value="+968">+968 (OM)</option>
-                                                <option value="+973">+973 (BH)</option>
-                                                <option value="+974">+974 (QA)</option>
-                                                <option value="+961">+961 (LB)</option>
-                                                <option value="+963">+963 (SY)</option>
-                                                <option value="+964">+964 (IQ)</option>
-                                            </select>
-                                            <x-input type="number" name="mobile" :required="true" value=""/>
+
+                                            <x-input type="tel" name="mobile" :required="true" value="" minlength="8" maxlength="15"/>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="whatsapp" name="{{ __('app.whatsapp_number') }}" />
                                         <div class="input-group">
-                                            <select class="form-select country-code" name="whatsapp_country_code" style="max-width: 120px;">
-                                                <option value="+966" selected>+966 (SA)</option>
-                                                <option value="+971">+971 (UAE)</option>
-                                                <option value="+20">+20 (EG)</option>
-                                                <option value="+962">+962 (JO)</option>
-                                                <option value="+965">+965 (KW)</option>
-                                                <option value="+968">+968 (OM)</option>
-                                                <option value="+973">+973 (BH)</option>
-                                                <option value="+974">+974 (QA)</option>
-                                                <option value="+961">+961 (LB)</option>
-                                                <option value="+963">+963 (SY)</option>
-                                                <option value="+964">+964 (IQ)</option>
-                                            </select>
-                                            <x-input type="number" name="whatsapp" :required="true" value=""/>
+                                          
+                                            <x-input type="tel" name="whatsapp" :required="true" value="" minlength="8" maxlength="15"/>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -231,6 +195,28 @@
 <script src="{{ versionedAsset('custom/js/party/party.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Prevent non-numeric input for phone fields
+        document.querySelector('input[name="whatsapp"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        document.querySelector('input[name="mobile"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        document.querySelector('input[name="phone"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
         // Email validation function
         function validateEmail(email) {
             if (!email) {

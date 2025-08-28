@@ -127,7 +127,7 @@ return [
 //    'location'                   => 'الموقع',
     'price'                 => 'السعر',
     'discount'              => 'الخصم',
-    'total'                 => 'الإجمالي',
+    'total'                 => 'السعر الإجمالي',
     'add_row'               => 'إضافة صف',
     'record_not_found'      => 'السجل غير موجود',
     'grand_total'           => 'الإجمالي الكلي',

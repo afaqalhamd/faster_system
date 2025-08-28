@@ -361,11 +361,43 @@ class ExpenseController extends Controller
                         ->when($request->expense_category_id, function ($query) use ($request) {
                             return $query->where('expense_category_id', $request->expense_category_id);
                         })
+                        ->when($request->expense_number, function ($query) use ($request) {
+                            $searchTerms = array_map('trim', explode(' ', $request->expense_number));
+                            return $query->where(function($q) use ($searchTerms) {
+                                $first = true;
+                                foreach($searchTerms as $term) {
+                                    if($first) {
+                                        $q->where('expense_code', 'LIKE', "%{$term}%");
+                                        $first = false;
+                                    } else {
+                                        $q->orWhere('expense_code', 'LIKE', "%{$term}%");
+                                    }
+                                }
+                            });
+                        })
                         ->when(!auth()->user()->can('expense.can.view.other.users.expenses'), function ($query) use ($request) {
                             return $query->where('created_by', auth()->user()->id);
                         });
 
         return DataTables::of($data)
+                    ->filter(function ($query) use ($request) {
+                        if ($request->has('search') && $request->search['value']) {
+                            $searchTerm = $request->search['value'];
+                            $searchTerms = array_map('trim', explode(',', $searchTerm));
+
+                            $query->where(function ($q) use ($searchTerms) {
+                                foreach ($searchTerms as $term) {
+                                    $q->orWhere('expense_code', 'LIKE', "%{$term}%")
+                                      ->orWhereHas('user', function ($userQuery) use ($term) {
+                                          $userQuery->where('username', 'LIKE', "%{$term}%");
+                                      })
+                                      ->orWhereHas('category', function ($categoryQuery) use ($term) {
+                                          $categoryQuery->where('name', 'LIKE', "%{$term}%");
+                                      });
+                                }
+                            });
+                        }
+                    })
                     ->addIndexColumn()
                     ->addColumn('created_at', function ($row) {
                         return $row->created_at->format(app('company')['date_format']);

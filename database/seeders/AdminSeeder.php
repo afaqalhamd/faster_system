@@ -17,11 +17,11 @@ class AdminSeeder extends Seeder
 
         User::create([
                                     'id' => 1,
-                                    'username' => 'admin',
+                                    'username' => 'Administrator',
                                     'first_name' => 'Super',
-                                    'last_name' => 'Human',
-                                    'email' => 'admin@example.com',
-                                    'password' => Hash::make('12345678'),
+                                    'last_name' => 'Admin',
+                                    'email' => 'fasterxpress@gmail.com',
+                                    'password' => Hash::make('Admin@123'),
                                     'status' => 1,
                                 ]);
     }

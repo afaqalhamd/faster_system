@@ -50,15 +50,36 @@
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="phone" name="{{ __('app.phone') }}" />
-                                        <x-input type="number" name="phone" :required="false" value="{{ $party->phone }}"/>
+                                        <div class="inut-group">
+                                            <x-input type="tel"
+                                                name="phone"
+                                                :required="false"
+                                                value="{{ $party->phone }}"
+                                                minlength="8"
+                                                maxlength="15"/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="mobile" name="{{ __('app.mobile') }}" />
-                                        <x-input type="number" name="mobile" :required="false" value="{{ $party->mobile }}"/>
+                                        <div class="input-group">
+                                            <x-input type="tel"
+                                            name="mobile"
+                                            :required="true"
+                                            value="{{ $party->mobile }}"
+                                            minlength="8"
+                                            maxlength="15"/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="whatsapp" name="{{ __('app.whatsapp_number') }}" />
-                                        <x-input type="number" name="whatsapp" :required="false" value="{{ $party->whatsapp }}"/>
+                                        <div class="input-group">
+                                            <x-input type="tel"
+                                            name="whatsapp"
+                                            :required="true"
+                                            value="{{ $party->whatsapp }}"
+                                            minlength="8"
+                                            maxlength="15"/>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <x-label for="tax_number" name="{{ __('tax.tax_number') }}" />
@@ -184,6 +205,32 @@
 
 @section('js')
 <script src="{{ versionedAsset('custom/js/party/party.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prevent non-numeric input for phone fields
+        document.querySelector('input[name="whatsapp"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        document.querySelector('input[name="mobile"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        document.querySelector('input[name="phone"]').addEventListener('keydown', function(e) {
+            // منع كتابة أي شيء غير الأرقام
+            if (!/[0-9]|Backspace|ArrowLeft|ArrowRight|Delete/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+
 <script src="{{ versionedAsset('custom/js/party/party-edit.js') }}"></script>
 <script type="text/javascript">
     var _opening_balance_type = '{{$opening_balance_type}}';

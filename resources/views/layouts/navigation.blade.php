@@ -84,12 +84,12 @@
                         </li>
                     @endcan
 
-                    @can('sale.quotation.view')
+                    {{-- @can('sale.quotation.view')
                         <li class="{{ request()->is('quotation/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('sale.quotation.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('sale.quotation.quotations') }}</a>
                         </li>
-                    @endcan
+                    @endcan --}}
 
                     @can('sale.invoice.view')
                         <li class="{{ request()->is('payment/in') ? 'mm-active' : '' }}">
@@ -399,12 +399,12 @@
                         </li>
                     @endcan
 
-                    @can('stock_transfer.view')
+                    {{-- @can('stock_transfer.view')
                         <li class="{{ request()->is('stock-transfer/list') ? 'mm-active' : '' }}">
                             <a href="{{ route('stock_transfer.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('warehouse.stock_transfer') }}</a>
                         </li>
-                    @endcan
+                    @endcan --}}
 
 
                 </ul>
@@ -429,16 +429,18 @@
                     @can('import.sale')
                     <li class="{{ request()->is('import/sale') ? 'mm-active' : '' }}">
                         <a href="{{ route('import.sale') }}"><i
-                                class='bx bx-radio-circle'></i>{{ __('app.import_order') }}&nbsp;<span
-                                class="badge bg-primary">{{__('app.new')}}</span></a>
+                                class='bx bx-radio-circle'></i>{{ __('app.import_order') }}
+                                {{-- &nbsp;<span
+                                class="badge bg-primary">{{__('app.new')}}</span> --}}
+                            </a>
                     </li>
                 @endcan
                 @can('import.purchase')
                 <li class="{{ request()->is('import/purchase') ? 'mm-active' : '' }}">
                     <a href="{{ route('import.purchase') }}"><i
                             class='bx bx-radio-circle'></i>{{ __('app.import_purchase') }}
-                            &nbsp;<span
-                                class="badge bg-primary">{{__('app.new')}}</span>
+                            {{-- &nbsp;<span
+                                class="badge bg-primary">{{__('app.new')}}</span> --}}
 
                         </a>
                 </li>
@@ -447,8 +449,7 @@
             <li class="{{ request()->is('import/sale-return') ? 'mm-active' : '' }}">
                 <a href="{{ route('import.sale-return') }}"><i
                         class='bx bx-radio-circle'></i>{{ __('app.o_return') }}
-                        &nbsp;<span
-                            class="badge bg-primary">{{__('app.new')}}</span>
+
 
                     </a>
             </li>
@@ -678,12 +679,12 @@
                                     </li>
                                 @endcan
 
-                                @can('report.purchase.item')
+                                {{-- @can('report.purchase.item')
                                 <li class="{{ request()->is('report/purchase/item-today') ? 'mm-active' : '' }}">
                                     <a href="{{ route('report.purchase.item.today') }}"><i
                                             class='bx bx-radio-circle'></i>{{ __('purchase.item_purchase_today') }}</a>
                                 </li>
-                            @endcan
+                            @endcan --}}
 
                                 @can('report.purchase.payment')
                                     <li class="{{ request()->is('report/purchase/payment') ? 'mm-active' : '' }}">
@@ -710,12 +711,12 @@
                                                 class='bx bx-radio-circle'></i>{{ __('sale.item_sale') }}</a>
                                     </li>
                                 @endcan
-                                @can('report.sale.item')
+                                {{-- @can('report.sale.item')
                                 <li class="{{ request()->is('report/sale/item-today') ? 'mm-active' : '' }}">
                                     <a href="{{ route('report.sale.item.today') }}"><i
                                             class='bx bx-radio-circle'></i>{{ __('sale.sale_item_today') }}</a>
                                 </li>
-                            @endcan
+                            @endcan --}}
                                 @can('report.sale.payment')
                                     <li class="{{ request()->is('report/sale/payment') ? 'mm-active' : '' }}">
                                         <a href="{{ route('report.sale.payment') }}"><i
@@ -855,12 +856,7 @@
                                                 class='bx bx-radio-circle'></i>{{ __('app.general') }}</a>
                                     </li>
                                 @endcan
-                                @can('report.stock_report.item.general')
-                                <li class="{{ request()->is('report/stock-report/general-stock') ? 'mm-active' : '' }}">
-                                    <a href="{{ route('report.stock_report.item.general.stock') }}"><i
-                                            class='bx bx-radio-circle'></i>{{ __('item.general_stock') }}</a>
-                                </li>
-                            @endcan
+
                             </ul>
                         </li>
                     @endcanany
@@ -980,7 +976,7 @@
             </li>
         @endcanany
 
-        <li class="menu-label">OTHER</li>
+        <li class="menu-label">Stock 24h</li>
 
         @canany(['report.sale.item', 'report.purchase.item'])
             <li>
@@ -1002,6 +998,13 @@
                                     class='bx bx-radio-circle'></i>{{ __('purchase.item_purchase_today') }}</a>
                         </li>
                     @endcan
+
+                 @can('report.stock_report.item.general')
+                                <li class="{{ request()->is('report/stock-report/general-stock') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('report.stock_report.item.general.stock') }}"><i
+                                            class='bx bx-radio-circle'></i>{{ __('item.zero_stock_last_24h') }}</a>
+                                </li>
+                            @endcan
                 </ul>
             </li>
         @endcanany

@@ -20,6 +20,7 @@ return [
     'sale_invoice_number'           => 'Sale Invoice Number',
     'debit_note'                    => 'Debit Note',
     'convert_to_return'             => 'Convert to Return',
+    'reference_no'                  => 'Reference',
 
     'convert_to_invoice'            => 'Convert to Invoice',
     'item_sale'                     => 'Item Sale',

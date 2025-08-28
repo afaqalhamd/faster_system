@@ -103,117 +103,181 @@ class SaleController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+    // public function store(Request $request)
+    // {
+    //     $file = $request->file('excel_file');
+
+    //     $spreadsheet = $this->reader->load($file->getPathname());
+
+    //     // Get the first sheet
+    //     $sheet = $spreadsheet->getSheet(0);
+    //     $data_list = $sheet->toArray();
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         if (count($data_list) <= 1) {
+    //             throw new \Exception(__('app.records_not_found'));
+    //         }
+
+    //         // Skip header row
+    //         array_shift($data_list);
+
+    //         $partyCurrency = Party::with('currency')->select('currency_id')
+    //             ->where('party_type', 'customer')
+    //             ->first();
+
+    //         if (!$partyCurrency) {
+    //             throw new \Exception(__('app.customer_not_found'));
+    //         }
+
+    //         $currency_id = $partyCurrency->currency_id;
+    //         $exchange_rate = $partyCurrency->currency->exchange_rate;
+
+    //         $saleOrder = new SaleOrder();
+    //         $saleOrder->party_id = 1; // Default customer
+    //         $saleOrder->order_date = Carbon::now();
+    //         $saleOrder->prefix_code = 'SO/';
+    //         $saleOrder->count_id = SaleOrder::max('count_id') + 1;
+    //         $saleOrder->order_code = $saleOrder->prefix_code . $saleOrder->count_id;
+    //         $saleOrder->order_status = 'Pending';
+    //         $saleOrder->round_off = 0;
+    //         $saleOrder->grand_total = 0;
+    //         $saleOrder->currency_id = $currency_id;
+    //         $saleOrder->exchange_rate = $exchange_rate;
+    //         $saleOrder->paid_amount = 0; // Set paid amount to 0 initially
+    //         $saleOrder->save();
+
+    //         $warehouse_id = $request->warehouse_id;
+
+    //         /**
+    //          * Record Status Update History
+    //          */
+    //         $this->statusHistoryService->RecordStatusHistory($saleOrder);
+
+    //         /**
+    //          * Save Table Items in Sale Order Items Table
+    //          * */
+    //         $saleOrderItemsArray = $this->saveSaleOrderItems($saleOrder, $data_list, $warehouse_id);
+    //         if (!$saleOrderItemsArray['status']) {
+    //             throw new \Exception($saleOrderItemsArray['message']);
+    //         }
+
+    //         // Update sale order grand total
+    //         $saleOrder->grand_total = $saleOrderItemsArray['grand_total'];
+    //         $saleOrder->save();
+
+    //         // Removed automatic payment creation
+    //         // No longer calling saveSaleOrderPayments
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => __('app.record_imported'),
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollback();
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => $e->getMessage()
+    //         ], 422);
+    //     }
+    // }
     public function store(Request $request)
-    {
-        $file = $request->file('excel_file');
+{
+    $file = $request->file('excel_file');
 
+    // التحقق من وجود الملف
+    if (!$file) {
+        return response()->json([
+            'success' => false,
+            'message' => __('app.no_file_uploaded')
+        ], 422);
+    }
+
+    // التحقق من نوع الملف
+    if (!in_array($file->getClientOriginalExtension(), ['xlsx', 'xls'])) {
+        return response()->json([
+            'success' => false,
+            'message' => __('app.invalid_file_type')
+        ], 422);
+    }
+
+    try {
         $spreadsheet = $this->reader->load($file->getPathname());
-
-        // Get the first sheet
         $sheet = $spreadsheet->getSheet(0);
         $data_list = $sheet->toArray();
 
-        try {
-            DB::beginTransaction();
+        DB::beginTransaction();
 
-            if (count($data_list) <= 1) {
-                throw new \Exception(__('app.records_not_found'));
-            }
-
-            // Skip header row
-            array_shift($data_list);
-
-            $partyCurrency = Party::with('currency')->select('currency_id')
-                ->where('party_type', 'customer')
-                ->first();
-
-            if (!$partyCurrency) {
-                throw new \Exception(__('app.customer_not_found'));
-            }
-
-            $currency_id = $partyCurrency->currency_id;
-            $exchange_rate = $partyCurrency->currency->exchange_rate;
-
-            $saleOrder = new SaleOrder();
-            $saleOrder->party_id = 1; // Default customer
-            $saleOrder->order_date = Carbon::now();
-            $saleOrder->prefix_code = 'SO/';
-            $saleOrder->count_id = SaleOrder::max('count_id') + 1;
-            $saleOrder->order_code = $saleOrder->prefix_code . $saleOrder->count_id;
-            $saleOrder->order_status = 'Pending';
-            $saleOrder->round_off = 0;
-            $saleOrder->grand_total = 0;
-            $saleOrder->currency_id = $currency_id;
-            $saleOrder->exchange_rate = $exchange_rate;
-            //currency_id
-            //exchange_rate
-            $saleOrder->save();
-
-            $warehouse_id = $request->warehouse_id;
-
-            /**
-             * Record Status Update History
-             */
-            $this->statusHistoryService->RecordStatusHistory($saleOrder);
-
-            /**
-             * Save Table Items in Sale Order Items Table
-             * */
-            $saleOrderItemsArray = $this->saveSaleOrderItems($saleOrder, $data_list, $warehouse_id);
-            if (!$saleOrderItemsArray['status']) {
-                throw new \Exception($saleOrderItemsArray['message']);
-            }
-
-            // Update sale order grand total
-            $saleOrder->grand_total = $saleOrderItemsArray['grand_total'];
-            $saleOrder->save();
-
-            /**
-             * Save Expense Payment Records
-             * */
-            $saleOrderPaymentsArray = $this->saveSaleOrderPayments($saleOrder);
-            if (!$saleOrderPaymentsArray['status']) {
-                throw new \Exception($saleOrderPaymentsArray['message']);
-            }
-
-            /**
-             * Payment Should not be less than 0
-             * */
-            $paidAmount = $saleOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
-            if ($paidAmount < 0) {
-                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
-            }
-
-            /**
-             * Paid amount should not be greater than grand total
-             * */
-            if ($paidAmount > $saleOrder->grand_total) {
-                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($saleOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $saleOrder->grand_total));
-            }
-
-            /**
-             * Update Sale Order Model
-             * Total Paid Amunt
-             * */
-            if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($saleOrder)) {
-                throw new \Exception(__('payment.failed_to_update_paid_amount'));
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => __('app.record_imported'),
-                //                'id' => $saleOrder->id
-            ]);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 422);
+        if (count($data_list) <= 1) {
+            throw new \Exception(__('app.records_not_found'));
         }
+
+        // تخطي صف العناوين
+        array_shift($data_list);
+
+        // الحصول على معلومات العملة من العميل الافتراضي
+        $partyCurrency = Party::with('currency')
+            ->where('party_type', 'customer')
+            ->first();
+
+        if (!$partyCurrency) {
+            throw new \Exception(__('app.customer_not_found'));
+        }
+
+        // إنشاء أمر البيع مع ضمان عدم تكرار order_code
+        $saleOrder = new SaleOrder();
+        $saleOrder->party_id = 1;// استخدام معرف العميل الفعلي بدلاً من القيمة الثابتة
+        $saleOrder->order_date = Carbon::now();
+        $saleOrder->prefix_code = 'SO/';
+        $saleOrder->order_status = 'Pending';
+        $saleOrder->round_off = 0;
+        $saleOrder->grand_total = 0;
+        $saleOrder->currency_id = $partyCurrency->currency_id;
+        $saleOrder->exchange_rate = $partyCurrency->currency->exchange_rate;
+        $saleOrder->paid_amount = 0;
+
+        // حفظ السجل أولاً للحصول على معرف فريد
+        $saleOrder->save();
+
+        // الآن نحدد count_id بناءً على ID الفريد
+        $saleOrder->count_id = $saleOrder->id;
+        $saleOrder->order_code = $saleOrder->prefix_code . $saleOrder->count_id;
+        $saleOrder->save();
+
+        $warehouse_id = $request->warehouse_id;
+
+        // تسجيل تاريخ الحالة
+        $this->statusHistoryService->RecordStatusHistory($saleOrder);
+
+        // حفظ عناصر أمر البيع
+        $saleOrderItemsArray = $this->saveSaleOrderItems($saleOrder, $data_list, $warehouse_id);
+        if (!$saleOrderItemsArray['status']) {
+            throw new \Exception($saleOrderItemsArray['message']);
+        }
+
+        // تحديث المبلغ الإجمالي
+        $saleOrder->grand_total = $saleOrderItemsArray['grand_total'];
+        $saleOrder->save();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => __('app.record_imported'),
+            'order_code' => $saleOrder->order_code // إرجاع كود الطلب للمرجعية
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 422);
     }
+}
 
     public function saveSaleOrderItems($order, $data_list, $warehouse_id)
     {
@@ -553,38 +617,11 @@ class SaleController extends Controller
 
             // Update purchase order grand total
             $purchaseOrder->grand_total = $purchaseOrderItemsArray['grand_total'];
+            $purchaseOrder->paid_amount = 0; // Set paid amount to 0 initially
             $purchaseOrder->save();
 
-            /**
-             * Save Purchase Order Payment Records
-             * */
-            $purchaseOrderPaymentsArray = $this->savePurchaseOrderPayments($purchaseOrder);
-            if (!$purchaseOrderPaymentsArray['status']) {
-                throw new \Exception($purchaseOrderPaymentsArray['message']);
-            }
-
-            /**
-             * Payment Should not be less than 0
-             * */
-            $paidAmount = $purchaseOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
-            if ($paidAmount < 0) {
-                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
-            }
-
-            /**
-             * Paid amount should not be greater than grand total
-             * */
-            if ($paidAmount > $purchaseOrder->grand_total) {
-                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($purchaseOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $purchaseOrder->grand_total));
-            }
-
-            /**
-             * Update Purchase Order Model
-             * Total Paid Amount
-             * */
-            if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($purchaseOrder)) {
-                throw new \Exception(__('payment.failed_to_update_paid_amount'));
-            }
+            // Removed automatic payment creation
+            // No longer calling savePurchaseOrderPayments
 
             /**
              * Update Account Transaction entry
@@ -616,130 +653,213 @@ class SaleController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function saleReturnStore(Request $request)
-    {
-        $file = $request->file('excel_file');
+//     public function saleReturnStore(Request $request)
+//     {
+//         $file = $request->file('excel_file');
 
-        $spreadsheet = $this->reader->load($file->getPathname());
+//         $spreadsheet = $this->reader->load($file->getPathname());
 
-        // Get the first sheet
-        $sheet = $spreadsheet->getSheet(0);
-        $data_list = $sheet->toArray();
+//         // Get the first sheet
+//         $sheet = $spreadsheet->getSheet(0);
+//         $data_list = $sheet->toArray();
 
-        try {
-            DB::beginTransaction();
+//         try {
+//             DB::beginTransaction();
 
-            if (count($data_list) <= 1) {
-                throw new \Exception(__('app.records_not_found'));
-            }
+//             if (count($data_list) <= 1) {
+//                 throw new \Exception(__('app.records_not_found'));
+//             }
 
-            // Skip header row
-            array_shift($data_list);
+//             // Skip header row
+//             array_shift($data_list);
 
-            $partyCurrency = Party::with('currency')->select('currency_id')
-                ->where('party_type', 'supplier')
-                ->first();
+//             $partyCurrency = Party::with('currency')->select('currency_id')
+//                 ->where('party_type', 'supplier')
+//                 ->first();
 
-            if (!$partyCurrency) {
-                throw new \Exception(__('app.supplier_not_found'));
-            }
+//             if (!$partyCurrency) {
+//                 throw new \Exception(__('app.supplier_not_found'));
+//             }
 
-            $currency_id = $partyCurrency->currency_id;
-            $exchange_rate = $partyCurrency->currency->exchange_rate;
+//             $currency_id = $partyCurrency->currency_id;
+//             $exchange_rate = $partyCurrency->currency->exchange_rate;
 
-            // Get the last count_id
-//            $lastCountId = DB::table('purchase_orders')->max('count_id') ?? 0;
-            $lastCountId = DB::table('purchase_orders')
-                ->where('order_type', 'return')
-                ->max('count_id') ?? 0;
+//             // Get the last count_id
+// //            $lastCountId = DB::table('purchase_orders')->max('count_id') ?? 0;
+//             $lastCountId = DB::table('purchase_orders')
+//                 ->where('order_type', 'return')
+//                 ->max('count_id') ?? 0;
 
-            $purchaseOrder = new \App\Models\Purchase\PurchaseOrder();
-            $purchaseOrder->party_id = 2; // Default supplier
-            $purchaseOrder->order_date = Carbon::now();
-            $purchaseOrder->prefix_code = 'SO/';
-            $purchaseOrder->count_id = $lastCountId + 1;
-            $purchaseOrder->order_code = $purchaseOrder->prefix_code . $purchaseOrder->count_id;
-            $purchaseOrder->order_status = 'Pending';
-            $purchaseOrder->round_off = 0;
-            $purchaseOrder->grand_total = 0;
-            $purchaseOrder->currency_id = $currency_id;
-            $purchaseOrder->exchange_rate = $exchange_rate;
-            $purchaseOrder->order_type = 'return';
-            $purchaseOrder->save();
+//             $purchaseOrder = new \App\Models\Purchase\PurchaseOrder();
+//             $purchaseOrder->party_id = 2; // Default supplier
+//             $purchaseOrder->order_date = Carbon::now();
+//             $purchaseOrder->prefix_code = 'SO/';
+//             $purchaseOrder->count_id = $lastCountId + 1;
+//             $purchaseOrder->order_code = $purchaseOrder->prefix_code . $purchaseOrder->count_id;
+//             $purchaseOrder->order_status = 'Pending';
+//             $purchaseOrder->round_off = 0;
+//             $purchaseOrder->grand_total = 0;
+//             $purchaseOrder->currency_id = $currency_id;
+//             $purchaseOrder->exchange_rate = $exchange_rate;
+//             $purchaseOrder->order_type = 'return';
+//             $purchaseOrder->save();
 
-            $warehouse_id = $request->warehouse_id;
+//             $warehouse_id = $request->warehouse_id;
 
-            /**
-             * Record Status Update History
-             */
-            $this->statusHistoryService->RecordStatusHistory($purchaseOrder);
+//             /**
+//              * Record Status Update History
+//              */
+//             $this->statusHistoryService->RecordStatusHistory($purchaseOrder);
 
-            /**
-             * Save Table Items in Purchase Order Items Table
-             * */
-            $purchaseOrderItemsArray = $this->savePurchaseOrderItems($purchaseOrder, $data_list, $warehouse_id);
-            if (!$purchaseOrderItemsArray['status']) {
-                throw new \Exception($purchaseOrderItemsArray['message']);
-            }
+//             /**
+//              * Save Table Items in Purchase Order Items Table
+//              * */
+//             $purchaseOrderItemsArray = $this->savePurchaseOrderItems($purchaseOrder, $data_list, $warehouse_id);
+//             if (!$purchaseOrderItemsArray['status']) {
+//                 throw new \Exception($purchaseOrderItemsArray['message']);
+//             }
 
-            // Update purchase order grand total
-            $purchaseOrder->grand_total = $purchaseOrderItemsArray['grand_total'];
-            $purchaseOrder->save();
+//             // Update purchase order grand total
+//             $purchaseOrder->grand_total = $purchaseOrderItemsArray['grand_total'];
+//             $purchaseOrder->save();
 
-            /**
-             * Save Purchase Order Payment Records
-             * */
-            $purchaseOrderPaymentsArray = $this->savePurchaseOrderPayments($purchaseOrder);
-            if (!$purchaseOrderPaymentsArray['status']) {
-                throw new \Exception($purchaseOrderPaymentsArray['message']);
-            }
+//             /**
+//              * Save Purchase Order Payment Records
+//              * */
+//             $purchaseOrderPaymentsArray = $this->savePurchaseOrderPayments($purchaseOrder);
+//             if (!$purchaseOrderPaymentsArray['status']) {
+//                 throw new \Exception($purchaseOrderPaymentsArray['message']);
+//             }
 
-            /**
-             * Payment Should not be less than 0
-             * */
-            $paidAmount = $purchaseOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
-            if ($paidAmount < 0) {
-                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
-            }
+//             /**
+//              * Payment Should not be less than 0
+//              * */
+//             $paidAmount = $purchaseOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
+//             if ($paidAmount < 0) {
+//                 throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
+//             }
 
-            /**
-             * Paid amount should not be greater than grand total
-             * */
-            if ($paidAmount > $purchaseOrder->grand_total) {
-                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($purchaseOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $purchaseOrder->grand_total));
-            }
+//             /**
+//              * Paid amount should not be greater than grand total
+//              * */
+//             if ($paidAmount > $purchaseOrder->grand_total) {
+//                 throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($purchaseOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $purchaseOrder->grand_total));
+//             }
 
-            /**
-             * Update Purchase Order Model
-             * Total Paid Amount
-             * */
-            if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($purchaseOrder)) {
-                throw new \Exception(__('payment.failed_to_update_paid_amount'));
-            }
+//             /**
+//              * Update Purchase Order Model
+//              * Total Paid Amount
+//              * */
+//             if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($purchaseOrder)) {
+//                 throw new \Exception(__('payment.failed_to_update_paid_amount'));
+//             }
 
-            /**
-             * Update Account Transaction entry
-             * */
-            $accountTransactionStatus = $this->accountTransactionService->purchaseOrderAccountTransaction($purchaseOrder);
-            if (!$accountTransactionStatus) {
-                throw new \Exception(__('payment.failed_to_update_account'));
-            }
+//             /**
+//              * Update Account Transaction entry
+//              * */
+//             $accountTransactionStatus = $this->accountTransactionService->purchaseOrderAccountTransaction($purchaseOrder);
+//             if (!$accountTransactionStatus) {
+//                 throw new \Exception(__('payment.failed_to_update_account'));
+//             }
 
-            DB::commit();
+//             DB::commit();
 
-            return response()->json([
-                'status' => true,
-                'message' => __('purchase.import_success'),
-                'id' => $purchaseOrder->id
-            ]);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage()
-            ], 422);
+//             return response()->json([
+//                 'status' => true,
+//                 'message' => __('purchase.import_success'),
+//                 'id' => $purchaseOrder->id
+//             ]);
+//         } catch (\Exception $e) {
+//             DB::rollback();
+//             return response()->json([
+//                 'status' => false,
+//                 'message' => $e->getMessage()
+//             ], 422);
+//         }
+//     }
+public function saleReturnStore(Request $request)
+{
+    $file = $request->file('excel_file');
+
+    $spreadsheet = $this->reader->load($file->getPathname());
+
+    // Get the first sheet
+    $sheet = $spreadsheet->getSheet(0);
+    $data_list = $sheet->toArray();
+
+    try {
+        DB::beginTransaction();
+
+        if (count($data_list) <= 1) {
+            throw new \Exception(__('app.records_not_found'));
         }
+
+        // Skip header row
+        array_shift($data_list);
+
+        $partyCurrency = Party::with('currency')->select('currency_id')
+            ->where('party_type', 'supplier')
+            ->first();
+
+        if (!$partyCurrency) {
+            throw new \Exception(__('app.supplier_not_found'));
+        }
+
+        $currency_id = $partyCurrency->currency_id;
+        $exchange_rate = $partyCurrency->currency->exchange_rate;
+
+        $lastCountId = DB::table('purchase_orders')
+            ->where('order_type', 'return')
+            ->max('count_id') ?? 0;
+
+        $purchaseOrder = new \App\Models\Purchase\PurchaseOrder();
+        $purchaseOrder->party_id = 2; // Default supplier
+        $purchaseOrder->order_date = Carbon::now();
+        $purchaseOrder->prefix_code = 'SR/';
+        $purchaseOrder->count_id = $lastCountId + 1;
+        $purchaseOrder->order_code = $purchaseOrder->prefix_code . $purchaseOrder->count_id;
+        $purchaseOrder->order_status = 'Pending';
+        $purchaseOrder->round_off = 0;
+        $purchaseOrder->grand_total = 0;
+        $purchaseOrder->currency_id = $currency_id;
+        $purchaseOrder->exchange_rate = $exchange_rate;
+        $purchaseOrder->order_type = 'return';
+        $purchaseOrder->save();
+
+        $warehouse_id = $request->warehouse_id;
+
+        /**
+         * Record Status Update History
+         */
+        $this->statusHistoryService->RecordStatusHistory($purchaseOrder);
+
+        /**
+         * Save Table Items in Purchase Order Items Table
+         */
+        $purchaseOrderItemsArray = $this->savePurchaseOrderItems($purchaseOrder, $data_list, $warehouse_id);
+        if (!$purchaseOrderItemsArray['status']) {
+            throw new \Exception($purchaseOrderItemsArray['message']);
+        }
+
+        // Update purchase order grand total only
+        $purchaseOrder->grand_total = $purchaseOrderItemsArray['grand_total'];
+        $purchaseOrder->save();
+
+        DB::commit();
+
+        return response()->json([
+            'status' => true,
+            'message' => __('purchase.import_success'),
+            'id' => $purchaseOrder->id
+        ]);
+    } catch (\Exception $e) {
+        DB::rollback();
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage()
+        ], 422);
     }
+}
 
     /**
      * Download sample import file for sales

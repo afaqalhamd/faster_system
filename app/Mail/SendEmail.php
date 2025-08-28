@@ -43,7 +43,7 @@ class SendEmail extends Mailable
     public function __construct($data)
     {
         $this->appSettingsRecordId = App::APP_SETTINGS_RECORD_ID->value;
-        $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
+        // Removed companyId line
         $this->emailAddresses = $data['email'];
         $this->subject = $data['subject'];
         $this->content = $data['content'];
@@ -52,7 +52,7 @@ class SendEmail extends Mailable
         //Get Dynamic smtp setup
         $this->setupEmailConfig();
 
-        
+
     }
 
     public function setupCompanyLogo()
@@ -68,7 +68,7 @@ class SendEmail extends Mailable
          }else{
             $this->companyLogo = null;
          }
-         
+
     }
 
     public function setupFromEmailConfig(){
@@ -89,10 +89,29 @@ class SendEmail extends Mailable
      * and setup it in email configutation settings
      * */
     public function setupEmailConfig(){
+        // Get SMTP settings from database - using default settings
+        $smtpSettings = SmtpSettings::first();
 
-        //$this->setupCompanyLogo();
+        if ($smtpSettings) {
+            // Configure mail settings dynamically
+            config([
+                'mail.mailers.smtp.host' => $smtpSettings->host,
+                'mail.mailers.smtp.port' => $smtpSettings->port,
+                'mail.mailers.smtp.encryption' => $smtpSettings->encryption,
+                'mail.mailers.smtp.username' => $smtpSettings->username,
+                'mail.mailers.smtp.password' => $smtpSettings->password,
+                'mail.from.address' => $smtpSettings->from_address ?: $this->fromEmail,
+                'mail.from.name' => $smtpSettings->from_name ?: $this->fromName,
+            ]);
 
-        //Configure from emaill setup
+            // Set default mail driver to smtp
+            config(['mail.default' => 'smtp']);
+        }
+
+        // Setup company logo for email template
+        $this->setupCompanyLogo();
+
+        // Configure from email setup
         $this->setupFromEmailConfig();
     }
 
@@ -102,7 +121,7 @@ class SendEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            //from: new Address($this->fromEmail, $this->fromName),
+            from: new Address($this->fromEmail, $this->fromName),
             to: $this->emailAddresses,
             subject: $this->subject,
         );
@@ -117,7 +136,7 @@ class SendEmail extends Mailable
             markdown: 'mails.send_email',
             with: [
                         'content' => $this->content,
-                        //'companyLogo' => $this->companyLogo,
+                        'companyLogo' => $this->companyLogo,
                     ],
         );
     }
@@ -130,7 +149,7 @@ class SendEmail extends Mailable
     public function attachments(): array
     {
         $attachments = [];
-        
+
         if(!empty($this->attachmentPath)){
             $attachments = [
                 Attachment::fromPath($this->attachmentPath),

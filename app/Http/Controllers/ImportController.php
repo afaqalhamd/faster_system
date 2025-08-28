@@ -1079,10 +1079,43 @@ class ImportController extends Controller
                         ],
                         'firstName' => 'required|string|max:255',
                         'lastName' => 'nullable|string|max:255',
-                        'email' => ['nullable', 'email', 'max:100', Rule::unique('parties')->where('party_type', $partyType)],
-                        'phone' => ['nullable', 'string', 'max:20', Rule::unique('parties')->where('party_type', $partyType)],
-                        'mobile' => ['nullable', 'string', 'max:20', Rule::unique('parties')->where('party_type', $partyType)],
-                        'whatsapp' => ['nullable', 'string', 'max:20', Rule::unique('parties')->where('party_type', $partyType)],
+                        // 'email' => ['nullable', 'email', 'max:100', Rule::unique('parties')->where('party_type', $partyType)],
+                        'email' => [
+                            'nullable',
+                            'email',
+                            'max:100',
+                            Rule::unique('parties')->where('party_type', $partyType),
+                            function ($attribute, $value, $fail) {
+                                if (!empty($value) && !str_contains(strtolower($value), '@gmail.com')) {
+                                    $fail('Email must contain @gmail.com domain.');
+                                }
+                            }
+                        ],
+                        // 'phone' => ['nullable', 'string', 'max:20', Rule::unique('parties')->where('party_type', $partyType)],
+                        'phone' => [
+                            'nullable',
+                            'string',
+                            'max:20',
+                            'min:8',
+                            'regex:/^[+]?[0-9]+$/',
+                            Rule::unique('parties')->where('party_type', $partyType)
+                        ],
+                        'mobile' => [
+                            'nullable',
+                            'string',
+                            'max:20',
+                            'min:8',
+                            'regex:/^[+]?[0-9]+$/',
+                            Rule::unique('parties')->where('party_type', $partyType)
+                        ],
+                        'whatsapp' => [
+                            'nullable',
+                            'string',
+                            'max:20',
+                            'min:8',
+                            'regex:/^[+]?[0-9]+$/',
+                            Rule::unique('parties')->where('party_type', $partyType)
+                        ],
                         'taxNumber' => ['nullable', 'string', 'max:100'],
                         'stateName' => ['nullable', 'string', 'max:100'],
                         'billingAddress' => ['nullable', 'string', 'max:500'],

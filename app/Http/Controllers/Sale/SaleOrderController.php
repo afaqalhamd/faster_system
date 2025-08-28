@@ -616,6 +616,11 @@ class SaleOrderController extends Controller
             ->when($request->to_date, function ($query) use ($request) {
                 return $query->where('order_date', '<=', $this->toSystemDateFormat($request->to_date));
             })
+            // In your datatable-list method
+            ->when($request->has('order_codes'), function ($query) use ($request) {
+                $orderCodes = json_decode($request->order_codes);
+                return $query->whereIn('order_code', $orderCodes);
+            })
             ->when(!auth()->user()->can('sale.order.can.view.other.users.sale.orders'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
             });

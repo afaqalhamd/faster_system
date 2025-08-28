@@ -3,7 +3,7 @@
 return [
 
         'enter_item_name'               => 'Enter Product Name',
-        'item_name'                     => 'Product Name',
+        'item_name'                     => 'Name',
         'item'                          => 'Product',
         'item_category'                 => 'Product Category',
         'details'                       => 'Product Details',

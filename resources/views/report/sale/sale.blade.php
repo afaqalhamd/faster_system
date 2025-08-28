@@ -24,7 +24,7 @@
                                     <h5 class="mb-0">{{ __('sale.sale_report') }}</h5>
                                 </div>
                                 <div class="card-body p-4 row g-3">
-                                    
+
                                         <div class="col-md-6 mb-3">
                                             <x-label for="from_date" name="{{ __('app.from_date') }}" />
                                             <div class="input-group">
@@ -83,7 +83,7 @@
                                                         <th>#</th>
                                                         <th>{{ __('app.date') }}</th>
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
-                                                        <th>{{ __('supplier.supplier') }}</th>
+                                                        <th>{{ __('customer.customer') }}</th>
                                                         <th>{{ __('app.grand_total') }}</th>
                                                         <th>{{ __('app.paid_amount') }}</th>
                                                         <th>{{ __('app.balance') }}</th>
@@ -109,5 +109,5 @@
     @include("plugin.export-table")
     <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
     <script src="{{ versionedAsset('custom/js/reports/sale/sale.js') }}"></script>
-    
+
 @endsection

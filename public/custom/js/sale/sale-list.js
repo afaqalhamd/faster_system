@@ -23,11 +23,16 @@ $(function() {
                     data:{
                             party_id : $('#party_id').val(),
                             user_id : $('#user_id').val(),
-
                             from_date : $('input[name="from_date"]').val(),
                             to_date : $('input[name="to_date"]').val(),
+                            reference_no : $('#reference_no').val(), // Add reference_no parameter
                         },
                 },
+            // Enable regex search
+            search: {
+                regex: true,
+                smart: false
+            },
             columns: [
                 {targets: 0, data:'id', orderable:true, visible:false},
                 {
@@ -93,7 +98,13 @@ $(function() {
                                 </div>`;
                     }
                 },
-
+                {
+                    data: 'reference_no',
+                    name: 'reference_no',
+                    orderable: false,
+                    className: 'text-center',
+                    searchable: true
+                },
                 {data: 'sale_date', name: 'sale_date'},
 
                 {data: 'party_name', name: 'party_name'},
@@ -172,9 +183,41 @@ $(function() {
                  * Initialize Tooltip
                  * */
                 setTooltip();
+            },
+
+            // Add initComplete for custom search functionality
+            initComplete: function() {
+                var api = this.api();
+
+                // Custom search function for reference_no and sale_code
+                $('#datatable_filter input').off('keyup search input').on('keyup search input', function() {
+                    var searchTerms = $(this).val().trim();
+
+                    if (searchTerms) {
+                        // Split search terms by newline or space
+                        var terms = searchTerms.split(/[\n\r\s]+/).filter(Boolean);
+
+                        if (terms.length > 1) {
+                            // Check if terms look like sale codes (starting with SL/)
+                            if (terms.some(term => term.startsWith('SL/'))) {
+                                // Create a server-side request with the sale_codes parameter
+                                api.ajax.url(baseURL+'/sale/invoice/datatable-list?sale_codes=' +
+                                    encodeURIComponent(JSON.stringify(terms))).load();
+                            } else {
+                                // Use reference_nos for other types of searches
+                                api.ajax.url(baseURL+'/sale/invoice/datatable-list?reference_nos=' +
+                                    encodeURIComponent(JSON.stringify(terms))).load();
+                            }
+                        } else {
+                            api.search(searchTerms).draw();
+                        }
+                    } else {
+                        api.search('').draw();
+                        // Reset to original URL if search is cleared
+                        api.ajax.url(baseURL+'/sale/invoice/datatable-list').load();
+                    }
+                });
             }
-
-
         });
 
         table.on('click', '.deleteRequest', function () {
@@ -330,8 +373,9 @@ $(function() {
         initSelect2PaymentType({ dropdownParent: $('#invoicePaymentModal') });
 	} );
 
-    $(document).on("change", '#party_id, #user_id, input[name="from_date"], input[name="to_date"]', function function_name(e) {
+    $(document).on("change", '#party_id, #user_id, #reference_no, input[name="from_date"], input[name="to_date"]', function function_name(e) {
         loadDatatables();
     });
 
 });
+

@@ -14,7 +14,7 @@ class ItemCategorySeeder extends Seeder
     public function run(): void
     {
         ItemCategory::create([
-            'name'               => 'General',
+            'name'               => 'Normal',
             'is_deletable'       => 0,
         ]);
     }

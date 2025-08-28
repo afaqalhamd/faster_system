@@ -11,7 +11,7 @@
                                             'purchase.order.uo',
                                         ]"/>
                 <div class="row">
-                    <form class="g-3 needs-validation" id="invoiceForm" action="{{ route('sale.return.order.update') }}" enctype="multipart/form-data">
+                    <form class="g-3 needs-validation" id="invoiceForm" action="{{ route('purchase.order.update') }}" enctype="multipart/form-data">
                         {{-- CSRF Protection --}}
                         @csrf
                         @method('PUT')

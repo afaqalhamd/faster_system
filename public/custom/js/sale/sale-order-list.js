@@ -90,6 +90,40 @@ $(function() {
                 {data: 'action', name: 'action', orderable: false, searchable: false},
             ],
 
+            // Enable regex search
+            search: {
+                regex: false,
+                smart: true
+            },
+
+            // Add initComplete for custom search functionality
+            initComplete: function() {
+                var api = this.api();
+
+                // Custom search function for order_code
+                $('#datatable_filter input').off('keyup search input').on('keyup search input', function() {
+                    var searchTerms = $(this).val().trim();
+
+                    if (searchTerms) {
+                        // Check if it contains multiple terms separated by space
+                        if (searchTerms.includes(' ')) {
+                            // Split search terms by space
+                            var terms = searchTerms.split(/\s+/).filter(Boolean);
+
+                            // Create a server-side request with the order_codes parameter
+                            api.ajax.url(baseURL+'/sale/order/datatable-list?order_codes=' +
+                                encodeURIComponent(JSON.stringify(terms))).load();
+                        } else {
+                            api.search(searchTerms).draw();
+                        }
+                    } else {
+                        api.search('').draw();
+                        // Reset to original URL if search is cleared
+                        api.ajax.url(baseURL+'/sale/order/datatable-list').load();
+                    }
+                });
+            },
+
             dom: "<'row' "+
                     "<'col-sm-12' "+
                         "<'float-start' l"+
