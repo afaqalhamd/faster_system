@@ -56,6 +56,11 @@
                                             <x-label for="warehouse_id" name="{{ __('warehouse.warehouse') }}" />
                                             <select class="warehouse-ajax form-select" data-placeholder="Select Warehouse" id="warehouse_id" name="warehouse_id"></select>
                                         </div>
+                                        <div class="col-md-6 mb-3">
+                                            <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
+                                            <x-input type="text" name="reference_no" value="" placeholder="e.g. 0213547 0213548 (multiple references separated by space)"/>
+                                            <small class="text-muted">{{ __('app.multiple_reference_hint', ['default' => 'Enter multiple reference numbers separated by space, comma, or semicolon']) }}</small>
+                                        </div>
                                 </div>
 
                                 <div class="card-body p-4 row g-3">
@@ -96,6 +101,7 @@
                                                         <th>#</th>
                                                         <th>{{ __('app.date') }}</th>
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
+                                                        <th>{{ __('app.reference_no') }}</th>
                                                         <th>{{ __('customer.customer') }}</th>
                                                         <th>{{ __('warehouse.warehouse') }}</th>
                                                         <th>{{ __('item.sku') }}</th>

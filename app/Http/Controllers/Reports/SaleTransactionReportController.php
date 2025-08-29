@@ -45,11 +45,28 @@ class SaleTransactionReportController extends Controller
             $fromDate           = $this->toSystemDateFormat($fromDate);
             $toDate             = $request->input('to_date');
             $toDate             = $this->toSystemDateFormat($toDate);
-            $partyId             = $request->input('party_id');
+            $partyId            = $request->input('party_id');
+            $referenceNo        = $request->input('reference_no');
 
             $preparedData = Sale::with('party')
                                                 ->when($partyId, function ($query) use ($partyId) {
                                                     return $query->where('party_id', $partyId);
+                                                })
+                                                ->when($referenceNo, function ($query) use ($referenceNo) {
+                                                    // Split reference numbers by space, comma, or semicolon
+                                                    $referenceNumbers = preg_split('/[\s,;]+/', trim($referenceNo), -1, PREG_SPLIT_NO_EMPTY);
+
+                                                    if (count($referenceNumbers) > 1) {
+                                                        // Multiple reference numbers - use whereIn or multiple LIKE conditions
+                                                        return $query->where(function($subQuery) use ($referenceNumbers) {
+                                                            foreach ($referenceNumbers as $refNo) {
+                                                                $subQuery->orWhere('reference_no', 'like', '%' . trim($refNo) . '%');
+                                                            }
+                                                        });
+                                                    } else {
+                                                        // Single reference number
+                                                        return $query->where('reference_no', 'like', '%' . $referenceNo . '%');
+                                                    }
                                                 })
                                                 ->whereBetween('sale_date', [$fromDate, $toDate])
                                                 ->get();
@@ -65,6 +82,7 @@ class SaleTransactionReportController extends Controller
                 $recordsArray[] = [
                                     'sale_date'         => $this->toUserDateFormat($data->sale_date),
                                     'invoice_or_bill_code'  => $data->sale_code,
+                                    'reference_no'          => $data->reference_no,
                                     'party_name'            => $data->party->getFullName(),
                                     'grand_total'           => $this->formatWithPrecision($data->grand_total, comma:false),
                                     'paid_amount'           => $this->formatWithPrecision($data->paid_amount, comma:false),
@@ -109,8 +127,9 @@ class SaleTransactionReportController extends Controller
             $toDate             = $this->toSystemDateFormat($toDate);
             $partyId            = $request->input('party_id');
             $itemId             = $request->input('item_id');
-            $brandId             = $request->input('brand_id');
+            $brandId            = $request->input('brand_id');
             $warehouseId        = $request->input('warehouse_id');
+            $referenceNo        = $request->input('reference_no');
 
             //If warehouseId is not provided, fetch warehouses accessible to the user
             $warehouseIds = $warehouseId ? [$warehouseId] : User::find(auth()->id())->getAccessibleWarehouses()->pluck('id');
@@ -131,6 +150,22 @@ class SaleTransactionReportController extends Controller
                                 ->when($partyId, function ($query) use ($partyId) {
                                     return $query->where('party_id', $partyId);
                                 })
+                                ->when($referenceNo, function ($query) use ($referenceNo) {
+                                    // Split reference numbers by space, comma, or semicolon
+                                    $referenceNumbers = preg_split('/[\s,;]+/', trim($referenceNo), -1, PREG_SPLIT_NO_EMPTY);
+
+                                    if (count($referenceNumbers) > 1) {
+                                        // Multiple reference numbers - use whereIn or multiple LIKE conditions
+                                        return $query->where(function($subQuery) use ($referenceNumbers) {
+                                            foreach ($referenceNumbers as $refNo) {
+                                                $subQuery->orWhere('reference_no', 'like', '%' . trim($refNo) . '%');
+                                            }
+                                        });
+                                    } else {
+                                        // Single reference number
+                                        return $query->where('reference_no', 'like', '%' . $referenceNo . '%');
+                                    }
+                                })
                                 ->get();
 
             if($preparedData->count() == 0){
@@ -145,6 +180,7 @@ class SaleTransactionReportController extends Controller
                     $recordsArray[] = [
                                     'sale_date'         => $this->toUserDateFormat($data->sale_date),
                                     'invoice_or_bill_code'  => $data->sale_code,
+                                    'reference_no'          => $data->reference_no,
                                     'party_name'            => $data->party->getFullName(),
                                     'warehouse'             => $transaction->warehouse->name,
                                     'item_name'             => $transaction->item->sku,
@@ -198,6 +234,7 @@ class SaleTransactionReportController extends Controller
             $toDate             = $this->toSystemDateFormat($toDate);
             $partyId            = $request->input('party_id');
             $paymentTypeId      = $request->input('payment_type_id');
+            $referenceNo        = $request->input('reference_no');
 
             $preparedData = Sale::with('party', 'paymentTransaction')
                                                 ->when($fromDate, function ($query) use ($fromDate, $toDate) {
@@ -213,6 +250,22 @@ class SaleTransactionReportController extends Controller
                                                             return $query->where('payment_type_id', $paymentTypeId);
                                                         });
                                                     })
+                                                ->when($referenceNo, function ($query) use ($referenceNo) {
+                                                    // Split reference numbers by space, comma, or semicolon
+                                                    $referenceNumbers = preg_split('/[\s,;]+/', trim($referenceNo), -1, PREG_SPLIT_NO_EMPTY);
+
+                                                    if (count($referenceNumbers) > 1) {
+                                                        // Multiple reference numbers - use whereIn or multiple LIKE conditions
+                                                        return $query->where(function($subQuery) use ($referenceNumbers) {
+                                                            foreach ($referenceNumbers as $refNo) {
+                                                                $subQuery->orWhere('reference_no', 'like', '%' . trim($refNo) . '%');
+                                                            }
+                                                        });
+                                                    } else {
+                                                        // Single reference number
+                                                        return $query->where('reference_no', 'like', '%' . $referenceNo . '%');
+                                                    }
+                                                })
                                                 ->get();
 
             if($preparedData->count() == 0){
@@ -225,6 +278,7 @@ class SaleTransactionReportController extends Controller
                     $recordsArray[] = [
                                     'transaction_date'      => $this->toUserDateFormat($transaction->transaction_date),
                                     'invoice_or_bill_code'  => $data->sale_code,
+                                    'reference_no'          => $data->reference_no,
                                     'party_name'            => $data->party->getFullName(),
                                     'payment_type'          => $transaction->paymentType->name,
                                     'amount'                => $this->formatWithPrecision($transaction->amount, comma:false),
@@ -279,6 +333,7 @@ class SaleTransactionReportController extends Controller
                     $recordsArray[] = [
                         'sale_date'             => $this->toUserDateFormat($data->sale_date),
                         'invoice_or_bill_code'  => $data->sale_code,
+                        'reference_no'          => $data->reference_no,
                         'party_name'            => $data->party->getFullName(),
                         'warehouse'             => $transaction->warehouse->name,
                         'item_name'             => $transaction->item->sku,

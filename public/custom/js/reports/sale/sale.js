@@ -98,11 +98,11 @@ $(function() {
 
         var id = 1;
         var tr = "";
-        
+
         var totalGrandTotal = parseFloat(0);
         var totalPaidAmount = parseFloat(0);
         var totalBalance = parseFloat(0);
-        
+
         $.each(response.data, function(index, item) {
             totalGrandTotal += parseFloat(item.grand_total);
             totalPaidAmount += parseFloat(item.paid_amount);
@@ -113,6 +113,7 @@ $(function() {
                     <td>${id++}</td>
                     <td>${item.sale_date}</td>
                     <td>${item.invoice_or_bill_code}</td>
+                    <td>${item.reference_no || ''}</td>
                     <td>${item.party_name}</td>
                     <td class='text-end' data-tableexport-celltype="number" >${_formatNumber(item.grand_total)}</td>
                     <td class='text-end' data-tableexport-celltype="number" >${_formatNumber(item.paid_amount)}</td>
@@ -124,6 +125,7 @@ $(function() {
         tr  +=`
             <tr class='fw-bold'>
                 <td colspan='0' class='text-end tfoot-first-td'>${_lang.total}</td>
+                <td></td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalGrandTotal)}</td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalPaidAmount)}</td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalBalance)}</td>
@@ -137,7 +139,7 @@ $(function() {
         /**
          * Set colspan of the table bottom
          * */
-        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(3));
+        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(4));
     }
 
     function showNoRecordsMessageOnTableBody() {
@@ -159,8 +161,8 @@ $(function() {
         return tableId.find('thead > tr:first > th').not('.d-none').length - minusCount;
     }
 
-    /** 
-     * 
+    /**
+     *
      * Table Exporter
      * PDF, SpreadSheet
      * */
@@ -185,5 +187,5 @@ $(function() {
             }
         });
     });
-    
+
 });//main function

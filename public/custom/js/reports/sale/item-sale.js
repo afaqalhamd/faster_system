@@ -115,6 +115,7 @@ $(function() {
                     <td>${id++}</td>
                     <td>${item.sale_date}</td>
                     <td>${item.invoice_or_bill_code}</td>
+                    <td>${item.reference_no || ''}</td>
                     <td>${item.party_name}</td>
                     <td>${item.warehouse}</td>
                     <td>${item.item_name}</td>
@@ -131,6 +132,7 @@ $(function() {
         tr  +=`
             <tr class='fw-bold'>
                 <td colspan='0' class='text-end tfoot-first-td'>${_lang.total}</td>
+                <td></td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalQuantity)}</td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalDiscountAmount)}</td>
                 <td class='text-end ${noTaxFlag()?'d-none':''}' data-tableexport-celltype="number">${_formatNumber(totalTaxAmount)}</td>
@@ -145,7 +147,7 @@ $(function() {
         /**
          * Set colspan of the table bottom
          * */
-        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(4-noTaxFlag()));
+        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(5-noTaxFlag()));
     }
 
     function showNoRecordsMessageOnTableBody() {

@@ -826,9 +826,33 @@ class PurchaseController extends Controller
             ->filter(function ($query) use ($request) {
                 if ($request->has('search') && $request->search['value']) {
                     $searchTerm = $request->search['value'];
-                    $query->where(function ($q) use ($searchTerm) {
-                        $q->where('purchase_code', 'like', "%{$searchTerm}%")
-                            ->orWhere('grand_total', 'like', "%{$searchTerm}%")
+
+                    // Check if search term contains multiple reference numbers
+                    $referenceNumbers = preg_split('/[\s,;]+/', trim($searchTerm), -1, PREG_SPLIT_NO_EMPTY);
+
+                                        $query->where(function ($q) use ($searchTerm, $referenceNumbers) {
+                        // Multiple search handling for both purchase_code and reference_no
+                        if (count($referenceNumbers) > 1) {
+                            // Multiple purchase codes search
+                            $q->where(function($subQuery) use ($referenceNumbers) {
+                                foreach ($referenceNumbers as $code) {
+                                    $subQuery->orWhere('purchase_code', 'like', '%' . trim($code) . '%');
+                                }
+                            })
+                            // Multiple reference_no search
+                            ->orWhere(function($subQuery) use ($referenceNumbers) {
+                                foreach ($referenceNumbers as $refNo) {
+                                    $subQuery->orWhere('reference_no', 'like', '%' . trim($refNo) . '%');
+                                }
+                            });
+                        } else {
+                            // Single search for purchase_code and reference_no
+                            $q->where('purchase_code', 'like', "%{$searchTerm}%")
+                                ->orWhere('reference_no', 'like', "%{$searchTerm}%");
+                        }
+
+                        // Other regular search fields
+                        $q->orWhere('grand_total', 'like', "%{$searchTerm}%")
                             ->orWhereHas('party', function ($partyQuery) use ($searchTerm) {
                                 $partyQuery->where('first_name', 'like', "%{$searchTerm}%")
                                     ->orWhere('last_name', 'like', "%{$searchTerm}%");
@@ -851,6 +875,9 @@ class PurchaseController extends Controller
             })
             ->addColumn('purchase_code', function ($row) {
                 return $row->purchase_code;
+            })
+            ->addColumn('reference_no', function ($row) {
+                return $row->reference_no;
             })
             ->addColumn('party_name', function ($row) {
                 return $row->party->first_name . " " . $row->party->last_name;

@@ -98,9 +98,9 @@ $(function() {
 
         var id = 1;
         var tr = "";
-        
+
         var totalAmount = parseFloat(0);
-        
+
         $.each(response.data, function(index, item) {
             totalAmount += parseFloat(item.amount);
 
@@ -109,6 +109,7 @@ $(function() {
                     <td>${id++}</td>
                     <td>${item.transaction_date}</td>
                     <td>${item.invoice_or_bill_code}</td>
+                    <td>${item.reference_no || ''}</td>
                     <td>${item.party_name}</td>
                     <td>${item.payment_type}</td>
                     <td class='text-end' data-tableexport-celltype="number" >${_formatNumber(item.amount)}</td>
@@ -119,6 +120,7 @@ $(function() {
         tr  +=`
             <tr class='fw-bold'>
                 <td colspan='0' class='text-end tfoot-first-td'>${_lang.total}</td>
+                <td></td>
                 <td class='text-end' data-tableexport-celltype="number">${_formatNumber(totalAmount)}</td>
             </tr>
         `;
@@ -130,7 +132,7 @@ $(function() {
         /**
          * Set colspan of the table bottom
          * */
-        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(1));
+        $('.tfoot-first-td').attr('colspan', columnCountWithoutDNoneClass(2));
     }
 
     function showNoRecordsMessageOnTableBody() {
@@ -152,8 +154,8 @@ $(function() {
         return tableId.find('thead > tr:first > th').not('.d-none').length - minusCount;
     }
 
-    /** 
-     * 
+    /**
+     *
      * Table Exporter
      * PDF, SpreadSheet
      * */
@@ -178,5 +180,5 @@ $(function() {
             }
         });
     });
-    
+
 });//main function

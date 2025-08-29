@@ -57,13 +57,13 @@
                     </li>
                     @endcan
 
-                    @can('sale.invoice.create')
+                    {{-- @can('sale.invoice.create')
                     <li class="nav-item">
                         <a href="{{ route('pos.create') }}" class="btn btn-sm btn-success radius-30 px-4">
                             <i class="bx bx-plus-circle mr-1"></i>{{ __('sale.pos') }}
                         </a>
                     </li>
-                    @endcan
+                    @endcan --}}
 
                     <x-header-shortcut-menu />
                     <x-flag-toggle />

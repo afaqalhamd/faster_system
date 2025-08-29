@@ -84,12 +84,12 @@
                         </li>
                     @endcan
 
-                    {{-- @can('sale.quotation.view')
+                    @can('sale.quotation.view')
                         <li class="{{ request()->is('quotation/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('sale.quotation.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('sale.quotation.quotations') }}</a>
                         </li>
-                    @endcan --}}
+                    @endcan
 
                     @can('sale.invoice.view')
                         <li class="{{ request()->is('payment/in') ? 'mm-active' : '' }}">
@@ -399,12 +399,12 @@
                         </li>
                     @endcan
 
-                    {{-- @can('stock_transfer.view')
+                    @can('stock_transfer.view')
                         <li class="{{ request()->is('stock-transfer/list') ? 'mm-active' : '' }}">
                             <a href="{{ route('stock_transfer.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('warehouse.stock_transfer') }}</a>
                         </li>
-                    @endcan --}}
+                    @endcan
 
 
                 </ul>
@@ -949,13 +949,7 @@
                         </li>
                     </ul>
                 @endcanany
- <!-- Stock Movement Report -->
- {{-- <ul>
-    {{-- <li class="{{ request()->is('reports/stock-movement*') ? 'mm-active' : '' }}">
-        <a href="{{ route('reports.stock-movement.index') }}"><i
-                class='bx bx-radio-circle'></i>{{ __('reports.stock_movement_24h') }}</a>
-    </li>
-</ul> --}}
+
 
                 @canany(['unit.view'])
                     <ul>

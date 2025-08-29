@@ -591,7 +591,6 @@ class SaleController extends Controller
             $purchaseOrder->party_id = 2; // Default supplier
             $purchaseOrder->order_date = Carbon::now();
             $purchaseOrder->prefix_code = 'PO/';
-            $purchaseOrder->count_id = $lastCountId + 1;
             $purchaseOrder->order_code = $purchaseOrder->prefix_code . $purchaseOrder->count_id;
             $purchaseOrder->order_status = 'Pending';
             $purchaseOrder->round_off = 0;
@@ -599,6 +598,8 @@ class SaleController extends Controller
             $purchaseOrder->currency_id = $currency_id;
             $purchaseOrder->exchange_rate = $exchange_rate;
             $purchaseOrder->save();
+            $purchaseOrder->count_id = $purchaseOrder->id;
+            $purchaseOrder->order_code = $purchaseOrder->prefix_code . $purchaseOrder->count_id;
 
             $warehouse_id = $request->warehouse_id;
 

@@ -362,16 +362,11 @@ class ExpenseController extends Controller
                             return $query->where('expense_category_id', $request->expense_category_id);
                         })
                         ->when($request->expense_number, function ($query) use ($request) {
-                            $searchTerms = array_map('trim', explode(' ', $request->expense_number));
+                            // Improved multiple search for expense_number filter
+                            $searchTerms = preg_split('/[\s,;]+/', trim($request->expense_number), -1, PREG_SPLIT_NO_EMPTY);
                             return $query->where(function($q) use ($searchTerms) {
-                                $first = true;
                                 foreach($searchTerms as $term) {
-                                    if($first) {
-                                        $q->where('expense_code', 'LIKE', "%{$term}%");
-                                        $first = false;
-                                    } else {
-                                        $q->orWhere('expense_code', 'LIKE', "%{$term}%");
-                                    }
+                                    $q->orWhere('expense_code', 'LIKE', "%{$term}%");
                                 }
                             });
                         })
@@ -383,18 +378,35 @@ class ExpenseController extends Controller
                     ->filter(function ($query) use ($request) {
                         if ($request->has('search') && $request->search['value']) {
                             $searchTerm = $request->search['value'];
-                            $searchTerms = array_map('trim', explode(',', $searchTerm));
 
-                            $query->where(function ($q) use ($searchTerms) {
-                                foreach ($searchTerms as $term) {
-                                    $q->orWhere('expense_code', 'LIKE', "%{$term}%")
-                                      ->orWhereHas('user', function ($userQuery) use ($term) {
-                                          $userQuery->where('username', 'LIKE', "%{$term}%");
-                                      })
-                                      ->orWhereHas('category', function ($categoryQuery) use ($term) {
-                                          $categoryQuery->where('name', 'LIKE', "%{$term}%");
-                                      });
+                            // Check if search term contains multiple codes/numbers
+                            $searchTerms = preg_split('/[\s,;]+/', trim($searchTerm), -1, PREG_SPLIT_NO_EMPTY);
+
+                            $query->where(function ($q) use ($searchTerm, $searchTerms) {
+                                // Multiple search handling for expense_code
+                                if (count($searchTerms) > 1) {
+                                    // Multiple expense codes search
+                                    $q->where(function($subQuery) use ($searchTerms) {
+                                        foreach ($searchTerms as $code) {
+                                            $subQuery->orWhere('expense_code', 'like', '%' . trim($code) . '%');
+                                        }
+                                    });
+                                } else {
+                                    // Single search for expense_code
+                                    $q->where('expense_code', 'like', "%{$searchTerm}%");
                                 }
+
+                                // Other regular search fields
+                                $q->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                                    $userQuery->where('username', 'LIKE', "%{$searchTerm}%");
+                                })
+                                ->orWhereHas('category', function ($categoryQuery) use ($searchTerm) {
+                                    $categoryQuery->where('name', 'LIKE', "%{$searchTerm}%");
+                                })
+                                ->orWhereHas('subcategory', function ($subcategoryQuery) use ($searchTerm) {
+                                    $subcategoryQuery->where('name', 'LIKE', "%{$searchTerm}%");
+                                })
+                                ->orWhere('paid_amount', 'like', "%{$searchTerm}%");
                             });
                         }
                     })

@@ -596,6 +596,7 @@ class SaleReturnController extends Controller
 
                 'tracking_type'             => $itemDetails->tracking_type,
 
+                'input_quantity'            => $itemQuantity,
                 'quantity'                  => $itemQuantity,
                 'unit_id'                   => $request->unit_id[$i],
                 'unit_price'                => $request->sale_price[$i],

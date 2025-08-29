@@ -358,6 +358,7 @@ class StockTransferController extends Controller
                     'transaction_date'          => $request->transfer_date,
                     'item_id'                   => $request->item_id[$i],
                     'tracking_type'             => $itemDetails->tracking_type,
+                    'input_quantity'            => $itemQuantity,
                     'quantity'                  => $itemQuantity,
                     'unit_id'                   => $request->unit_id[$i],
                     'unit_price'                => $averageItemPurchasePrice,

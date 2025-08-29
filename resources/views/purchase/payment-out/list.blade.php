@@ -52,6 +52,11 @@
                                     <span class="input-group-text" id="input-near-focus" role="button"><i class="fadeIn animated bx bx-calendar-alt"></i></span>
                                 </div>
                             </div>
+                            <div class="col-md-3">
+                                <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
+                                <x-input type="text" name="reference_no" value="" placeholder="e.g. 0213547 0213548 (multiple references separated by space)"/>
+                                <small class="text-muted">{{ __('app.multiple_reference_hint', ['default' => 'Enter multiple reference numbers separated by space, comma, or semicolon']) }}</small>
+                            </div>
                         </div>
                         <form class="row g-3 needs-validation" id="datatableForm" action="" enctype="multipart/form-data">
                             {{-- CSRF Protection --}}
@@ -64,8 +69,8 @@
                                         <tr>
                                             <th class="d-none"><!-- Which Stores ID & it is used for sorting --></th>
                                             <th>{{ __('app.date') }}</th>
-                                            <th>{{ __('app.reference_no') }}</th>
                                             <th>{{ __('purchase.bill_no') }}</th>
+                                            <th>{{ __('app.reference_no') }}</th>
                                             <th>{{ __('supplier.supplier') }}</th>
                                             <th>{{ __('payment.paid') }}</th>
                                             <th>{{ __('app.created_by') }}</th>

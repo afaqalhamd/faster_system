@@ -318,6 +318,22 @@ class PurchasePaymentController extends Controller
                     })
                     ->when($request->to_date, function ($query) use ($request) {
                         return $query->where('transaction_date', '<=', $this->toSystemDateFormat($request->to_date));
+                    })
+                    ->when($request->reference_no, function ($query) use ($request) {
+                        // Split reference numbers by space, comma, or semicolon
+                        $referenceNumbers = preg_split('/[\s,;]+/', trim($request->reference_no), -1, PREG_SPLIT_NO_EMPTY);
+
+                        if (count($referenceNumbers) > 1) {
+                            // Multiple reference numbers - use multiple LIKE conditions
+                            return $query->where(function($subQuery) use ($referenceNumbers) {
+                                foreach ($referenceNumbers as $refNo) {
+                                    $subQuery->orWhere('reference_no', 'like', '%' . trim($refNo) . '%');
+                                }
+                            });
+                        } else {
+                            // Single reference number
+                            return $query->where('reference_no', 'like', '%' . $request->reference_no . '%');
+                        }
                     });
                 }
 
@@ -337,6 +353,9 @@ class PurchasePaymentController extends Controller
                     })
                     ->addColumn('purchase_code', function ($row) {
                         return $row->transaction->purchase_code??'';
+                    })
+                    ->addColumn('reference_no', function ($row) {
+                        return $row->transaction->reference_no??'';
                     })
                     ->addColumn('party_name', function ($row) {
                         return $row->transaction->party->first_name." ".$row->transaction->party->last_name;

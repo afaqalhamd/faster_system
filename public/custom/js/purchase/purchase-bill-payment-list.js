@@ -25,6 +25,7 @@ $(function() {
                     data:{
                             party_id : $('#party_id').val(),
                             user_id : $('#user_id').val(),
+                            reference_no : $('input[name="reference_no"]').val(),
 
                             from_date : $('input[name="from_date"]').val(),
                             to_date : $('input[name="to_date"]').val(),
@@ -33,8 +34,8 @@ $(function() {
             columns: [
                 {targets: 0, data:'id', orderable:true, visible:false},
                 {data: 'transaction_date', name: 'transaction_date'},
-                {data: 'reference_no', name: 'reference_no'},
                 {data: 'purchase_code', name: 'purchase_code'},
+                {data: 'reference_no', name: 'reference_no'},
                 {data: 'party_name', name: 'party_name'},
 
                 {data: 'payment', name: 'payment', className: 'text-end'},
@@ -269,7 +270,7 @@ $(function() {
         //initSelect2PaymentType({ dropdownParent: $('#invoicePaymentModal') });
 	} );
 
-    $(document).on("change", '#party_id, #user_id, input[name="from_date"], input[name="to_date"]', function function_name(e) {
+    $(document).on("change", '#party_id, #user_id, input[name="from_date"], input[name="to_date"], input[name="reference_no"]', function function_name(e) {
         loadDatatables();
     });
 

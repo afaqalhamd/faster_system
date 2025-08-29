@@ -20,9 +20,9 @@
 	<!--end wrapper-->
 
 
-	{{-- @include('layouts.search') --}}
+	{{-- @include('layouts.search')
 
-	{{-- @include('layouts.switcher') --}}
+	 @include('layouts.switcher') --}}
 
 	@include('layouts.script')
 

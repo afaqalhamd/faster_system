@@ -17,6 +17,8 @@ return [
     'general' 						    => 'General',
     'logo' 						        => 'Logo',
     'app_logo'                          => 'App Logo',
+    'loading'                           => 'Loading, please wait...',
+    'multiple_reference_hint'           => 'Enter multiple reference numbers separated by space, comma, or semicolon',
     'dark_logo' 						=> 'Dark Logo',
     'light_logo' 						=> 'Light Logo',
     'favicon' 						    => 'Favicon',

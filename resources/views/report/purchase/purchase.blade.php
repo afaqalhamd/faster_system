@@ -24,7 +24,7 @@
                                     <h5 class="mb-0">{{ __('purchase.purchase_report') }}</h5>
                                 </div>
                                 <div class="card-body p-4 row g-3">
-                                    
+
                                         <div class="col-md-6 mb-3">
                                             <x-label for="from_date" name="{{ __('app.from_date') }}" />
                                             <div class="input-group">
@@ -42,6 +42,11 @@
                                         <div class="col-md-6 mb-3">
                                             <x-label for="party_id" name="{{ __('supplier.supplier') }}" />
                                             <select class="form-select party-ajax" data-party-type='supplier' data-placeholder="Select Supplier" id="party_id" name="party_id"></select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
+                                            <x-input type="text" name="reference_no" value="" placeholder="e.g. 0213547 0213548 (multiple references separated by space)"/>
+                                            <small class="text-muted">{{ __('app.multiple_reference_hint', ['default' => 'Enter multiple reference numbers separated by space, comma, or semicolon']) }}</small>
                                         </div>
                                 </div>
 
@@ -83,6 +88,7 @@
                                                         <th>#</th>
                                                         <th>{{ __('app.date') }}</th>
                                                         <th>{{ __('app.invoice_or_reference_no') }}</th>
+                                                        <th>{{ __('app.reference_no') }}</th>
                                                         <th>{{ __('supplier.supplier') }}</th>
                                                         <th>{{ __('app.grand_total') }}</th>
                                                         <th>{{ __('app.paid_amount') }}</th>
@@ -109,5 +115,5 @@
     @include("plugin.export-table")
     <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
     <script src="{{ versionedAsset('custom/js/reports/purchase/purchase.js') }}"></script>
-    
+
 @endsection

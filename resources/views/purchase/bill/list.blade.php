@@ -71,6 +71,7 @@
                                             <th class="d-none"><!-- Which Stores ID & it is used for sorting --></th>
                                             <th><input class="form-check-input row-select" type="checkbox"></th>
                                             <th>{{ __('purchase.code') }}</th>
+                                            <th>{{ __('app.reference_no') }}</th>
                                             <th>{{ __('app.date') }}</th>
                                             <th>{{ __('supplier.supplier') }}</th>
                                             <th>{{ __('app.total') }}</th>

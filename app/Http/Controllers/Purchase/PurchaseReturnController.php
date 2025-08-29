@@ -593,6 +593,8 @@ class PurchaseReturnController extends Controller
                 'description'               => $request->description[$i],
 
                 'tracking_type'             => $itemDetails->tracking_type,
+                'input_quantity' => $itemQuantity,
+
 
                 'quantity'                  => $itemQuantity,
                 'unit_id'                   => $request->unit_id[$i],

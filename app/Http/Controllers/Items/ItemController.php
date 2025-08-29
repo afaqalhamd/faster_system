@@ -493,16 +493,33 @@ class ItemController extends Controller
             ->filter(function ($query) use ($request) {
                 if ($request->has('search')) {
                     $searchTerm = $request->search['value'];
-                    $query->where(function ($q) use ($searchTerm) {
-                        $q->where('name', 'like', "%{$searchTerm}%")
+
+                    // Check if search term contains multiple SKUs or ASINs
+                    $searchTerms = preg_split('/[\s,;]+/', trim($searchTerm), -1, PREG_SPLIT_NO_EMPTY);
+
+                    $query->where(function ($q) use ($searchTerm, $searchTerms) {
+                        // Multiple search handling for SKU and ASIN
+                        if (count($searchTerms) > 1) {
+                            // Multiple SKUs/ASINs search
+                            $q->where(function($subQuery) use ($searchTerms) {
+                                foreach ($searchTerms as $term) {
+                                    $subQuery->orWhere('sku', 'like', '%' . trim($term) . '%')
+                                             ->orWhere('asin', 'like', '%' . trim($term) . '%');
+                                }
+                            });
+                        } else {
+                            // Single search for SKU and ASIN
+                            $q->where('sku', 'like', "%{$searchTerm}%")
+                              ->orWhere('asin', 'like', "%{$searchTerm}%");
+                        }
+
+                        // Other regular search fields
+                        $q->orWhere('name', 'like', "%{$searchTerm}%")
                             ->orWhere('description', 'like', "%{$searchTerm}%")
-                            ->orWhere('sku', 'like', "%{$searchTerm}%")
                             ->orWhere('sale_price', 'like', "%{$searchTerm}%")
                             ->orWhere('item_code', 'like', "%{$searchTerm}%")
                             ->orWhere('item_location', 'like', "%{$searchTerm}%")
                             ->orWhere('tracking_type', 'like', "%{$searchTerm}%")
-                            // Add more columns as needed
-
                             ->orWhereHas('tax', function ($taxQuery) use ($searchTerm) {
                                 $taxQuery->where('name', 'like', "%{$searchTerm}%");
                             })
@@ -612,16 +629,33 @@ class ItemController extends Controller
             ->filter(function ($query) use ($request) {
                 if ($request->has('search')) {
                     $searchTerm = $request->search['value'];
-                    $query->where(function ($q) use ($searchTerm) {
-                        $q->where('name', 'like', "%{$searchTerm}%")
+
+                    // Check if search term contains multiple SKUs or ASINs
+                    $searchTerms = preg_split('/[\s,;]+/', trim($searchTerm), -1, PREG_SPLIT_NO_EMPTY);
+
+                    $query->where(function ($q) use ($searchTerm, $searchTerms) {
+                        // Multiple search handling for SKU and ASIN
+                        if (count($searchTerms) > 1) {
+                            // Multiple SKUs/ASINs search
+                            $q->where(function($subQuery) use ($searchTerms) {
+                                foreach ($searchTerms as $term) {
+                                    $subQuery->orWhere('sku', 'like', '%' . trim($term) . '%')
+                                             ->orWhere('asin', 'like', '%' . trim($term) . '%');
+                                }
+                            });
+                        } else {
+                            // Single search for SKU and ASIN
+                            $q->where('sku', 'like', "%{$searchTerm}%")
+                              ->orWhere('asin', 'like', "%{$searchTerm}%");
+                        }
+
+                        // Other regular search fields
+                        $q->orWhere('name', 'like', "%{$searchTerm}%")
                             ->orWhere('description', 'like', "%{$searchTerm}%")
-                            ->orWhere('sku', 'like', "%{$searchTerm}%")
                             ->orWhere('sale_price', 'like', "%{$searchTerm}%")
                             ->orWhere('item_code', 'like', "%{$searchTerm}%")
                             ->orWhere('item_location', 'like', "%{$searchTerm}%")
                             ->orWhere('tracking_type', 'like', "%{$searchTerm}%")
-                            // Add more columns as needed
-
                             ->orWhereHas('tax', function ($taxQuery) use ($searchTerm) {
                                 $taxQuery->where('name', 'like', "%{$searchTerm}%");
                             })
