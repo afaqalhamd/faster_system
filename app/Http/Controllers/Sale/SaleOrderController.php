@@ -89,11 +89,19 @@ class SaleOrderController extends Controller
         $prefix = Prefix::findOrNew($this->companyId);
         $lastCountId = $this->getLastCountId();
         $selectedPaymentTypesArray = json_encode($this->paymentTypeService->selectedPaymentTypesArray());
+
+        // Prepare empty item transactions structure similar to edit method
+        $itemTransactionsJson = json_encode([]);
+
+        // Get tax list for frontend
+        $taxList = CacheService::get('tax')->toJson();
+
         $data = [
             'prefix_code' => $prefix->sale_order,
             'count_id' => ($lastCountId + 1),
         ];
-        return view('sale.order.create', compact('data', 'selectedPaymentTypesArray'));
+
+        return view('sale.order.create', compact('data', 'selectedPaymentTypesArray', 'itemTransactionsJson', 'taxList'));
     }
 
     /**
@@ -463,7 +471,144 @@ class SaleOrderController extends Controller
             }//amount>0
         }//for end
 
+        // After all payments are processed, check if inventory should be deducted
+        if (isset($request->modelName)) {
+            $this->checkAndProcessInventoryDeduction($request->modelName);
+        }
+
         return ['status' => true];
+    }
+
+    /**
+     * Process inventory deduction after payment completion
+     * This method should be called when payment is fully completed
+     *
+     * @param SaleOrder $saleOrder
+     * @return JsonResponse
+     */
+    public function processInventoryDeduction(SaleOrder $saleOrder): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            // Check if order is already processed
+            if ($saleOrder->inventory_status === 'deducted') {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('sale.inventory_already_deducted')
+                ]);
+            }
+
+            // Check if payment is complete
+            $totalPaid = $saleOrder->paymentTransaction->sum('amount');
+            if ($totalPaid < $saleOrder->grand_total) {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('payment.payment_not_complete')
+                ]);
+            }
+
+            // Process inventory deduction for each item
+            foreach ($saleOrder->itemTransaction as $transaction) {
+                // Update the transaction unique code from SALE_ORDER to SALE
+                $transaction->update([
+                    'unique_code' => ItemTransactionUniqueCode::SALE->value
+                ]);
+
+                // Update inventory quantities
+                $this->itemTransactionService->updateItemGeneralQuantityWarehouseWise($transaction->item_id);
+
+                // Handle batch/serial tracking if applicable
+                if ($transaction->tracking_type === 'batch') {
+                    $this->updateBatchInventoryAfterPayment($transaction);
+                } elseif ($transaction->tracking_type === 'serial') {
+                    $this->updateSerialInventoryAfterPayment($transaction);
+                }
+            }
+
+            // Update sale order status
+            $saleOrder->update([
+                'order_status' => 'Completed',
+                'inventory_status' => 'deducted',
+                'inventory_deducted_at' => now()
+            ]);
+
+            // Record status history
+            $this->statusHistoryService->RecordStatusHistory($saleOrder);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => __('sale.inventory_deducted_successfully')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Update batch inventory after payment
+     */
+    private function updateBatchInventoryAfterPayment($transaction)
+    {
+        foreach ($transaction->itemBatchTransactions as $batchTransaction) {
+            $batchTransaction->update([
+                'unique_code' => ItemTransactionUniqueCode::SALE->value
+            ]);
+
+            $this->itemTransactionService->updateItemBatchQuantityWarehouseWise(
+                $batchTransaction->item_batch_master_id
+            );
+        }
+    }
+
+    /**
+     * Check and process inventory deduction after payment update
+     * This should be called whenever a payment is added to a sale order
+     *
+     * @param SaleOrder $saleOrder
+     * @return bool
+     */
+    public function checkAndProcessInventoryDeduction(SaleOrder $saleOrder): bool
+    {
+        // Check if payment is now complete
+        $totalPaid = $saleOrder->paymentTransaction->sum('amount');
+
+        if ($totalPaid >= $saleOrder->grand_total && $saleOrder->inventory_status !== 'deducted') {
+            $result = $this->processInventoryDeduction($saleOrder);
+            return $result->getData()->status ?? false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Manual inventory deduction endpoint
+     * For admin users to manually trigger inventory deduction
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function manualInventoryDeduction(Request $request, int $id): JsonResponse
+    {
+        $saleOrder = SaleOrder::with(['itemTransaction', 'paymentTransaction'])->findOrFail($id);
+
+        // Check permissions
+        if (!auth()->user()->can('sale.order.manual.inventory.deduction')) {
+            return response()->json([
+                'status' => false,
+                'message' => __('auth.unauthorized')
+            ], 403);
+        }
+
+        return $this->processInventoryDeduction($saleOrder);
     }
 
     public function saveSaleOrderItems($request)
@@ -580,7 +725,7 @@ class SaleOrderController extends Controller
                         'quantity' => $itemQuantity,
                     ];
 
-                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::PURCHASE_ORDER->value);
+                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE_ORDER->value);
 
                     if (!$batchTransaction) {
                         throw new \Exception(__('item.failed_to_save_batch_records'));
@@ -596,6 +741,30 @@ class SaleOrderController extends Controller
         return ['status' => true];
     }
 
+
+    /**
+     * Helper method to check if current user has delivery role
+     * @return bool
+     */
+    private function isDeliveryUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply delivery user filtering to query
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyDeliveryUserFilter($query)
+    {
+        if ($this->isDeliveryUser()) {
+            // Delivery users can only see delivery status orders
+            $query->where('order_status', 'Delivery');
+        }
+        return $query;
+    }
 
     /**
      * Datatabale
@@ -623,6 +792,10 @@ class SaleOrderController extends Controller
             })
             ->when(!auth()->user()->can('sale.order.can.view.other.users.sale.orders'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
+            })
+            // Apply delivery user filter - restrict to completed orders only
+            ->when($this->isDeliveryUser(), function ($query) {
+                return $this->applyDeliveryUserFilter($query);
             });
 
         return DataTables::of($data)
@@ -667,6 +840,13 @@ class SaleOrderController extends Controller
             })
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
+            })
+            ->addColumn('inventory_status', function ($row) {
+                $status = $row->inventory_status ?? 'pending';
+                $badgeClass = $status === 'deducted' ? 'bg-success' : 'bg-warning';
+                $statusText = $status === 'deducted' ? __('Deducted') : __('Reserved');
+
+                return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
             })
             ->addColumn('status', function ($row) {
                 if ($row->sale) {
@@ -731,6 +911,12 @@ class SaleOrderController extends Controller
                                 <li>
                                     <a class="dropdown-item notify-through-email" data-model="sale/order" data-id="' . $id . '" role="button"></i><i class="bx bx-envelope"></i> ' . __('app.send_email') . '</a>
                                 </li>
+                                 <li>
+                                    <a class="dropdown-item make-payment" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-money"></i> ' . __('payment.receive_payment') . '</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item payment-history" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-table"></i> ' . __('payment.history') . '</a>
+                                </li>
                                 <li>
                                     <a class="dropdown-item notify-through-sms" data-model="sale/order" data-id="' . $id . '" role="button"></i><i class="bx bx-envelope"></i> ' . __('app.send_sms') . '</a>
                                 </li>
@@ -746,7 +932,7 @@ class SaleOrderController extends Controller
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'inventory_status'])
             ->make(true);
     }
 

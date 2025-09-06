@@ -28,7 +28,7 @@
 
                             @can('sale.order.create')
                             <!-- Button pushed to the right side -->
-{{--                            <x-anchor-tag href="{{ route('sale.order.create') }}" text="{{ __('sale.order.create') }}" class="btn btn-primary px-5" />--}}
+                           <x-anchor-tag href="{{ route('sale.order.create') }}" text="{{ __('sale.order.create') }}" class="btn btn-primary px-5" />
                             @endcan
                         </div>
                     </div>
@@ -81,6 +81,7 @@
                                             <th>{{ __('app.total') }}</th>
                                             <th>{{ __('payment.balance') }}</th>
                                             <th>{{ __('app.status') }}</th>
+                                            <th>{{ __('Inventory Status') }}</th>
                                             <th>{{ __('app.created_by') }}</th>
                                             <th>{{ __('app.created_at') }}</th>
                                             <th>{{ __('app.action') }}</th>

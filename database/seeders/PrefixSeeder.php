@@ -26,6 +26,7 @@ class PrefixSeeder extends Seeder
             'sale_return'           => 'SR/',
             'stock_transfer'        => 'ST/',
             'quotation'             => 'QT/',
+            'stock_adjustment'      => 'SA/',
         ]);
     }
 }

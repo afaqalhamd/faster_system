@@ -75,7 +75,7 @@
                                         <div class="input-group">
                                             <x-input type="tel"
                                             name="whatsapp"
-                                            :required="true"
+                                            :required="false"
                                             value="{{ $party->whatsapp }}"
                                             minlength="8"
                                             maxlength="15"/>

@@ -64,7 +64,7 @@ class GstReportController extends Controller
                 $stateName = $data->transaction->state? $data->transaction->state->name : '';
 
                 $companyStateID = app('company')['state_id'];
-                $invoiceStateID = $data->transaction->party->state_id;
+                $invoiceStateID = ($data->transaction && $data->transaction->party) ? $data->transaction->party->state_id : null;
 
                 //GST Calculation
                 $taxAmount = $data->tax_amount;
@@ -77,8 +77,8 @@ class GstReportController extends Controller
                 //end
 
                 $recordsArray[] = [
-                                    'tax_number'            => $data->transaction->party->tax_number??'',
-                                    'party_name'            => $data->transaction->party->getFullName(),
+                                    'tax_number'            => ($data->transaction && $data->transaction->party) ? $data->transaction->party->tax_number : '',
+                                    'party_name'            => ($data->transaction && $data->transaction->party) ? $data->transaction->party->getFullName() : '',
                                     'transaction_type'      => $transactionType,
                                     'transaction_date'      => $this->toUserDateFormat($transactionDate),
                                     'invoice_or_bill_code'  => $invoiceNumber,
@@ -148,7 +148,7 @@ class GstReportController extends Controller
                 $stateName = $data->transaction->state? $data->transaction->state->name : '';
 
                 $companyStateID = app('company')['state_id'];
-                $invoiceStateID = $data->transaction->party->state_id;
+                $invoiceStateID = ($data->transaction && $data->transaction->party) ? $data->transaction->party->state_id : null;
 
                 //GST Calculation
                 $taxAmount = $data->tax_amount;
@@ -161,8 +161,8 @@ class GstReportController extends Controller
                 //end
 
                 $recordsArray[] = [
-                                    'tax_number'            => $data->transaction->party->tax_number??'',
-                                    'party_name'            => $data->transaction->party->getFullName(),
+                                    'tax_number'            => ($data->transaction && $data->transaction->party) ? $data->transaction->party->tax_number : '',
+                                    'party_name'            => ($data->transaction && $data->transaction->party) ? $data->transaction->party->getFullName() : '',
                                     'transaction_type'      => $transactionType,
                                     'transaction_date'      => $this->toUserDateFormat($transactionDate),
                                     'invoice_or_bill_code'  => $invoiceNumber,

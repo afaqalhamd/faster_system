@@ -24,6 +24,7 @@ use App\Models\Items\ItemTransaction;
 use App\Models\Expenses\Expense;
 use App\Models\CashAdjustment;
 use App\Models\StockTransfer;
+use App\Models\StockAdjustment;
 use App\Observers\TwilioObserver;
 use App\Services\GeneralDataService;
 use App\Services\SmsService;
@@ -136,6 +137,8 @@ class AppServiceProvider extends ServiceProvider
             'Cash Adjustment'           =>  CashAdjustment::class,//Used in CashController class
 
             'Stock Transfer'            =>  StockTransfer::class,//Used in CashController class
+
+            'Stock Adjustment'          =>  StockAdjustment::class,//Used in ItemTransaction class
 
             'Party Payment'            =>  PartyPayment::class,//Used in PartyTransactionController class
 

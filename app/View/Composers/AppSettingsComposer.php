@@ -20,34 +20,51 @@ class AppSettingsComposer
      */
     public function compose(View $view): void
     {
+        // Always set default values, regardless of installation status
+        $appSetting = null;
+        $footerText = null;
+        $fevicon = null;
+        $colored_logo = null;
+        $appDirection = 'ltr';
+        $themeMode = 'light-theme';
+        $themeBgColor = 'bg-white';
+
         if(env('INSTALLATION_STATUS')){
             $appSetting = CacheService::get('appSetting');
 
             /**
              * appSetting show footer text else null
             */
-            $view->with('footerText', $appSetting?->footer_text ?? null);
-            $view->with('fevicon', $appSetting?->fevicon ?? null);
-            $view->with('colored_logo', $appSetting?->colored_logo ?? null);
+            $footerText = $appSetting?->footer_text ?? null;
+            $fevicon = $appSetting?->fevicon ?? null;
+            $colored_logo = $appSetting?->colored_logo ?? null;
 
             /**
              * Cookie Setting
              * */
             $cookie = Cookie::get('language_data'); // Get json data
             $cookieArrayData = json_decode($cookie, true);
-            $view->with('appDirection', isset($cookieArrayData['direction'])? $cookieArrayData['direction'] : 'ltr');
+            $appDirection = isset($cookieArrayData['direction'])? $cookieArrayData['direction'] : 'ltr';
 
             /**
              * Theme Mode Settings
              * */
             $themeModeCookie = Cookie::get('theme_mode');
-            $view->with('themeMode', $themeModeCookie??'light-mode');
+            $themeMode = $themeModeCookie ?? 'light-theme';
 
             /**
-             * Theme Manuall settings for some pages
+             * Theme Manual settings for some pages
              * Like POS, Login, Register Pages
              * */
-             $view->with('themeBgColor', ($themeModeCookie=='dark-theme')? 'bg-dark' : 'bg-white');
-         }
+            $themeBgColor = ($themeModeCookie == 'dark-theme') ? 'bg-dark' : 'bg-white';
+        }
+
+        // Always bind the variables to the view
+        $view->with('footerText', $footerText);
+        $view->with('fevicon', $fevicon);
+        $view->with('colored_logo', $colored_logo);
+        $view->with('appDirection', $appDirection);
+        $view->with('themeMode', $themeMode);
+        $view->with('themeBgColor', $themeBgColor);
     }
 }

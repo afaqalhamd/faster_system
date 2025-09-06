@@ -628,31 +628,31 @@
 
         source:     function( request, response ) {
                         $.ajax( {
-                            url: baseURL + '/expense/expense-items-master/ajax/get-list',
+                            url: baseURL + '/item/ajax/get-list',
                             dataType: "json",
                             data: {
                                 search: request.term
                             },
                             success: function( data ) {
-                                response( data.results );
+                                response( data );
                             }
                         } );
                     },
 
         focus:      function( event, ui ) {
-                        itemSearchInputBoxId.val( ui.item.text );
-                        searchedItemPrice = _parseFix(ui.item.unit_price);
+                        itemSearchInputBoxId.val( ui.item.name );
+                        searchedItemPrice = _parseFix(ui.item.sale_price);
                         return false;
                     },
 
         select:     function( event, ui ) {
-                        itemSearchInputBoxId.val( ui.item.text );
+                        itemSearchInputBoxId.val( ui.item.name );
                         return false;
                     },
     })
     .autocomplete( "instance" )._renderItem = function( ul, item ) {
         return $( "<li>" )
-            .append( "<div>" + item.text + "</div>" )
+            .append( "<div>" + item.name + "</div>" )
             .appendTo( ul );
     };//autocomplete end
 

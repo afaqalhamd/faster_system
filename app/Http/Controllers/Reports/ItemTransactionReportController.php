@@ -110,8 +110,8 @@ class ItemTransactionReportController extends Controller
                 $recordsArray[] = [
                                     'transaction_date'      => $this->toUserDateFormat($data->itemTransaction->transaction_date),
                                     'transaction_type'      => $transactionType . $suffix,
-                                    'invoice_or_bill_code'  => $data->itemTransaction->transaction->getTableCode()??'',
-                                    'party_name'            => $data->itemTransaction->transaction->party ? $data->itemTransaction->transaction->party->getFullName() : '',
+                                    'invoice_or_bill_code'  => $data->itemTransaction->transaction ? $data->itemTransaction->transaction->getTableCode() : '',
+                                    'party_name'            => ($data->itemTransaction->transaction && $data->itemTransaction->transaction->party) ? $data->itemTransaction->transaction->party->getFullName() : '',
                                     'warehouse'             => $data->warehouse->name,
                                     'item_name'             => $data->itemTransaction->item->name,
                                     'brand_name'            => $data->itemTransaction->item->brand->name??'',
@@ -215,8 +215,8 @@ class ItemTransactionReportController extends Controller
                 $recordsArray[] = [
                                     'transaction_date'      => $this->toUserDateFormat($data->itemTransaction->transaction_date),
                                     'transaction_type'      => $transactionType . $suffix,
-                                    'invoice_or_bill_code'  => $data->itemTransaction->transaction->getTableCode()??'',
-                                    'party_name'            => $data->itemTransaction->transaction->party ? $data->itemTransaction->transaction->party->getFullName() : '',
+                                    'invoice_or_bill_code'  => $data->itemTransaction->transaction ? $data->itemTransaction->transaction->getTableCode() : '',
+                                    'party_name'            => ($data->itemTransaction->transaction && $data->itemTransaction->transaction->party) ? $data->itemTransaction->transaction->party->getFullName() : '',
                                     'warehouse'             => $data->warehouse->name,
                                     'item_name'             => $data->itemTransaction->item->name,
                                     'brand_name'            => $data->itemTransaction->item->brand->name??'',
@@ -303,8 +303,8 @@ class ItemTransactionReportController extends Controller
                 $recordsArray[] = [
                                     'transaction_date'      => $this->toUserDateFormat($data->transaction_date),
                                     'transaction_type'      => $transactionType . $suffix,
-                                    'invoice_or_bill_code'  => $data->transaction->getTableCode()??'',
-                                    'party_name'            => $data->transaction->party ? $data->transaction->party->getFullName() : '',
+                                    'invoice_or_bill_code'  => $data->transaction ? $data->transaction->getTableCode() : '',
+                                    'party_name'            => ($data->transaction && $data->transaction->party) ? $data->transaction->party->getFullName() : '',
                                     'warehouse'             => $data->warehouse->name,
                                     'item_name'             => $data->item->name,
                                     'brand_name'             => $data->item->brand->name??'',

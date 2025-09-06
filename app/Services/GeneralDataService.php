@@ -55,6 +55,16 @@ class GeneralDataService{
                     'color'    =>  'success',
                 ],
                 [
+                    'id'    =>  'Delivery',
+                    'name'    =>  'Delivery',
+                    'color'    =>  'info',
+                ],
+                [
+                    'id'    =>  'POD',
+                    'name'    =>  'POD',
+                    'color'    =>  'primary',
+                ],
+                [
                     'id'    =>  'Cancelled',
                     'name'    =>  'Cancelled',
                     'color'    =>  'danger',
@@ -62,6 +72,47 @@ class GeneralDataService{
                 [
                     'id'    =>  'No Status',
                     'name'    =>  'No Status',
+                    'color'    =>  'secondary',
+                ],
+        ];
+     }
+
+     function getSaleStatus() : array{
+        return [
+
+                [
+                    'id'    =>  'Pending',
+                    'name'    =>  'Pending',
+                    'color'    =>  'warning',
+                ],
+                [
+                    'id'    =>  'Processing',
+                    'name'    =>  'Processing',
+                    'color'    =>  'primary',
+                ],
+                [
+                    'id'    =>  'Completed',
+                    'name'    =>  'Completed',
+                    'color'    =>  'success',
+                ],
+                [
+                    'id'    =>  'Delivery',
+                    'name'    =>  'Delivery',
+                    'color'    =>  'info',
+                ],
+                [
+                    'id'    =>  'POD',
+                    'name'    =>  'POD',
+                    'color'    =>  'primary',
+                ],
+                [
+                    'id'    =>  'Cancelled',
+                    'name'    =>  'Cancelled',
+                    'color'    =>  'danger',
+                ],
+                [
+                    'id'    =>  'Returned',
+                    'name'    =>  'Returned',
                     'color'    =>  'secondary',
                 ],
         ];

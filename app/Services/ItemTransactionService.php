@@ -25,6 +25,8 @@ use App\Models\Sale\SaleReturn;
 use App\Models\StockTransfer;
 use App\Enums\ItemTransactionUniqueCode;
 use App\Models\Sale\Quotation;
+use App\Models\StockAdjustment;
+use App\Models\User;
 
 class ItemTransactionService{
 
@@ -39,19 +41,31 @@ class ItemTransactionService{
     public function __construct(ItemService $itemService)
     {
         $this->itemService = $itemService;
-        $this->canAllowNegativeStockBilling = app('company')['allow_negative_stock_billing'];
+        // Don't access app('company') in constructor, access it when needed
     }
 
-    public function hasOpeningStock($itemId) : bool {
-        return ItemTransaction::where('item_id', $itemId)
-            ->where('unique_code', ItemTransactionUniqueCode::ITEM_OPENING->value)
-            ->exists();
+    /**
+     * Get the company settings with lazy loading
+     */
+    protected function getCompanySettings()
+    {
+        // Check if the binding exists before accessing it
+        if (app()->has('company')) {
+            return app('company');
+        }
+
+        // Return default values if company binding is not available
+        return [
+            'allow_negative_stock_billing' => false,
+        ];
     }
 
-    public function deleteOpeningStock($itemId) : bool {
-        return ItemTransaction::where('item_id', $itemId)
-            ->where('unique_code', ItemTransactionUniqueCode::ITEM_OPENING->value)
-            ->delete();
+    /**
+     * Get the allow_negative_stock_billing setting
+     */
+    protected function canAllowNegativeStockBilling()
+    {
+        return $this->getCompanySettings()['allow_negative_stock_billing'];
     }
 
     public function transactionUniqueCode($model){
@@ -90,6 +104,11 @@ class ItemTransactionService{
             // sale Order Entry
             $uniqueCode = ItemTransactionUniqueCode::QUOTATION->value;
         }
+        else if($baseNameOfClass == 'StockAdjustment') {
+            // sale Order Entry
+            $uniqueCode = ItemTransactionUniqueCode::STOCK_ADJUSTMENT->value;
+        }
+
 
         return $uniqueCode;
 
@@ -98,14 +117,13 @@ class ItemTransactionService{
 	 * Record Item Transactions
 	 *
 	 * */
-	public function recordItemTransactionEntry(Item|PurchaseOrder|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation $model, array $data)
+	public function recordItemTransactionEntry(Item|PurchaseOrder|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation|StockAdjustment $model, array $data)
     {
         $itemId 			= $data['item_id'];
         $transactionDate 	= $this->toSystemDateFormat($data['transaction_date']);
         $warehouseId 		= $data['warehouse_id'];
         $trackingType 		= $data['tracking_type'];
         //$itemLocation 		= $data['item_location'];
-        $input_quantity 			= $data['input_quantity'];
         $quantity 			= $data['quantity'];
         $atPrice 			= $data['unit_price'];
         $tax_type           = $data['tax_type'];
@@ -129,7 +147,6 @@ class ItemTransactionService{
 
                     'mrp'                   =>  $mrp,
 
-                    'input_quantity'              =>  $input_quantity,
                     'quantity'              =>  $quantity,
                     'unit_price'            =>  $atPrice,
                     'unit_id'               =>  $unitId,
@@ -269,6 +286,8 @@ class ItemTransactionService{
         $CONST_SALE_RETURN      = ItemTransactionUniqueCode::SALE_RETURN->value;
         $CONST_STOCK_TRANSFER   = ItemTransactionUniqueCode::STOCK_TRANSFER->value;
         $CONST_STOCK_RECEIVE    = ItemTransactionUniqueCode::STOCK_RECEIVE->value;
+        $CONST_STOCK_ADJUSTMENT_INCREASE = ItemTransactionUniqueCode::STOCK_ADJUSTMENT_INCREASE->value;
+        $CONST_STOCK_ADJUSTMENT_DECREASE = ItemTransactionUniqueCode::STOCK_ADJUSTMENT_DECREASE->value;
 
         $itemSerialTransactions = ItemSerialTransaction::where('item_serial_master_id', $itemSerialMasterId)
                                                         ->whereNotIn('unique_code', [$CONST_PURCHASE_ORDER, $CONST_SALE_ORDER])
@@ -277,7 +296,6 @@ class ItemTransactionService{
         //Delete item_serial_master_id records from the ItemSerialQuantity model
         ItemSerialQuantity::where('item_serial_master_id', $itemSerialMasterId)->delete();
 
-        $netQuantity = 0;
         if($itemSerialTransactions->count()>0){
 
             //Collection Group by warehouse
@@ -295,16 +313,17 @@ class ItemTransactionService{
                         case $CONST_PURCHASE:
                         case $CONST_SALE_RETURN:
                         case $CONST_STOCK_RECEIVE:
+                        case $CONST_STOCK_ADJUSTMENT_INCREASE:
                             $operation = 'add';
                             break;
 
                         case $CONST_PURCHASE_RETURN:
                         case $CONST_STOCK_TRANSFER:
                         case $CONST_SALE:
+                        case $CONST_STOCK_ADJUSTMENT_DECREASE:
                             $operation = 'remove';
                             break;
                     }
-
 
                     $arrayData = [
                             'item_id'               => $transaction['item_id'],
@@ -332,6 +351,18 @@ class ItemTransactionService{
             }
         }//isNotEmpty
 
+
+        //Find the item id
+        $itemId = ItemSerialMaster::where('id', $itemSerialMasterId)->first()->item_id;
+
+        /**
+         * Record Item All
+         * */
+        $updateQuantityWarehouseWise = $this->updateItemGeneralQuantityWarehouseWise($itemId);
+        if(!$updateQuantityWarehouseWise){
+            throw new \Exception('Failed to record General Items Stock Warehouse Wise!');
+        }
+
         return true;
     }
 
@@ -345,7 +376,7 @@ class ItemTransactionService{
         if (in_array($uniqueCode, [ItemTransactionUniqueCode::SALE->value])) {
 
             //If negative stck is not allowed
-            if(!$this->canAllowNegativeStockBilling){
+            if(!$this->canAllowNegativeStockBilling()){
 
                 if($itemDetails->tracking_type === 'regular' && !$itemDetails->is_service){
 
@@ -380,20 +411,24 @@ class ItemTransactionService{
 
         //Batch Number should not be empty
         //$batchArray['batch_no'] should not be empty or null
-        if(app('company')['is_batch_compulsory'] && empty($batchArray['batch_no'])){
+        if($this->getCompanySettings()['is_batch_compulsory'] && empty($batchArray['batch_no'])){
             throw new \Exception("Batch Number is required!<br>Item: '" . $itemDetails->name."'");
         }
 
+        /**
+         *
+         * Only for Sale and Sale Order
+         */
         if (in_array($uniqueCode, [ItemTransactionUniqueCode::SALE->value, ItemTransactionUniqueCode::SALE_ORDER->value])) {
 
             //Validate The Given batch number exist in the ItemBatchMaster ?
             $itemBatchMaster = ItemBatchMaster::where('batch_no', $batchArray['batch_no'])->where('item_id', $itemId)->first();
-            if(!$itemBatchMaster && app('company')['is_batch_compulsory']){
+            if(!$itemBatchMaster && $this->getCompanySettings()['is_batch_compulsory']){
                 throw new \Exception('Batch Number: ' . $batchArray['batch_no'] . '<br>Not found in the system!<br>Item: '. $itemDetails->name);
             }
 
             //If negative stck is not allowed
-            if(!$this->canAllowNegativeStockBilling){
+            if(!$this->canAllowNegativeStockBilling()){
 
                 //Check Stock Availability
                 $itemBatchQuantity = ItemBatchQuantity::where('item_batch_master_id', $itemBatchMaster->id)
@@ -483,6 +518,10 @@ class ItemTransactionService{
                         COALESCE(SUM(CASE WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_TRANSFER->value . '" THEN quantity ELSE 0 END), 0)
                         +
                         COALESCE(SUM(CASE WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_RECEIVE->value . '" THEN quantity ELSE 0 END), 0)
+                        +
+                        COALESCE(SUM(CASE WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_ADJUSTMENT_INCREASE->value . '" THEN quantity ELSE 0 END), 0)
+                        -
+                        COALESCE(SUM(CASE WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_ADJUSTMENT_DECREASE->value . '" THEN quantity ELSE 0 END), 0)
                     ) as item_batch_warehouse_stock,
                     item_id,
                     warehouse_id,
@@ -497,8 +536,6 @@ class ItemTransactionService{
 
             //Collection Group by warehouse
             $itemBatchTransactions = $itemBatchTransactions->groupBy('warehouse_id')->toArray();
-
-            $quantityCollection = collect();
 
             //MULTIPLE SERIAL TRANSACTIONS
             foreach ($itemBatchTransactions as $warehouseId => $batchTransactions) {
@@ -541,90 +578,47 @@ class ItemTransactionService{
      * */
     public function updateItemGeneralQuantityWarehouseWise($itemGeneralMasterId){
 
-        $CONST_PURCHASE_ORDER   = ItemTransactionUniqueCode::PURCHASE_ORDER->value;
-        $CONST_PURCHASE         = ItemTransactionUniqueCode::PURCHASE->value;
-        $CONST_PURCHASE_RETURN  = ItemTransactionUniqueCode::PURCHASE_RETURN->value;
-        $CONST_ITEM_OPENING     = ItemTransactionUniqueCode::ITEM_OPENING->value;
-
         $itemTransactions = ItemTransaction::selectRaw('
-                                (
                                     COALESCE(SUM(
                                         CASE
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::PURCHASE->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::PURCHASE_RETURN->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN -quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN -quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::SALE->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN -quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN -quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::SALE_RETURN->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::ITEM_OPENING->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_TRANSFER->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN -quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN -quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
-                                            WHEN unique_code = "' . ItemTransactionUniqueCode::STOCK_RECEIVE->value . '"
-                                                THEN
-                                                    CASE
-                                                        WHEN items.base_unit_id = item_transactions.unit_id
-                                                            THEN quantity
-                                                        WHEN items.secondary_unit_id = item_transactions.unit_id
-                                                            THEN quantity / items.conversion_rate
-                                                        ELSE 0
-                                                    END
+                                            WHEN unique_code IN (
+                                                "' . ItemTransactionUniqueCode::PURCHASE->value . '",
+                                                "' . ItemTransactionUniqueCode::SALE_RETURN->value . '",
+                                                "' . ItemTransactionUniqueCode::ITEM_OPENING->value . '",
+                                                "' . ItemTransactionUniqueCode::STOCK_RECEIVE->value . '",
+                                                "' . ItemTransactionUniqueCode::STOCK_ADJUSTMENT_INCREASE->value . '"
+                                            ) THEN
+                                                CASE
+                                                    WHEN items.base_unit_id = item_transactions.unit_id THEN quantity
+                                                    WHEN items.secondary_unit_id = item_transactions.unit_id THEN quantity / items.conversion_rate
+                                                    ELSE 0
+                                                END
+                                            WHEN unique_code IN (
+                                                "' . ItemTransactionUniqueCode::PURCHASE_RETURN->value . '",
+                                                "' . ItemTransactionUniqueCode::SALE->value . '",
+                                                "' . ItemTransactionUniqueCode::STOCK_TRANSFER->value . '",
+                                                "' . ItemTransactionUniqueCode::STOCK_ADJUSTMENT_DECREASE->value . '"
+                                            ) THEN
+                                                CASE
+                                                    WHEN items.base_unit_id = item_transactions.unit_id THEN -quantity
+                                                    WHEN items.secondary_unit_id = item_transactions.unit_id THEN -quantity / items.conversion_rate
+                                                    ELSE 0
+                                                END
+                                            ELSE 0
                                         END
-                                    ), 0)
+                                    ), 0) AS item_general_warehouse_stock,
+                                    item_id,
+                                    warehouse_id
+                                ')
+                                ->join('items', 'item_transactions.item_id', '=', 'items.id')
+                                ->whereNotIn('unique_code', [
+                                    ItemTransactionUniqueCode::PURCHASE_ORDER->value,
+                                    ItemTransactionUniqueCode::SALE_ORDER->value
+                                ])
+                                ->where('item_id', $itemGeneralMasterId)
+                                ->groupBy('item_id', 'warehouse_id')
+                                ->get();
 
-                                ) as item_general_warehouse_stock,
-                                item_id,
-                                warehouse_id
-                            ')
-                            ->join('items', 'item_transactions.item_id', '=', 'items.id')
-                            ->whereNotIn('unique_code', [ItemTransactionUniqueCode::PURCHASE_ORDER->value, ItemTransactionUniqueCode::SALE_ORDER->value])
-                            ->where('item_id', $itemGeneralMasterId)
-                            ->groupBy('item_id', 'warehouse_id')
-                            ->get();
 
         //Delete ItemGeneralQuantity
         ItemGeneralQuantity::where('item_id', $itemGeneralMasterId)->delete();
@@ -634,8 +628,6 @@ class ItemTransactionService{
 
             //Group By warehouse
             $itemGeneralTransactions = $itemTransactions->groupBy('warehouse_id')->toArray();
-
-            $quantityCollection = collect();
 
             //MULTIPLE ITEM TRANSACTIONS
             foreach ($itemGeneralTransactions as $warehouseId => $generalransactions) {
@@ -665,7 +657,7 @@ class ItemTransactionService{
         return true;
     }
 
-    public function getHistoryOfItems(Item|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation $model){
+    public function getHistoryOfItems(Item|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation|StockAdjustment $model){
         /**
          * Get ItemSerialTransaction
          * Models: ItemSerialTransaction, itemSerialMaster, ItemSerialQuantity
@@ -720,7 +712,7 @@ class ItemTransactionService{
     /**
      * UPDATE HISTORY DATA FOR ITEM BATCH AND SERIAL NUMBER AND GENERAL
      * */
-    public function updatePreviousHistoryOfItems(Item|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation $model, array $getPreviousHistoryOfItems)
+    public function updatePreviousHistoryOfItems(Item|Purchase|PurchaseReturn|SaleOrder|Sale|SaleReturn|StockTransfer|Quotation|StockAdjustment $model, array $getPreviousHistoryOfItems)
     {
         /**
          * IMPORTANT NOTE:
@@ -773,6 +765,7 @@ class ItemTransactionService{
                             throw new \Exception('Failed to update previouse batch number history data in item batch quantity table!');
                         }
                     }
+
                 }
 
             }
@@ -901,7 +894,7 @@ class ItemTransactionService{
 
     public function updateItemMasterAveragePurchasePrice(array $itemIds){
 
-        $company = app('company');
+        $company = $this->getCompanySettings();
 
         // Check if auto-update features are enabled
         if (!$company['auto_update_purchase_price'] || !$company['auto_update_average_purchase_price']) {
@@ -950,16 +943,144 @@ class ItemTransactionService{
                 $totalQuantity += $quantity;
             }
 
+
             // Calculate and update average purchase price
             if ($totalQuantity > 0) {
                 $avgPurchasePrice = $totalWeightedPrice / $totalQuantity;
-                $itemModel->purchase_price = $avgPurchasePrice;
+                $itemModel->purchase_price = $avgPurchasePrice > 0 ? $avgPurchasePrice : $itemModel->purchase_price;
                 $itemModel->save();
             }
         }
 
         return true;
     }
+
+    /**
+     * Calculate average purchase and sale price for each item.
+     * @param array $itemIds
+     * @return array
+     */
+    public function calculateEachItemSaleAndPurchasePrice(array $itemIds, $warehouseId = null, bool $useGlobalPurchasePrice = true, array $saleTransactionDateRange = [])
+    {
+        $result = [];
+
+        $itemIds = array_unique($itemIds);
+
+        $purchaseWarehouseIds = (!$useGlobalPurchasePrice && $warehouseId) ? [$warehouseId] : null;
+        $saleWarehouseIds = $warehouseId ? [$warehouseId] : null;
+
+        $items = Item::whereIn('id', $itemIds)->get()->keyBy('id');
+
+        // ✅ Purchase Transactions
+        $purchaseTransactions = ItemTransaction::whereIn('item_id', $itemIds)
+            ->whereIn('unique_code', [
+                ItemTransactionUniqueCode::PURCHASE->value,
+                ItemTransactionUniqueCode::ITEM_OPENING->value,
+                ItemTransactionUniqueCode::STOCK_RECEIVE->value,
+            ])
+            ->when($purchaseWarehouseIds, function ($query) use ($purchaseWarehouseIds) {
+                return $query->whereIn('warehouse_id', $purchaseWarehouseIds);
+            })
+            ->get()
+            ->groupBy('item_id');
+
+        // ✅ Sale Transactions
+        $saleTransactions = ItemTransaction::whereIn('item_id', $itemIds)
+            ->where('unique_code', ItemTransactionUniqueCode::SALE->value)
+            ->when($saleWarehouseIds, function ($query) use ($saleWarehouseIds) {
+                return $query->whereIn('warehouse_id', $saleWarehouseIds);
+            })
+            ->when(!empty($saleTransactionDateRange), function ($query) use ($saleTransactionDateRange) {
+                return $query->whereBetween('transaction_date', [$saleTransactionDateRange['from_date'], $saleTransactionDateRange['to_date']]);
+            })
+            ->get()
+            ->groupBy('item_id');
+
+        foreach ($itemIds as $itemId) {
+            $item = $items->get($itemId);
+            if (!$item) {
+                $result[$itemId] = [
+                    'avg_purchase_price' => 0,
+                    'avg_sale_price'     => 0,
+                ];
+                continue;
+            }
+
+            // 👉 Purchase Calculation
+            $purchaseTotal = 0;
+            $purchaseQty = 0;
+            foreach ($purchaseTransactions->get($itemId, collect()) as $transaction) {
+                $qty = $transaction->quantity;
+                $total = $transaction->total + $transaction->charge_amount + $transaction->charge_tax_amount;
+
+                if (
+                    $item->base_unit_id != $transaction->unit_id &&
+                    $item->secondary_unit_id == $transaction->unit_id &&
+                    $item->conversion_rate != 1
+                ) {
+                    $total *= $item->conversion_rate;
+                    $qty = $qty / $item->conversion_rate;
+                }
+
+                $purchaseTotal += $total;
+                $purchaseQty += $qty;
+            }
+
+
+            // 👉 Sale Calculation
+            $saleTotal = 0;
+            $saleQty = 0;
+            foreach ($saleTransactions->get($itemId, collect()) as $transaction) {
+                $qty = $transaction->quantity;
+                /**
+                 * actual total
+                 * total = Price - discount + tax =
+                 * In total disocunt is already diducted and tax is added
+                 */
+                //$netSale = $transaction->total - $transaction->tax_amount;
+
+                if (
+                    $item->base_unit_id != $transaction->unit_id &&
+                    $item->secondary_unit_id == $transaction->unit_id &&
+                    $item->conversion_rate != 1
+                ) {
+                    $qty = $qty / $item->conversion_rate;
+                }
+
+                $saleTotal += $transaction->total;//$netSale;
+                $saleQty += $qty;
+            }
+
+
+            //Each Item Data, where unique item id is the key
+            $result[$itemId] = [
+                'purchase' => [
+                    // 'quantity' => $purchaseQty,
+
+                    /*final item total including tax and discount*/
+                    'total' => $purchaseTotal,
+                    'average_purchase_price' => $purchaseQty > 0 ? $purchaseTotal / $purchaseQty : 0,
+                    /*END:*/
+
+                ],
+
+                'sale'  =>[
+                    // 'quantity' => $saleQty,
+
+                    /*START: final item total including tax and discount*/
+                    'total' => $saleTotal,
+                    'average_sale_price' => $saleQty > 0 ? $saleTotal / $saleQty : 0,
+                    /*END:*/
+
+                ],
+            ];
+        }
+
+        return $result;
+    }
+
+
+
 
 
 

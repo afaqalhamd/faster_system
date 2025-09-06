@@ -157,6 +157,11 @@
                                         <div class="valid-feedback"></div>
                                     </div>
                                     <div class="col-md-12">
+                                        <x-label for="stock_adjustment" name="{{ __('warehouse.stock_adjustment') }}" />
+                                        <x-input type="text" name="stock_adjustment" value="{{ $prefix->stock_adjustment }}"/>
+                                        <div class="valid-feedback"></div>
+                                    </div>
+                                    <div class="col-md-12">
                                         <x-label for="quotation" name="{{ __('sale.quotation.quotation') }}" />
                                         <x-input type="text" name="quotation" value="{{ $prefix->quotation }}"/>
                                         <div class="valid-feedback"></div>

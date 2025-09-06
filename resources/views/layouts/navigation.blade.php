@@ -121,6 +121,31 @@
             </li>
         @endcanany
 
+        @can('delivery.view')
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon"><i class="bx bx-package"></i>
+                    </div>
+                    <div class="menu-title">{{
+                        __('delivery.delivery') }}</div>
+                </a>
+                <ul>
+                    <li class="{{ request()->is('delivery/dashboard') ? 'mm-active' : '' }}">
+                        <a href="{{ route('delivery.dashboard') }}"><i
+                                class='bx bx-radio-circle'></i>{{ __('delivery.dashboard') }}</a>
+                    </li>
+                    <li class="{{ request()->is('delivery/pending') ? 'mm-active' : '' }}">
+                        <a href="{{ route('delivery.pending') }}"><i
+                                class='bx bx-radio-circle'></i>{{ __('delivery.pending_deliveries') }}</a>
+                    </li>
+                    <li class="{{ request()->is('delivery/completed') ? 'mm-active' : '' }}">
+                        <a href="{{ route('delivery.completed') }}"><i
+                                class='bx bx-radio-circle'></i>{{ __('delivery.completed_deliveries') }}</a>
+                    </li>
+                </ul>
+            </li>
+        @endcan
+
         @canany(['purchase.bill.view', 'purchase.order.view', 'purchase.return.view'])
             <li>
                 <a href="javascript:;" class="has-arrow">
@@ -257,6 +282,29 @@
                         </li>
                         @endcanany
         --}}
+
+        {{-- @canany(['stock_transfer.view', 'stock_adjustment.view'])
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon"><i class="bx bx-intersect"></i>
+                </div>
+                <div class="menu-title">{{
+                __('item.stock') }}</div>
+            </a>
+            <ul>
+                @can('stock_transfer.view')
+                <li class="{{ request()->is('stock-transfer/*') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('stock_transfer.list') }}"><i class='bx bx-radio-circle'></i>{{ __('warehouse.transfer') }}</a>
+                                </li>
+                @endcan
+                @can('stock_adjustment.view')
+                <li class="{{ request()->is('stock-adjustment/*') ? 'mm-active' : '' }}">
+                                    <a href="{{ route('stock_adjustment.list') }}"><i class='bx bx-radio-circle'></i>{{ __('warehouse.adjustment') }}</a>
+                                </li>
+                @endcan
+            </ul>
+        </li>
+        @endcanany --}}
 
         @canany(['expense.create', 'expense.view', 'expense.category.view', 'expense.subcategory.view'])
             <li>
@@ -404,6 +452,11 @@
                             <a href="{{ route('stock_transfer.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('warehouse.stock_transfer') }}</a>
                         </li>
+                    @endcan
+                    @can('stock_adjustment.view')
+                    <li class="{{ request()->is('stock-adjustment/*') ? 'mm-active' : '' }}">
+                                        <a href="{{ route('stock_adjustment.list') }}"><i class='bx bx-radio-circle'></i>{{ __('warehouse.adjustment') }}</a>
+                                    </li>
                     @endcan
 
 
@@ -832,6 +885,22 @@
                             </ul>
                         </li>
                     @endcanany
+                    @canany(['report.stock_adjustment', 'report.stock_adjustment.item'])
+							<li> <a class="has-arrow" href="javascript:;"><i class='bx bx-radio-circle'></i>{{ __('warehouse.stock_adjustment') }}</a>
+										<ul>
+											@can('report.stock_adjustment')
+											<li class="{{ request()->is('report/stock-adjustment') ? 'mm-active' : '' }}">
+												<a href="{{ route('report.stock_adjustment') }}"><i class='bx bx-radio-circle'></i>{{ __('warehouse.stock_adjustment') }}</a>
+											</li>
+											@endcan
+											@can('report.stock_adjustment.item')
+											<li class="{{ request()->is('report/stock-adjustment/item') ? 'mm-active' : '' }}">
+												<a href="{{ route('report.stock_adjustment.item') }}"><i class='bx bx-radio-circle'></i>{{ __('item.item_wise') }}</a>
+											</li>
+											@endcan
+										</ul>
+							</li>
+						@endcanany
 
                     @canany(['report.stock_report.*'])
                         <li><a class="has-arrow" href="javascript:;"><i

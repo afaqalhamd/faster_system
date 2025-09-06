@@ -62,6 +62,17 @@
                                                 <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
                                                 <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value=""/>
                                             </div>
+                                            <div class="col-md-4">
+                                                <x-label for="sales_status" name="{{ __('Sales Status') }}" />
+                                                <select class="form-select" name="sales_status" id="sales_status">
+                                                    <option value="Pending">{{ __('sale.pending') }}</option>
+                                                    <option value="Processing">{{ __('sale.processing') }}</option>
+                                                    <option value="Completed">{{ __('sale.completed') }}</option>
+                                                    <option value="Delivery">{{ __('sale.delivery') }}</option>
+                                                    <option value="Cancelled">{{ __('sale.cancelled') }}</option>
+                                                    <option value="Returned">{{ __('sale.returned') }}</option>
+                                                </select>
+                                            </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
                                                 <x-label for="sale_price" name="{{ __('currency.exchange_rate') }}" />

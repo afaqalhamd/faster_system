@@ -22,6 +22,18 @@ return [
     'transfer_code'             => 'Transfer Code',
     'default'                   => 'Default Warehouse',
     'allow_all_warehouses'      => 'Allow All Warehouses',
-    'user_wise_warehouses_records'      => 'If you leave it empty, records will still be shown based on users allocated warehouses!'
+    'user_wise_warehouses_records'      => 'If you leave it empty, records will still be shown based on users allocated warehouses!',
+    'stock_adjustment'           => 'Stock Adjustment',
+    'stock_adjustment_list'      => 'Stock Adjustment List',
+    'stock_adjustment_details'   => 'Stock Adjustment Details',
+    'stock_adjustment_report'    => 'Stock Adjustment Report',
+    'item_stock_adjustment_report' => 'Item Stock Adjustment Report',
+    'allow_user_to_view_all_stock_adjustment' => 'Allow User to View All Stock Adjustment Created By Other Users',
+    'new_adjustment'            => 'New Adjustment',
+    'adjustment_qty'            => 'Adjustment Qty',
+    'adjustment_code'           => 'Adjustment Code',
+    'transfer'                  => 'Transfer',
+    'adjustment'                => 'Stock Adjustment',
+    'adjustment_type'           => 'Adjustment Type',
 
 ];

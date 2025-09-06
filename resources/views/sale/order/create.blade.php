@@ -118,6 +118,7 @@
                                                         <tr class="text-uppercase">
                                                             <th scope="col">{{ __('app.action') }}</th>
                                                             <th scope="col">{{ __('item.item') }}</th>
+                                                            <th scope="col">{{ __('item.sku') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_serial_tracking'] ? 'd-none':'' }}">{{ __('item.serial') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_batch_tracking'] ? 'd-none':'' }}">{{ __('item.batch_no') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_mfg_date'] ? 'd-none':'' }}">{{ __('item.mfg_date') }}</th>
@@ -126,12 +127,16 @@
                                                             <th scope="col" class="{{ !app('company')['show_mrp'] ? 'd-none':'' }}">{{ __('item.mrp') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">{{ __('item.color') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_size'] ? 'd-none':'' }}">{{ __('item.size') }}</th>
+                                                            <th scope="col" class="d-none">{{ __('unit.unit') }}</th>
+                                                            <th scope="col" class="d-none2">{{ __('app.price_per_unit') }}</th>
                                                             <th scope="col">{{ __('app.qty') }}</th>
-                                                            <th scope="col">{{ __('unit.unit') }}</th>
-                                                            <th scope="col">{{ __('app.price_per_unit') }}</th>
+                                                            <th scope="col">{{ __('app.real_qty') }}</th>
                                                             <th scope="col" class="{{ !app('company')['show_discount'] ? 'd-none':'' }}">{{ __('app.discount') }}</th>
                                                             <th scope="col" class="{{ (app('company')['tax_type'] == 'no-tax') ? 'd-none':'' }}">{{ __('tax.tax') }}</th>
-                                                            <th scope="col">{{ __('app.total') }}</th>
+                                                            <th scope="col">{{ __('app.location') }}</th>
+                                                            <th scope="col">{{ __('app.status') }}</th>
+                                                            <th scope="col">{{ __('app.action') }}</th>
+                                                            <th scope="col" class="d-none">{{ __('app.total') }}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -195,6 +200,10 @@
                                     </div>
                                     <div class="card-header px-4 py-3">
                                         <h5 class="mb-0">{{ __('payment.payment') }}</h5>
+                                        <small class="text-muted">
+                                            <i class="bx bx-info-circle"></i>
+                                            {{ __('Inventory will be reserved but not deducted until payment is completed') }}
+                                        </small>
                                     </div>
                                     <div class="card-body p-4 row g-3 ">
                                         <div class="payment-container">
@@ -259,6 +268,10 @@
         @endsection
 
 @section('js')
+<script type="text/javascript">
+        const itemsTableRecords = @json($itemTransactionsJson);
+        const taxList = JSON.parse('{!! $taxList !!}');
+</script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>

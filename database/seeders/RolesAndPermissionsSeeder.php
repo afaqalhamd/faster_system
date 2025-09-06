@@ -830,6 +830,16 @@ class RolesAndPermissionsSeeder extends Seeder
                                 ],
             ],
             [
+            'groupName' => 'Delivery',
+            'permissionName' => [
+                                    [
+                                        'name' => 'delivery.view',
+                                        'displayName' => 'View',
+                                    ],
+
+                                ],
+            ],
+            [
             'groupName' => 'Cash & Bank Transaction',
             'permissionName' => [
                                     [
@@ -882,7 +892,14 @@ class RolesAndPermissionsSeeder extends Seeder
 
         }
 
-
+        // Create Delivery role
+        $deliveryRole = Role::firstOrCreate(['name' => 'Delivery']);
+        
+        // Assign delivery permission to delivery role
+        $deliveryPermission = Permission::where('name', 'delivery.view')->first();
+        if ($deliveryPermission) {
+            $deliveryRole->givePermissionTo($deliveryPermission);
+        }
 
 
     }

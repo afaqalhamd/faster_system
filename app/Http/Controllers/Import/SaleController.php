@@ -218,6 +218,16 @@ class SaleController extends Controller
         // تخطي صف العناوين
         array_shift($data_list);
 
+        // التحقق من وجود بيانات وصحة في الملف
+        foreach ($data_list as $index => $row) {
+            if (count($row) < 2) {
+                throw new \Exception(__('app.invalid_file_format') . ' - الصف ' . ($index + 2) . ' يحتوي على بيانات ناقصة');
+            }
+            if (empty(trim($row[0])) || empty(trim($row[1]))) {
+                throw new \Exception(__('app.invalid_file_format') . ' - الصف ' . ($index + 2) . ' يحتوي على بيانات فارغة');
+            }
+        }
+
         // الحصول على معلومات العملة من العميل الافتراضي
         $partyCurrency = Party::with('currency')
             ->where('party_type', 'customer')
@@ -229,7 +239,7 @@ class SaleController extends Controller
 
         // إنشاء أمر البيع مع ضمان عدم تكرار order_code
         $saleOrder = new SaleOrder();
-        $saleOrder->party_id = 1;// استخدام معرف العميل الفعلي بدلاً من القيمة الثابتة
+        $saleOrder->party_id = 1; // استخدام معرف العميل الافتراضي
         $saleOrder->order_date = Carbon::now();
         $saleOrder->prefix_code = 'SO/';
         $saleOrder->order_status = 'Pending';
@@ -237,7 +247,7 @@ class SaleController extends Controller
         $saleOrder->grand_total = 0;
         $saleOrder->currency_id = $partyCurrency->currency_id;
         $saleOrder->exchange_rate = $partyCurrency->currency->exchange_rate;
-        $saleOrder->paid_amount = 0;
+        $saleOrder->paid_amount = 0; // تأكد من أن المبلغ المدفوع يبدأ بـ 0
 
         // حفظ السجل أولاً للحصول على معرف فريد
         $saleOrder->save();
@@ -258,8 +268,10 @@ class SaleController extends Controller
             throw new \Exception($saleOrderItemsArray['message']);
         }
 
-        // تحديث المبلغ الإجمالي
+        // تحديث المبلغ الإجمالي فقط - لا تقم بإضافة مدفوعات تلقائية
         $saleOrder->grand_total = $saleOrderItemsArray['grand_total'];
+        // التأكد من عدم وجود مدفوعات تلقائية
+        $saleOrder->paid_amount = 0;
         $saleOrder->save();
 
         DB::commit();
@@ -298,11 +310,11 @@ class SaleController extends Controller
 
             $itemName = $itemDetails->name;
 
-            // Validate quantity
-            if (empty($quantity) || $quantity === 0 || $quantity < 0) {
+            // Improved quantity validation
+            if (empty($quantity) || !is_numeric($quantity) || $quantity <= 0) {
                 return [
                     'status' => false,
-                    'message' => ($quantity < 0) ? __('item.item_qty_negative', ['item_name' => $itemName]) : __('item.please_enter_item_quantity', ['item_name' => $itemName]),
+                    'message' => __('item.please_enter_item_quantity', ['item_name' => $itemName]) . ' - الكمية: ' . $quantity,
                 ];
             }
 
@@ -321,7 +333,7 @@ class SaleController extends Controller
                 'description' => '',
                 'tracking_type' => $itemDetails->tracking_type,
                 'input_quantity' => $quantity,
-                'quantity' => 0,
+                'quantity' => $quantity, // Fix: Use actual quantity instead of 0
                 'unit_id' => 3,
                 'unit_price' => $unitPrice,
                 'mrp' => $itemDetails->mrp ?? 0,
@@ -382,7 +394,7 @@ class SaleController extends Controller
                         'quantity' => $quantity,
                     ];
 
-                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $itemDetails->id, $warehouse_id, ItemTransactionUniqueCode::PURCHASE_ORDER->value);
+                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $itemDetails->id, $warehouse_id, ItemTransactionUniqueCode::SALE_ORDER->value);
 
                     if (!$batchTransaction) {
                         throw new \Exception(__('item.failed_to_save_batch_records'));
@@ -457,7 +469,7 @@ class SaleController extends Controller
                 'description' => '',
                 'tracking_type' => $itemDetails->tracking_type,
                 'input_quantity' => $quantity,
-                'quantity' => 0,
+                'quantity' => $quantity, // Fix: Use actual quantity instead of 0
                 'unit_id' => 3,
                 'unit_price' => $unitPrice,
                 'mrp' => $itemDetails->mrp ?? 0,

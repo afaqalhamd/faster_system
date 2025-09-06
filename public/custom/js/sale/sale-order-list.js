@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9,10];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -83,6 +83,16 @@ $(function() {
 
                         return `<div class="badge text-${data.color} bg-light-${data.color} p-2 text-uppercase px-3">${data.order_status}</div>`;
 
+                    }
+                },
+                {
+                    data: 'inventory_status',
+                    name: 'inventory_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // The data comes as HTML from the backend, so we just return it
+                        return data;
                     }
                 },
                 {data: 'username', name: 'username'},

@@ -302,7 +302,11 @@ return [
     'a5_print'                          => 'A5 Print',
     //2.3
     'example'                           => 'Example',
-    'o_return'                          => 'Import Order Return'
+    'o_return'                          => 'Import Order Return',
+    'increase'                          => 'Increase',
+    'decrease'                          => 'Decrease',
+    'receive' => 'Receive',
+
 
 
 ];

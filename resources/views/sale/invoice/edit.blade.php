@@ -84,6 +84,17 @@
                                                 <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
                                                 <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value="{{ $sale->reference_no }}"/>
                                             </div>
+                                            <div class="col-md-4">
+                                                <x-label for="sales_status" name="{{ __('Sales Status') }}" />
+                                                <select class="form-select" name="sales_status" id="sales_status">
+                                                    <option value="Pending" {{ $sale->sales_status == 'Pending' ? 'selected' : '' }}>{{ __('sale.pending') }}</option>
+                                                    <option value="Processing" {{ $sale->sales_status == 'Processing' ? 'selected' : '' }}>{{ __('sale.processing') }}</option>
+                                                    <option value="Completed" {{ $sale->sales_status == 'Completed' ? 'selected' : '' }}>{{ __('sale.completed') }}</option>
+                                                    <option value="Delivery" {{ $sale->sales_status == 'Delivery' ? 'selected' : '' }}>{{ __('sale.delivery') }}</option>
+                                                    <option value="Cancelled" {{ $sale->sales_status == 'Cancelled' ? 'selected' : '' }}>{{ __('sale.cancelled') }}</option>
+                                                    <option value="Returned" {{ $sale->sales_status == 'Returned' ? 'selected' : '' }}>{{ __('sale.returned') }}</option>
+                                                </select>
+                                            </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
                                                 <x-label for="sale_price" name="{{ __('currency.exchange_rate') }}" />

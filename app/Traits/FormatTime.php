@@ -33,9 +33,9 @@ trait FormatTime
         }
         try {
                 $time = Carbon::parse($dateTimeInput);
-                
-                return app('company')['time_format'] == 24 
-                        ? $time->format('H:i:s') 
+
+                return app('company')['time_format'] == 24
+                        ? $time->format('H:i:s')
                         : $time->format('h:i:s A');
             } catch (\Exception $e) {
                 //

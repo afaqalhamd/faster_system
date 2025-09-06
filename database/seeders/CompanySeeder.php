@@ -15,7 +15,7 @@ class CompanySeeder extends Seeder
             'id'                    => 1,
             'name'                  => 'Fasterxpress Systems',
             'mobile'                => '+8616620154555',
-            'email'                =>  'fasterxpress@gmail.com',
+            'email'                =>  'info@warehose.fasterxpress.com',
             'address'               => 'China/Guangzhou.Foshan.Yiwu',
             'language_code'         => null,
             'language_name'         => null,

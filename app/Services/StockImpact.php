@@ -31,10 +31,18 @@ class StockImpact
             case ItemTransactionUniqueCode::PURCHASE_RETURN->value:
             case ItemTransactionUniqueCode::SALE->value:
             case ItemTransactionUniqueCode::STOCK_TRANSFER->value:
+            case ItemTransactionUniqueCode::STOCK_ADJUSTMENT_DECREASE->value:
                 return [
                     'impact'    => 'negative',
                     'quantity'  => -$quantity,
                     'color'     => 'danger',
+                ];
+
+            case ItemTransactionUniqueCode::STOCK_ADJUSTMENT_INCREASE->value:
+                return [
+                    'impact'    => 'positive',
+                    'quantity'  => $quantity,
+                    'color'     => 'primary',
                 ];
 
             default:

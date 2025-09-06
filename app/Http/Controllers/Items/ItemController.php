@@ -952,6 +952,7 @@ class ItemController extends Controller
     function getAjaxItemSearchBarList()
     {
         $search = request('search');
+        $warehouseId = request('warehouse_id');
 
         /**
          * Party Wise Wholesale & Retail Price listing in Sales
@@ -961,8 +962,10 @@ class ItemController extends Controller
             ?->is_wholesale_customer ?? false;
 
         $itemMaster = Item::with('tax', 'brand')
-            ->where('name', 'LIKE', "%{$search}%")
-            ->orWhere('item_code', 'LIKE', "%{$search}%")
+            ->where(function ($query) use ($search) {
+                $query->where('name', 'LIKE', "%{$search}%")
+                      ->orWhere('item_code', 'LIKE', "%{$search}%");
+            })
             ->limit(10)
             ->get();
         $response = $this->returnRequiredFormatData($itemMaster, $showWholesalePrice);
@@ -1017,6 +1020,7 @@ class ItemController extends Controller
         $isPermiteToViewPurchasePrice = (bool)auth()->user()->can('general.allow.to.view.item.purchase.price');
 
         $warehouseId = request('warehouse_id');
+        $requestFrom = request('request_from');
 
         // Cache the Tax list
         $taxList = CacheService::get('tax');
@@ -1026,10 +1030,15 @@ class ItemController extends Controller
 
         $itemMaster->load('itemGeneralQuantities');
 
-        return $itemMaster->map(function ($item) use ($taxList, $unitList, $warehouseId, $showWholesalePrice, $isPermiteToViewPurchasePrice) {
+        // Load warehouse data if needed for stock adjustment
+        $warehouse = null;
+        if ($warehouseId && $requestFrom === 'stock_adjustment') {
+            $warehouse = \App\Models\Warehouse::find($warehouseId);
+        }
+
+        return $itemMaster->map(function ($item) use ($taxList, $unitList, $warehouseId, $showWholesalePrice, $isPermiteToViewPurchasePrice, $warehouse, $requestFrom) {
 
             $warehouseStock = $item->itemGeneralQuantities->where('warehouse_id', $warehouseId)->first();
-
 
             $itemsArray = [
                 'id' => $item->id,
@@ -1037,6 +1046,7 @@ class ItemController extends Controller
                 'description' => $item->description ?? '',
                 'brand_name' => $item->brand->name ?? '--',
                 'item_code' => $item->item_code ?? '',
+                'sku' => $item->item_code ?? '',
                 'is_service' => $item->is_service,
                 'selected_unit_id' => $item->base_unit_id,//Select Unit
                 'base_unit_id' => $item->base_unit_id,
@@ -1054,12 +1064,16 @@ class ItemController extends Controller
                 'is_purchase_price_with_tax' => $item->is_purchase_price_with_tax,
                 'tax_id' => $item->tax_id,
                 'tracking_type' => $item->tracking_type,
-                'item_location' => $item->item_location,
+                'item_location' => $item->item_location ?? '',
+                'status' => $item->status == 1 ? 'Active' : 'Inactive',
                 //'current_stock'             => $item->current_stock,
                 'current_stock' => $warehouseStock ? $warehouseStock->quantity : 0,
                 'image_path' => $item->image_path ?? 'no',
                 'mrp' => $item->mrp,
                 'quantity' => 1,
+                'input_quantity' => 1,
+                'total_price' => 0,
+                't_id' => '',
                 'taxList' => $taxList,
                 'unitList' => getOnlySelectedUnits($unitList, $item->base_unit_id, $item->secondary_unit_id),
 
@@ -1068,8 +1082,15 @@ class ItemController extends Controller
                 'total_price_after_discount' => 0,
                 'discount_amount' => 0,
                 'tax_amount' => 0,
-                'warehouse_id' => 0,
+                'warehouse_id' => $warehouseId ?? 0,
             ];
+
+            // Add stock_in_unit and warehouse_name for stock_adjustment requests
+            if ($requestFrom === 'stock_adjustment') {
+                $stockQuantity = $warehouseStock ? $warehouseStock->quantity : 0;
+                $itemsArray['stock_in_unit'] = app(\App\Services\ItemService::class)->getQuantityInUnit($stockQuantity, $item->id);
+                $itemsArray['warehouse_name'] = $warehouse ? $warehouse->name : 'Unknown Warehouse';
+            }
 
             if ($showWholesalePrice) {
                 $itemsArray['sale_price'] = ($item->is_wholesale_price_with_tax == 1) ? calculatePrice($item->wholesale_price, $item->tax->rate, true) : $item->wholesale_price;

@@ -107,5 +107,11 @@ return [
 
 'sale_return'           => 'إرجاع البيع',
 
+// Inventory Status
+'inventory_deducted'            => 'تم خصم المخزون',
+'ready_for_deduction'           => 'جاهز للخصم',
+'pending'                       => 'قيد الانتظار',
+'inventory_already_deducted'    => 'تم خصم المخزون بالفعل',
+'inventory_deducted_successfully' => 'تم خصم المخزون بنجاح',
 
 ];

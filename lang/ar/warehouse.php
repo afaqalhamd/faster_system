@@ -25,5 +25,17 @@ return [
 'allow_all_warehouses'      => 'السماح بجميع المستودعات',
 
 'user_wise_warehouses_records'  => 'سجلات المستودعات حسب المستخدم',
+'stock_adjustment'           => 'تسوية المخزون',
+    'stock_adjustment_list'      => 'قائمة تسوية المخزون',
+    'stock_adjustment_details'   => 'تفاصيل تسوية المخزون',
+    'stock_adjustment_report'    => 'تقرير تسوية المخزون',
+    'item_stock_adjustment_report' => 'تقرير تسوية مخزون العناصر',
+    'allow_user_to_view_all_stock_adjustment' => 'السماح للمستخدم بعرض جميع تسويات المخزون التي أنشأها مستخدمون آخرون',
+    'new_adjustment'            => 'تسوية جديدة',
+    'adjustment_qty'            => 'كمية التسوية',
+    'adjustment_code'           => 'رمز التسوية',
+    'transfer'                  => 'نقل',
+    'adjustment'                => 'تسوية المخزون',
+    'adjustment_type'           => 'نوع التسوية',
 
 ];

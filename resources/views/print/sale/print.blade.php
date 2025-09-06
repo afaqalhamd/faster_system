@@ -31,7 +31,9 @@
                     <td class="address">
                         <span class="fw-bold cu-fs-18">{{ __('app.bill_to') }}</span><br>
                         <span>{{ $sale->party->first_name.' '. $sale->party->last_name }}<br>
-                        {{ $sale->party->billing_address }}</span>
+                        {{ $sale->party->billing_address }}<br>
+                        {{ $sale->party->mobile }}
+                    </span>
                     </td>
                     <td class="address">
                         <span class="fw-bold cu-fs-18">{{ __('app.ship_to') }}</span><br>
@@ -51,7 +53,9 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>{{ __('item.item') }}</th>
+                    <th class="text-center">{{ __('item.sku') }}</th>
+
+                    <th class="text-center">{{ __('item.item') }}</th>
                     @if(app('company')['show_hsn'])
                     <th>{{ __('item.hsn') }}</th>
                     @endif
@@ -79,15 +83,15 @@
                     @if(app('company')['show_mrp'])
                     <th>{{ __('item.mrp') }}</th>
                     @endif
-                    <th>{{ __('app.qty') }}</th>
-                    <th>{{ __('app.price_per_unit') }}</th>
+                    <th class="text-center">{{ __('app.qty') }}</th>
+                    <th class="text-center">{{ __('app.price_per_unit') }}</th>
                     @if(app('company')['show_discount'])
-                    <th>{{ __('app.discount') }}</th>
+                    <th class="text-center">{{ __('app.discount') }}</th>
                     @endif
                     @if(app('company')['tax_type'] != 'no-tax')
                     <th>{{ __('tax.tax') }}</th>
                     @endif
-                    <th>{{ __('app.total') }}</th>
+                    <th class="text-center">{{ __('app.total') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,7 +102,9 @@
                 @foreach($sale->itemTransaction as $transaction)
                 <tr>
                     <td class="no">{{ $i++ }}</td>
-                    <td class="">
+                    <td class="text-center">   <b>{{ $transaction->item->sku }}</b>
+                    </td>
+                    <td class="text-center">
                         <!-- Service Name -->
                         <b>{{ $transaction->item->name }}</b>
                         <!-- Description -->
@@ -153,15 +159,15 @@
                        {{ $formatNumber->formatWithPrecision($transaction->batch ? $transaction->batch->itemBatchMaster->mrp : $transaction->mrp)}}
                    </td>
                    @endif
-                   <td class="text-end">
+                   <td class="text-center">
                         {{ $formatNumber->formatQuantity($transaction->quantity) }}
                     </td>
-                    <td class=" text-end">
+                    <td class="text-center">
                         {{ $formatNumber->formatWithPrecision($transaction->unit_price) }}<br>
                         <small>{{ $transaction->unit->name }}</small>
                     </td>
                     @if(app('company')['show_discount'])
-                    <td class=" text-end">
+                    <td class="text-center">
                         {{ $formatNumber->formatWithPrecision($transaction->discount_amount) }}<br>
                         <small>
                             ({{ $formatNumber->formatWithPrecision($transaction->discount) }}
@@ -175,21 +181,22 @@
                         <small>({{ $transaction->tax->rate }}%)</small>
                     </td>
                     @endif
-                    <td class="text-end">
+                    <td class="text-center">
                         {{ $formatNumber->formatWithPrecision($transaction->total) }}
                     </td>
                 </tr>
                 @endforeach
                 <tr class="fw-bold">
-                    <td class="text-end" colspan="{{ 2 + $totalBatchTrackingRowCount + app('company')['show_mrp'] + app('company')['show_hsn'] }}">
+                    <td class="text-center" colspan="{{ 2 + $totalBatchTrackingRowCount + app('company')['show_mrp'] + app('company')['show_hsn'] }}">
                             {{ __('app.total') }}
                     </td>
-                    <td class="text-end">
-                            {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('quantity')) }}
+                    <td class="text-center">
+                        {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('quantity')) }}
                     </td>
                     <td></td>
                     @if(app('company')['show_discount'])
-                    <td class="text-end">
+                    <td class="text-center">
+
                             {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('discount_amount')) }}
                     </td>
                     @endif
@@ -198,8 +205,8 @@
                             {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('tax_amount')) }}
                     </td>
                     @endif
-                    <td class="text-end">
-                            {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('total')) }}
+                    <td class="text-center">
+                        {{ $formatNumber->formatWithPrecision($sale->itemTransaction->sum('total')) }}
                     </td>
                 </tr>
             </tbody>

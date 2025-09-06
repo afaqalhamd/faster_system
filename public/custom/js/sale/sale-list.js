@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -110,7 +110,74 @@ $(function() {
                 {data: 'party_name', name: 'party_name'},
                 {data: 'grand_total', name: 'grand_total', className: 'text-end'},
                 {data: 'balance', name: 'balance', className: 'text-end'},
+                {
+                    data: 'inventory_status',
+                    name: 'inventory_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // If data already contains HTML, return it as is
+                        if (data.includes('<div class="badge')) {
+                            return data;
+                        }
 
+                        // Otherwise, create the badge HTML based on inventory status
+                        const statusMap = {
+                            'deducted': { class: 'bg-light-success text-success', text: 'Inventory Deducted' },
+                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'ready_for_deduction': { class: 'bg-light-primary text-primary', text: 'Ready for Deduction' },
+                            'Deducted': { class: 'bg-light-success text-success', text: 'Inventory Deducted' },
+                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'Ready for Deduction': { class: 'bg-light-primary text-primary', text: 'Ready for Deduction' }
+                        };
+
+                        // Check if we have a translation for this status
+                        let displayText = data;
+                        if (data === 'deducted') {
+                            displayText = 'Inventory Deducted';
+                        } else if (data === 'pending') {
+                            displayText = 'Pending';
+                        } else if (data === 'ready_for_deduction') {
+                            displayText = 'Ready for Deduction';
+                        }
+
+                        const statusInfo = statusMap[data] || { class: 'bg-light-secondary text-secondary', text: displayText };
+
+                        return `<div class="badge ${statusInfo.class} p-2 text-uppercase px-3">${statusInfo.text}</div>`;
+                    }
+                },
+                {
+                    data: 'sales_status',
+                    name: 'sales_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // If data already contains HTML, return it as is
+                        if (data.includes('<div class="badge')) {
+                            return data;
+                        }
+
+                        // Otherwise, create the badge HTML
+                        const statusMap = {
+                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'Processing': { class: 'bg-light-primary text-primary', text: 'Processing' },
+                            'Completed': { class: 'bg-light-success text-success', text: 'Completed' },
+                            'Delivery': { class: 'bg-light-info text-info', text: 'Delivery' },
+                            'Cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled' },
+                            'Returned': { class: 'bg-light-secondary text-secondary', text: 'Returned' },
+                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'processing': { class: 'bg-light-primary text-primary', text: 'Processing' },
+                            'completed': { class: 'bg-light-success text-success', text: 'Completed' },
+                            'delivery': { class: 'bg-light-info text-info', text: 'Delivery' },
+                            'cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled' },
+                            'returned': { class: 'bg-light-secondary text-secondary', text: 'Returned' }
+                        };
+
+                        const statusInfo = statusMap[data] || { class: 'bg-light-secondary text-secondary', text: data };
+
+                        return `<div class="badge ${statusInfo.class} p-2 text-uppercase px-3">${statusInfo.text}</div>`;
+                    }
+                },
                 {data: 'username', name: 'username'},
                 {data: 'created_at', name: 'created_at'},
                 {data: 'action', name: 'action', orderable: false, searchable: false},
@@ -378,4 +445,3 @@ $(function() {
     });
 
 });
-

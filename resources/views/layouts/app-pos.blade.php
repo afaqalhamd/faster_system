@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="{{ $themeMode }}" lang="en" dir="{{ $appDirection }}">
+<html class="{{ $themeMode ?? 'light-theme' }}" lang="en" dir="{{ $appDirection ?? 'ltr' }}">
 
 @include('layouts.head')
 
@@ -17,7 +17,7 @@
 	{{-- @include('layouts.search') --}}
 
 	{{-- @include('layouts.switcher') --}}
-	
+
 	@include('layouts.script')
 
 </body>

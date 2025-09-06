@@ -34,6 +34,8 @@ use App\Services\Communication\Sms\SaleSmsNotificationService;
 use App\Enums\ItemTransactionUniqueCode;
 use App\Models\Sale\Quotation;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Exception;
+
 
 use Mpdf\Mpdf;
 
@@ -63,6 +65,8 @@ class SaleController extends Controller
 
     public $saleSmsNotificationService;
 
+    private $generalDataService;
+
     public function __construct(PaymentTypeService           $paymentTypeService,
                                 PaymentTransactionService    $paymentTransactionService,
                                 AccountTransactionService    $accountTransactionService,
@@ -70,7 +74,8 @@ class SaleController extends Controller
                                 ItemService                  $itemService,
                                 PartyService                 $partyService,
                                 SaleEmailNotificationService $saleEmailNotificationService,
-                                SaleSmsNotificationService   $saleSmsNotificationService
+                                SaleSmsNotificationService   $saleSmsNotificationService,
+                                GeneralDataService           $generalDataService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -82,6 +87,7 @@ class SaleController extends Controller
         $this->partyService = $partyService;
         $this->saleEmailNotificationService = $saleEmailNotificationService;
         $this->saleSmsNotificationService = $saleSmsNotificationService;
+        $this->generalDataService = $generalDataService;
         $this->previousHistoryOfItems = [];
     }
 
@@ -259,8 +265,8 @@ class SaleController extends Controller
 
         $itemTransactionsJson = json_encode($itemTransactions);
 
-        //Payment Details
-        $selectedPaymentTypesArray = json_encode($this->paymentTransactionService->getPaymentRecordsArray($sale));
+        //Payment Details - Fixed for conversion
+        $selectedPaymentTypesArray = $this->getPaymentDataForConversion($sale, $convertingFrom);
 
         $taxList = CacheService::get('tax')->toJson();
 
@@ -277,7 +283,7 @@ class SaleController extends Controller
      */
     public function edit($id): View
     {
-        $sale = Sale::with(['party',
+        $sale = Sale::with(['party', 'paymentTransaction',
             'itemTransaction' => [
                 'item',
                 'tax',
@@ -345,7 +351,7 @@ class SaleController extends Controller
      */
     public function details($id): View
     {
-        $sale = Sale::with(['party',
+        $sale = Sale::with(['party', 'paymentTransaction',
             'itemTransaction' => [
                 'item',
                 'tax',
@@ -483,88 +489,115 @@ class SaleController extends Controller
     {
         try {
 
-            DB::beginTransaction();
-            // Get the validated data from the expenseRequest
-            $validatedData = $request->validated();
+        DB::beginTransaction();
+        // Get the validated data from the expenseRequest
+        $validatedData = $request->validated();
 
-            if ($request->operation == 'save' || $request->operation == 'convert') {
-                // Create a new sale record using Eloquent and save it
-                $newSale = Sale::create($validatedData);
+        // Initialize inventory status and sales status
+        $validatedData['inventory_status'] = 'pending'; // Items are reserved, not deducted yet
+        $validatedData['inventory_deducted_at'] = null; // Not deducted yet
+        $validatedData['sales_status'] = $request->sales_status ?? 'Pending'; // Initialize sales status
 
-                $request->request->add(['sale_id' => $newSale->id]);
-            } else {
-                $fillableColumns = [
-                    'party_id' => $validatedData['party_id'],
-                    'sale_date' => $validatedData['sale_date'],
-                    'reference_no' => $validatedData['reference_no'],
-                    'prefix_code' => $validatedData['prefix_code'],
-                    'count_id' => $validatedData['count_id'],
-                    'sale_code' => $validatedData['sale_code'],
-                    'note' => $validatedData['note'],
-                    'round_off' => $validatedData['round_off'],
-                    'grand_total' => $validatedData['grand_total'],
-                    'state_id' => $validatedData['state_id'],
-                    'currency_id' => $validatedData['currency_id'],
-                    'exchange_rate' => $validatedData['exchange_rate'],
-                ];
+        if ($request->operation == 'save' || $request->operation == 'convert') {
+            // Create a new sale record using Eloquent and save it
+            $newSale = Sale::create($validatedData);
 
-                $newSale = Sale::findOrFail($validatedData['sale_id']);
-                $newSale->update($fillableColumns);
+            $request->request->add(['sale_id' => $newSale->id]);
 
-                /**
-                 * Before deleting ItemTransaction data take the
-                 * old data of the item_serial_master_id
-                 * to update the item_serial_quantity
-                 * */
-                $this->previousHistoryOfItems = $this->itemTransactionService->getHistoryOfItems($newSale);
-
-                $newSale->itemTransaction()->delete();
-                //$newSale->accountTransaction()->delete();
-
-                //Sale Account Update
-                foreach ($newSale->accountTransaction as $saleAccount) {
-                    //get account if of model with tax accounts
-                    $saleAccountId = $saleAccount->account_id;
-
-                    //Delete sale and tax account
-                    $saleAccount->delete();
-
-                    //Update  account
-                    $this->accountTransactionService->calculateAccounts($saleAccountId);
-                }//sale account
-
-
-                // Check if paymentTransactions exist
-                // $paymentTransactions = $newSale->paymentTransaction;
-                // if ($paymentTransactions->isNotEmpty()) {
-                //     foreach ($paymentTransactions as $paymentTransaction) {
-                //         $accountTransactions = $paymentTransaction->accountTransaction;
-                //         if ($accountTransactions->isNotEmpty()) {
-                //             foreach ($accountTransactions as $accountTransaction) {
-                //                 //Sale Account Update
-                //                 $accountId = $accountTransaction->account_id;
-                //                 // Do something with the individual accountTransaction
-                //                 $accountTransaction->delete(); // Or any other operation
-
-                //                 $this->accountTransactionService->calculateAccounts($accountId);
-                //             }
-                //         }
-                //     }
-                // }
-
-                // $newSale->paymentTransaction()->delete();
+            // Handle payment transfer for conversions
+            if ($request->operation == 'convert') {
+                $this->handleConversionPaymentTransfer($request, $newSale);
             }
+        } else {
+            $fillableColumns = [
+                'party_id' => $validatedData['party_id'],
+                'sale_date' => $validatedData['sale_date'],
+                'reference_no' => $validatedData['reference_no'],
+                'prefix_code' => $validatedData['prefix_code'],
+                'count_id' => $validatedData['count_id'],
+                'sale_code' => $validatedData['sale_code'],
+                'note' => $validatedData['note'],
+                'round_off' => $validatedData['round_off'],
+                'grand_total' => $validatedData['grand_total'],
+                'state_id' => $validatedData['state_id'],
+                'currency_id' => $validatedData['currency_id'],
+                'exchange_rate' => $validatedData['exchange_rate'],
+                'inventory_status' => 'pending',
+                'inventory_deducted_at' => null,
+                'sales_status' => $request->sales_status ?? $validatedData['sales_status'],
+            ];
 
-            $request->request->add(['modelName' => $newSale]);
+            $newSale = Sale::findOrFail($validatedData['sale_id']);
+            $newSale->update($fillableColumns);
 
             /**
-             * Save Table Items in Sale Items Table
+             * Before deleting ItemTransaction data take the
+             * old data of the item_serial_master_id
+             * to update the item_serial_quantity
              * */
-            $SaleItemsArray = $this->saveSaleItems($request);
-            if (!$SaleItemsArray['status']) {
-                throw new \Exception($SaleItemsArray['message']);
-            }
+            $this->previousHistoryOfItems = $this->itemTransactionService->getHistoryOfItems($newSale);
 
+            $newSale->itemTransaction()->delete();
+            //$newSale->accountTransaction()->delete();
+
+            //Sale Account Update
+            foreach ($newSale->accountTransaction as $saleAccount) {
+                //get account if of model with tax accounts
+                $saleAccountId = $saleAccount->account_id;
+
+                //Delete sale and tax account
+                $saleAccount->delete();
+
+                //Update  account
+                $this->accountTransactionService->calculateAccounts($saleAccountId);
+            }//sale account
+
+
+            // Check if paymentTransactions exist
+            // $paymentTransactions = $newSale->paymentTransaction;
+            // if ($paymentTransactions->isNotEmpty()) {
+            //     foreach ($paymentTransactions as $paymentTransaction) {
+            //         $accountTransactions = $paymentTransaction->accountTransaction;
+            //         if ($accountTransactions->isNotEmpty()) {
+            //             foreach ($accountTransactions as $accountTransaction) {
+            //                 //Sale Account Update
+            //                 $accountId = $accountTransaction->account_id;
+            //                 // Do something with the individual accountTransaction
+            //                 $accountTransaction->delete(); // Or any other operation
+
+            //                 $this->accountTransactionService->calculateAccounts($accountId);
+            //             }
+            //         }
+            //     }
+            // }
+
+            // $newSale->paymentTransaction()->delete();
+        }
+
+        $request->request->add(['modelName' => $newSale]);
+
+        /**
+         * Save Table Items in Sale Items Table
+         * */
+        $SaleItemsArray = $this->saveSaleItems($request);
+        if (!$SaleItemsArray['status']) {
+            throw new \Exception($SaleItemsArray['message']);
+        }
+
+        // Check if payments were already transferred during conversion
+        $skipPaymentProcessing = false;
+        if ($request->operation == 'convert') {
+            $existingPayments = $newSale->refresh()->paymentTransaction;
+            if ($existingPayments->isNotEmpty()) {
+                $skipPaymentProcessing = true;
+                \Log::info('Skipping payment processing - payments already transferred', [
+                    'sale_id' => $newSale->id,
+                    'existing_payments_count' => $existingPayments->count()
+                ]);
+            }
+        }
+
+        if (!$skipPaymentProcessing) {
             /**
              * Save Expense Payment Records
              * */
@@ -572,75 +605,74 @@ class SaleController extends Controller
             if (!$salePaymentsArray['status']) {
                 throw new \Exception($salePaymentsArray['message']);
             }
-
-            /**
-             * Payment Should not be less than 0
-             * */
-            $paidAmount = $newSale->refresh('paymentTransaction')->paymentTransaction->sum('amount');
-            if ($paidAmount < 0) {
-                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
-            }
-
-
-            /**
-             * Paid amount should not be greater than grand total
-             * */
-            if ($paidAmount > $newSale->grand_total) {
-                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($newSale->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $newSale->grand_total));
-            }
-
-            /**
-             * Update Sale Model
-             * Total Paid Amunt
-             * */
-            if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($request->modelName)) {
-                throw new \Exception(__('payment.failed_to_update_paid_amount'));
-            }
-
-            /**
-             * Update Account Transaction entry
-             * Call Services
-             * @return boolean
-             * */
-            // $accountTransactionStatus = $this->accountTransactionService->saleAccountTransaction($request->modelName);
-            // if(!$accountTransactionStatus){
-            //     throw new \Exception(__('payment.failed_to_update_account'));
-            // }
-
-            /**
-             * Credit Limit Check
-             * */
-            if ($this->partyService->limitThePartyCreditLimit($validatedData['party_id'])) {
-                //
-            }
-
-            /**
-             * UPDATE HISTORY DATA
-             * LIKE: ITEM SERIAL NUMBER QUNATITY, BATCH NUMBER QUANTITY, GENERAL DATA QUANTITY
-             * */
-            $this->itemTransactionService->updatePreviousHistoryOfItems($request->modelName, $this->previousHistoryOfItems);
-
-            DB::commit();
-
-            // Regenerate the CSRF token
-            //Session::regenerateToken();
-
-            return response()->json([
-                'status' => true,
-                'message' => __('app.record_saved_successfully'),
-                'id' => $request->sale_id,
-
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 409);
-
         }
+
+        /**
+         * Payment Should not be less than 0
+         * */
+        $paidAmount = $newSale->refresh('paymentTransaction')->paymentTransaction->sum('amount');
+        if ($paidAmount < 0) {
+            throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
+        }
+
+
+        /**
+         * Paid amount should not be greater than grand total
+         * */
+        if ($paidAmount > $newSale->grand_total) {
+            throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($newSale->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $newSale->grand_total));
+        }
+
+        /**
+         * Update Sale Model
+         * Total Paid Amunt
+         * */
+        if (!$this->paymentTransactionService->updateTotalPaidAmountInModel($request->modelName)) {
+            throw new \Exception(__('payment.failed_to_update_paid_amount'));
+        }
+
+        /**
+         * Update Account Transaction entry
+         * Call Services
+         * @return boolean
+         * */
+        // $accountTransactionStatus = $this->accountTransactionService->saleAccountTransaction($request->modelName);
+        // if(!$accountTransactionStatus){
+        //     throw new \Exception(__('payment.failed_to_update_account'));
+        // }
+
+        /**
+         * Credit Limit Check
+         * */
+        if ($this->partyService->limitThePartyCreditLimit($validatedData['party_id'])) {
+            //
+        }
+
+        /**
+         * UPDATE HISTORY DATA
+         * LIKE: ITEM SERIAL NUMBER QUNATITY, BATCH NUMBER QUANTITY, GENERAL DATA QUANTITY
+         * */
+        $this->itemTransactionService->updatePreviousHistoryOfItems($request->modelName, $this->previousHistoryOfItems);
+
+        DB::commit();
+
+        // Regenerate the CSRF token
+        //Session::regenerateToken();
+
+        return response()->json([
+            'status' => true,
+            'message' => __('app.record_saved_successfully'),
+            'id' => $request->sale_id,
+
+        ]);
+    } catch (Exception $e) {
+        DB::rollback();
+
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage(),
+        ], 409);
+    }
 
     }
 
@@ -708,6 +740,14 @@ class SaleController extends Controller
 
             }//amount>0
         }//for end
+
+        // After all payments are processed, refresh the model to get updated payment information
+        // and check if inventory should be deducted
+        if (isset($request->modelName)) {
+            // Refresh the model to get the latest payment data
+            $request->modelName->refresh();
+            $this->checkAndProcessInventoryDeduction($request->modelName);
+        }
 
         return ['status' => true];
     }
@@ -819,7 +859,8 @@ class SaleController extends Controller
             }
 
             //Validate is negative stock entry allowed or not for General Item
-            $regularItemTransaction = $this->itemTransactionService->validateRegularItemQuantity($itemDetails, $request->warehouse_id[$i], $itemQuantity, ItemTransactionUniqueCode::SALE->value);
+            // Use SALE_ORDER for reservation (not deducted yet)
+            $regularItemTransaction = $this->itemTransactionService->validateRegularItemQuantity($itemDetails, $request->warehouse_id[$i], $itemQuantity, ItemTransactionUniqueCode::SALE_ORDER->value);
 
             if (!$regularItemTransaction) {
                 throw new \Exception(__('item.failed_to_save_regular_item_record'));
@@ -838,6 +879,7 @@ class SaleController extends Controller
             /**
              *
              * Item Transaction Entry
+             * Use SALE_ORDER for reservation (not deducted yet)
              * */
             $transaction = $this->itemTransactionService->recordItemTransactionEntry($request->modelName, [
                 'warehouse_id' => $request->warehouse_id[$i],
@@ -862,6 +904,7 @@ class SaleController extends Controller
                 'tax_amount' => $request->tax_amount[$i],
 
                 'total' => $request->total[$i],
+                'unique_code' => ItemTransactionUniqueCode::SALE_ORDER->value, // Reserve items, don't deduct yet
 
             ]);
 
@@ -896,7 +939,8 @@ class SaleController extends Controller
                             'serial_code' => $serialNumber,
                         ];
 
-                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE->value);
+                        // Use SALE_ORDER for reservation (not deducted yet)
+                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE_ORDER->value);
 
                         if (!$serialTransaction) {
                             throw new \Exception(__('item.failed_to_save_serials'));
@@ -920,7 +964,8 @@ class SaleController extends Controller
                         'quantity' => $itemQuantity,
                     ];
 
-                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE->value);
+                    // Use SALE_ORDER for reservation (not deducted yet)
+                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE_ORDER->value);
 
                     if (!$batchTransaction) {
                         throw new \Exception(__('item.failed_to_save_batch_records'));
@@ -941,11 +986,10 @@ class SaleController extends Controller
 
 
     /**
-     * Datatabale
+     * Datatable list for sales
      * */
     public function datatableList(Request $request)
     {
-
         $data = Sale::with('user', 'party')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
@@ -959,19 +1003,12 @@ class SaleController extends Controller
             ->when($request->to_date, function ($query) use ($request) {
                 return $query->where('sale_date', '<=', $this->toSystemDateFormat($request->to_date));
             })
-            ->when($request->reference_no, function ($query) use ($request) {
-                return $query->where('reference_no', 'like', "%{$request->reference_no}%");
-            })
-            ->when($request->has('reference_nos'), function ($query) use ($request) {
-                $referenceNos = json_decode($request->reference_nos);
-                return $query->whereIn('reference_no', $referenceNos);
-            })
-            ->when($request->has('sale_codes'), function ($query) use ($request) {
-                $saleCodes = json_decode($request->sale_codes);
-                return $query->whereIn('sale_code', $saleCodes);
-            })
             ->when(!auth()->user()->can('sale.invoice.can.view.other.users.sale.invoices'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
+            })
+            // Apply delivery user filter - restrict to delivery status sales only
+            ->when($this->isDeliveryUser(), function ($query) {
+                return $this->applyDeliveryUserFilter($query);
             });
 
         return DataTables::of($data)
@@ -980,7 +1017,9 @@ class SaleController extends Controller
                     $searchTerm = $request->search['value'];
                     $query->where(function ($q) use ($searchTerm) {
                         $q->where('sale_code', 'like', "%{$searchTerm}%")
-                        ->orWhere('reference_no', 'like', "%{$searchTerm}%")
+                            ->orWhere('reference_no', 'like', "%{$searchTerm}%")
+                            ->orWhere('grand_total', 'like', "%{$searchTerm}%")
+                            ->orWhere('sales_status', 'like', "%{$searchTerm}%")
                             ->orWhereHas('party', function ($partyQuery) use ($searchTerm) {
                                 $partyQuery->where('first_name', 'like', "%{$searchTerm}%")
                                     ->orWhere('last_name', 'like', "%{$searchTerm}%");
@@ -1004,48 +1043,6 @@ class SaleController extends Controller
             ->addColumn('sale_code', function ($row) {
                 return $row->sale_code;
             })
-            ->addColumn('status', function ($row) {
-                if ($row->saleOrder) {
-                    return [
-                        'text' => "Converted from Sale Order",
-                        'code' => $row->saleOrder->order_code,
-                        'url' => route('sale.order.details', ['id' => $row->saleOrder->id]), // Sale Order link
-                    ];
-                } elseif ($row->quotation) {
-                    return [
-                        'text' => "Converted from Quotation",
-                        'code' => $row->quotation->quotation_code,
-                        'url' => route('sale.quotation.details', ['id' => $row->quotation->id]), // Quotation link
-                    ];
-                }
-
-                return [
-                    'text' => "",
-                    'code' => "",
-                    'url' => "",
-                ];
-            })
-            ->addColumn('is_return_raised', function ($row) {
-                $returns = $row->saleReturn()->get(); // Get all return records
-
-                if ($returns->isNotEmpty()) {
-                    $returnCodes = $returns->pluck('return_code')->toArray(); // Get return codes
-                    $returnIds = $returns->pluck('id')->toArray(); // Get return IDs
-
-                    return [
-                        'status' => "Return Raised",
-                        'codes' => implode(', ', $returnCodes), // Convert codes to comma-separated string
-                        'urls' => array_map(function ($id) {
-                            return route('sale.return.details', ['id' => $id]);
-                        }, $returnIds), // Generate URLs for each return ID
-                    ];
-                }
-                return [
-                    'status' => "",
-                    'codes' => "",
-                    'urls' => [],
-                ];
-            })
             ->addColumn('party_name', function ($row) {
                 return $row->party->first_name . " " . $row->party->last_name;
             })
@@ -1055,63 +1052,57 @@ class SaleController extends Controller
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
             })
+            ->addColumn('sales_status', function ($row) {
+                return $row->sales_status;
+            })
+            ->addColumn('color', function ($row) {
+                $saleStatuses = $this->generalDataService->getSaleStatus();
+
+                // Find the status matching the given id
+                return collect($saleStatuses)->firstWhere('id', $row->sales_status)['color'];
+
+            })
             ->addColumn('action', function ($row) {
                 $id = $row->id;
 
                 $editUrl = route('sale.invoice.edit', ['id' => $id]);
-                $deleteUrl = route('sale.invoice.delete', ['id' => $id]);
                 $detailsUrl = route('sale.invoice.details', ['id' => $id]);
-                $printUrl = route('sale.invoice.print', ['id' => $id, 'invoiceFormat' => 'format-1']);
-                $printUrlPOS = route('sale.invoice.pos.print', ['id' => $id]);
-                $pdfUrl = route('sale.invoice.pdf', ['id' => $id, 'invoiceFormat' => 'format-1']);
-
-                //Verify is it converted or not
-                /*if($row->saleReturn){
-                    $convertToSale = route('sale.return.details', ['id' => $row->saleReturn->id]);
-                    $convertToSaleText = __('app.view_bill');
-                    $convertToSaleIcon = 'check-double';
-                }else{*/
-                $convertToSale = route('sale.return.convert', ['id' => $id]);
-                $convertToSaleText = __('sale.convert_to_return');
-                $convertToSaleIcon = 'transfer-alt';
-                //}
+                $printUrl = route('sale.invoice.print', ['invoiceFormat' => 'normal', 'id' => $id]);
+                $pdfUrl = route('sale.invoice.pdf', ['invoiceFormat' => 'normal', 'id' => $id]);
 
                 $actionBtn = '<div class="dropdown ms-auto">
                             <a class="dropdown-toggle dropdown-toggle-nocaret" href="#" data-bs-toggle="dropdown"><i class="bx bx-dots-vertical-rounded font-22 text-option"></i>
                             </a>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a class="dropdown-item" href="' . $editUrl . '"><i class="bi bi-trash"></i><i class="bx bx-edit"></i> ' . __('app.edit') . '</a>
+                                    <a class="dropdown-item" href="' . $editUrl . '"><i class="bx bx-edit"></i> ' . __('app.edit') . '</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="' . $convertToSale . '"><i class="bx bx-' . $convertToSaleIcon . '"></i> ' . $convertToSaleText . '</a>
+                                    <a class="dropdown-item" href="' . $detailsUrl . '"><i class="bx bx-show-alt"></i> ' . __('app.details') . '</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="' . $detailsUrl . '"></i><i class="bx bx-show-alt"></i> ' . __('app.details') . '</a>
+                                    <a target="_blank" class="dropdown-item" href="' . $printUrl . '"><i class="bx bx-printer"></i> ' . __('app.print') . '</a>
                                 </li>
                                 <li>
-                                    <a target="_blank" class="dropdown-item" href="' . $printUrl . '"></i><i class="bx bx-printer "></i> ' . __('app.print') . '</a>
+                                    <a target="_blank" class="dropdown-item" href="' . $pdfUrl . '"><i class="bx bxs-file-pdf"></i> ' . __('app.pdf') . '</a>
                                 </li>
-                                <li>
-                                    <a target="_blank" class="dropdown-item" href="' . $pdfUrl . '"></i><i class="bx bxs-file-pdf"></i> ' . __('app.pdf') . '</a>
-                                </li>
-                                <li>
-                                    <a target="_blank" class="dropdown-item" href="' . $printUrlPOS . '"></i><i class="bx bx-printer" type="solid"></i> ' . __('sale.pos_print') . '</a>
-                                </li>
-                                <li>
+                                 <li>
                                     <a class="dropdown-item make-payment" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-money"></i> ' . __('payment.receive_payment') . '</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item payment-history" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-table"></i> ' . __('payment.history') . '</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item notify-through-email" data-model="sale/invoice" data-id="' . $id . '" role="button"></i><i class="bx bx-envelope"></i> ' . __('app.send_email') . '</a>
+                                    <a class="dropdown-item notify-through-email" data-model="sale/invoice" data-id="' . $id . '" role="button"><i class="bx bx-envelope"></i> ' . __('app.send_email') . '</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item notify-through-sms" data-model="sale/invoice" data-id="' . $id . '" role="button"></i><i class="bx bx-envelope"></i> ' . __('app.send_sms') . '</a>
+                                    <a class="dropdown-item notify-through-sms" data-model="sale/invoice" data-id="' . $id . '" role="button"><i class="bx bx-envelope"></i> ' . __('app.send_sms') . '</a>
                                 </li>
                                 <li>
-                                    <button type="button" class="dropdown-item text-danger deleteRequest" data-delete-id=' . $id . '><i class="bx bx-trash"></i> ' . __('app.delete') . '</button>
+                                    <a class="dropdown-item status-history" data-model="statusHistoryModal" data-id="' . $id . '" role="button"><i class="bx bx-book"></i> ' . __('app.status_history') . '</a>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item text-danger deleteRequest" data-delete-id="' . $id . '"><i class="bx bx-trash"></i> ' . __('app.delete') . '</button>
                                 </li>
                             </ul>
                         </div>';
@@ -1349,6 +1340,414 @@ class SaleController extends Controller
                 'message' => $e->getMessage(),
             ], 409);
         }
+    }
+
+    /**
+     * Get payment data for conversion operations
+     * Handles existing payments from Sale Orders or Quotations
+     */
+    private function getPaymentDataForConversion($sale, $convertingFrom): string
+    {
+        if ($convertingFrom == 'Sale Order') {
+            // Get the original Sale Order ID from the sale
+            $saleOrderId = $sale->sale_order_id ?? request('sale_order_id');
+
+            if ($saleOrderId) {
+                $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction')->find($saleOrderId);
+
+                // Check if SaleOrder has payments
+                if ($saleOrder && $saleOrder->paymentTransaction && $saleOrder->paymentTransaction->isNotEmpty()) {
+                    $existingPayments = $saleOrder->paymentTransaction->map(function ($payment) {
+                        return [
+                            'id' => $payment->id,
+                            'amount' => $payment->amount,
+                            'payment_type_id' => $payment->payment_type_id,
+                            'transaction_date' => $payment->transaction_date,
+                            'reference_no' => $payment->reference_no ?? '',
+                            'note' => $payment->note ?? '',
+                            'from_sale_order' => true,
+                            'original_transaction_type' => 'Sale Order'
+                        ];
+                    })->toArray();
+
+                    \Log::info('Found existing payments in Sale Order', [
+                        'sale_order_id' => $saleOrder->id,
+                        'payments_count' => count($existingPayments),
+                        'total_amount' => collect($existingPayments)->sum('amount')
+                    ]);
+
+                    return json_encode($existingPayments);
+                }
+            }
+        } elseif ($convertingFrom == 'Quotation') {
+            // Get the original Quotation ID from the sale
+            $quotationId = $sale->quotation_id ?? request('quotation_id');
+
+            if ($quotationId) {
+                $quotation = \App\Models\Sale\Quotation::with('paymentTransaction')->find($quotationId);
+
+                // Check if Quotation has payments
+                if ($quotation && $quotation->paymentTransaction && $quotation->paymentTransaction->isNotEmpty()) {
+                    $existingPayments = $quotation->paymentTransaction->map(function ($payment) {
+                        return [
+                            'id' => $payment->id,
+                            'amount' => $payment->amount,
+                            'payment_type_id' => $payment->payment_type_id,
+                            'transaction_date' => $payment->transaction_date,
+                            'reference_no' => $payment->reference_no ?? '',
+                            'note' => $payment->note ?? '',
+                            'from_quotation' => true,
+                            'original_transaction_type' => 'Quotation'
+                        ];
+                    })->toArray();
+
+                    return json_encode($existingPayments);
+                }
+            }
+        }
+
+        // No existing payments, return default payment types
+        \Log::info('No existing payments found, returning default payment types', [
+            'converting_from' => $convertingFrom,
+            'source_id' => $sale->id
+        ]);
+
+        return json_encode($this->paymentTypeService->selectedPaymentTypesArray());
+    }
+
+    /**
+     * Handle payment transfer during conversion operations
+     */
+    private function handleConversionPaymentTransfer($request, $sale)
+    {
+        $convertingFrom = $request->converting_from;
+
+        if ($convertingFrom == 'Sale Order' && $request->sale_order_id) {
+            $this->transferPaymentsFromSaleOrder($request->sale_order_id, $sale);
+        } elseif ($convertingFrom == 'Quotation' && $request->quotation_id) {
+            $this->transferPaymentsFromQuotation($request->quotation_id, $sale);
+        }
+    }
+
+    /**
+     * Transfer payments from Sale Order to Sale
+     */
+    private function transferPaymentsFromSaleOrder($saleOrderId, $sale)
+    {
+        \Log::info('Starting payment transfer from Sale Order', [
+            'sale_order_id' => $saleOrderId,
+            'sale_id' => $sale->id
+        ]);
+
+        $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction')->find($saleOrderId);
+
+        if ($saleOrder && $saleOrder->paymentTransaction->isNotEmpty()) {
+            \Log::info('Found payments to transfer', [
+                'payments_count' => $saleOrder->paymentTransaction->count(),
+                'total_amount' => $saleOrder->paymentTransaction->sum('amount')
+            ]);
+
+            foreach ($saleOrder->paymentTransaction as $payment) {
+                // Create new payment for Sale using polymorphic relationship
+                $newPayment = $payment->replicate();
+                $newPayment->transaction_id = $sale->id;
+                $newPayment->transaction_type = \App\Models\Sale\Sale::class;
+                $newPayment->save();
+
+                \Log::info('Payment transferred', [
+                    'original_payment_id' => $payment->id,
+                    'new_payment_id' => $newPayment->id,
+                    'amount' => $payment->amount
+                ]);
+
+                // Delete original payment
+                $payment->delete();
+            }
+
+            // Update amounts
+            $saleOrder->update(['paid_amount' => 0]);
+            $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+
+            \Log::info('Payment transfer completed', [
+                'sale_order_id' => $saleOrderId,
+                'sale_id' => $sale->id,
+                'new_paid_amount' => $sale->refresh()->paid_amount
+            ]);
+        } else {
+            \Log::info('No payments found to transfer', [
+                'sale_order_id' => $saleOrderId
+            ]);
+        }
+    }
+
+    /**
+     * Transfer payments from Quotation to Sale
+     */
+    private function transferPaymentsFromQuotation($quotationId, $sale)
+    {
+        \Log::info('Starting payment transfer from Quotation', [
+            'quotation_id' => $quotationId,
+            'sale_id' => $sale->id
+        ]);
+
+        $quotation = \App\Models\Sale\Quotation::with('paymentTransaction')->find($quotationId);
+
+        if ($quotation && $quotation->paymentTransaction->isNotEmpty()) {
+            foreach ($quotation->paymentTransaction as $payment) {
+                // Create new payment for Sale using polymorphic relationship
+                $newPayment = $payment->replicate();
+                $newPayment->transaction_id = $sale->id;
+                $newPayment->transaction_type = \App\Models\Sale\Sale::class;
+                $newPayment->save();
+
+                // Delete original payment
+                $payment->delete();
+            }
+
+            // Update amounts
+            $quotation->update(['paid_amount' => 0]);
+            $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+        }
+    }
+
+    /**
+     * Process inventory deduction after payment completion
+     * This method should be called when payment is fully completed
+     *
+     * @param Sale $sale
+     * @return JsonResponse
+     */
+    public function processInventoryDeduction(Sale $sale): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            // Check if order is already processed
+            if ($sale->inventory_status === 'deducted') {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('sale.inventory_already_deducted')
+                ]);
+            }
+
+            // Check if payment is complete
+            $totalPaid = $sale->paymentTransaction->sum('amount');
+            if ($totalPaid < $sale->grand_total) {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('payment.payment_not_complete')
+                ]);
+            }
+
+            \Log::info('Starting inventory deduction for sale', [
+                'sale_id' => $sale->id,
+                'items_count' => $sale->itemTransaction->count()
+            ]);
+
+            // Process inventory deduction for each item
+            foreach ($sale->itemTransaction as $transaction) {
+                // Update the transaction unique code from SALE_ORDER to SALE
+                $transaction->update([
+                    'unique_code' => ItemTransactionUniqueCode::SALE->value
+                ]);
+
+                // Update inventory quantities
+                $this->itemTransactionService->updateItemGeneralQuantityWarehouseWise($transaction->item_id);
+
+                // Handle batch/serial tracking if applicable
+                if ($transaction->tracking_type === 'batch') {
+                    $this->updateBatchInventoryAfterPayment($transaction);
+                } elseif ($transaction->tracking_type === 'serial') {
+                    $this->updateSerialInventoryAfterPayment($transaction);
+                }
+            }
+
+            // Update sale status
+            $sale->update([
+                'inventory_status' => 'deducted',
+                'inventory_deducted_at' => now()
+            ]);
+
+            DB::commit();
+
+            \Log::info('Inventory deduction completed for sale', ['sale_id' => $sale->id]);
+
+            return response()->json([
+                'status' => true,
+                'message' => __('sale.inventory_deducted_successfully')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Inventory deduction failed for sale', [
+                'sale_id' => $sale->id,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Update batch inventory after payment
+     */
+    private function updateBatchInventoryAfterPayment($transaction)
+    {
+        foreach ($transaction->itemBatchTransactions as $batchTransaction) {
+            $batchTransaction->update([
+                'unique_code' => ItemTransactionUniqueCode::SALE->value
+            ]);
+
+            $this->itemTransactionService->updateItemBatchQuantityWarehouseWise(
+                $batchTransaction->item_batch_master_id
+            );
+        }
+    }
+
+    /**
+     * Update serial inventory after payment
+     */
+    private function updateSerialInventoryAfterPayment($transaction)
+    {
+        foreach ($transaction->itemSerialTransaction as $serialTransaction) {
+            $serialTransaction->update([
+                'unique_code' => ItemTransactionUniqueCode::SALE->value
+            ]);
+
+            $this->itemTransactionService->updateItemSerialQuantityWarehouseWise(
+                $serialTransaction->item_serial_master_id
+            );
+        }
+    }
+
+    /**
+     * Check and process inventory deduction after payment update
+     * This should be called whenever a payment is added to a sale
+     *
+     * @param Sale $sale
+     * @return bool
+     */
+    public function checkAndProcessInventoryDeduction(Sale $sale): bool
+    {
+        // Check if payment is now complete
+        $totalPaid = $sale->paymentTransaction->sum('amount');
+
+        // Log for debugging
+        \Log::info('Checking inventory deduction for sale', [
+            'sale_id' => $sale->id,
+            'total_paid' => $totalPaid,
+            'grand_total' => $sale->grand_total,
+            'inventory_status' => $sale->inventory_status
+        ]);
+
+        if ($totalPaid >= $sale->grand_total && $sale->inventory_status !== 'deducted') {
+            \Log::info('Processing inventory deduction for sale', ['sale_id' => $sale->id]);
+            $result = $this->processInventoryDeduction($sale);
+            return $result->getData()->status ?? false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Manual inventory deduction endpoint
+     * For admin users to manually trigger inventory deduction
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function manualInventoryDeduction(Request $request, int $id): JsonResponse
+    {
+        $sale = Sale::with(['itemTransaction', 'paymentTransaction'])->findOrFail($id);
+
+        // Check permissions
+        if (!auth()->user()->can('sale.invoice.manual.inventory.deduction')) {
+            return response()->json([
+                'status' => false,
+                'message' => __('auth.unauthorized')
+            ], 403);
+        }
+
+        return $this->processInventoryDeduction($sale);
+    }
+
+    /**
+     * Update sales status
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function updateSalesStatus(Request $request, int $id): JsonResponse
+    {
+        try {
+            $sale = Sale::findOrFail($id);
+
+            // Validate the status
+            $validStatuses = ['Pending', 'Processing', 'Completed', 'Delivery', 'Cancelled', 'Returned'];
+            if (!in_array($request->sales_status, $validStatuses)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid sales status'
+                ], 400);
+            }
+
+            $sale->update(['sales_status' => $request->sales_status]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Sales status updated successfully',
+                'sales_status' => $request->sales_status
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
+
+    /**
+     * Get sales status options
+     *
+     * @return JsonResponse
+     */
+    public function getSalesStatusOptions(): JsonResponse
+    {
+        $generalDataService = new GeneralDataService();
+        $statusOptions = $generalDataService->getSaleStatus();
+
+        return response()->json([
+            'status' => true,
+            'data' => $statusOptions
+        ]);
+    }
+
+    /**
+     * Helper method to check if current user has delivery role
+     * @return bool
+     */
+    private function isDeliveryUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply delivery user filtering to query
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyDeliveryUserFilter($query)
+    {
+        if ($this->isDeliveryUser()) {
+            // Delivery users can only see sales with 'Delivery' status
+            $query->where('sales_status', 'Delivery');
+        }
+        return $query;
     }
 
 }

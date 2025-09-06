@@ -65,8 +65,8 @@
                                     <div class="col-md-6">
                                         <x-label for="whatsapp" name="{{ __('app.whatsapp_number') }}" />
                                         <div class="input-group">
-                                          
-                                            <x-input type="tel" name="whatsapp" :required="true" value="" minlength="8" maxlength="15"/>
+
+                                            <x-input type="tel" name="whatsapp" :required="false" value="" minlength="8" maxlength="15"/>
                                         </div>
                                     </div>
                                     <div class="col-md-6">

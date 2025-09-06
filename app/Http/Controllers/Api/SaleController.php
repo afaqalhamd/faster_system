@@ -31,6 +31,124 @@ class SaleController extends Controller
     protected $partyService;
     protected $previousHistoryOfItems;
 
+
+    /**
+     * Create a new sale with comprehensive data
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    /**
+     * إنشاء عملية بيع بسيطة
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function createSimpleSale(Request $request): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            // التحقق من البيانات الأساسية فقط
+            $validator = Validator::make($request->all(), [
+                'party_id' => 'required|exists:parties,id',
+                'sale_date' => 'required|date',
+                'prefix_code' => 'required|string|max:10',
+                'count_id' => 'required|integer',
+                'sale_code' => 'required|string|unique:sales',
+                'items' => 'required|array|min:1',
+                'items.*.item_id' => 'required|exists:items,id',
+                'items.*.warehouse_id' => 'required|exists:warehouses,id',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.total' => 'required|numeric|min:0',
+                'payment_type_id' => 'required|exists:payment_types,id',
+                'payment_amount' => 'required|numeric|min:0',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'خطأ في البيانات المدخلة',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // حساب المجموع الكلي
+            $subTotal = 0;
+            foreach ($request->items as $item) {
+                $subTotal += $item['total'];
+            }
+
+            // إنشاء الفاتورة
+            $sale = Sale::create([
+                'party_id' => $request->party_id,
+                'sale_date' => $this->toSystemDateFormat($request->sale_date),
+                'reference_no' => $request->reference_no ?? null,
+                'prefix_code' => $request->prefix_code,
+                'count_id' => $request->count_id,
+                'sale_code' => $request->sale_code,
+                'note' => $request->note ?? null,
+                'sub_total' => $subTotal,
+                'discount_amount' => $request->discount_amount ?? 0,
+                'tax_amount' => $request->tax_amount ?? 0,
+                'shipping_charge' => $request->shipping_charge ?? 0,
+                'grand_total' => $subTotal - ($request->discount_amount ?? 0) + ($request->shipping_charge ?? 0),
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            // إضافة العناصر
+            foreach ($request->items as $item) {
+                $itemDetails = Item::find($item['item_id']);
+
+                // تسجيل معاملة العنصر
+                $transaction = $this->itemTransactionService->recordItemTransactionEntry($sale, [
+                    'warehouse_id' => $item['warehouse_id'],
+                    'transaction_date' => $this->toSystemDateFormat($request->sale_date),
+                    'item_id' => $item['item_id'],
+                    'tracking_type' => $itemDetails->tracking_type,
+                    'quantity' => $item['quantity'],
+                    'unit_id' => $item['unit_id'] ?? $itemDetails->unit_id,
+                    'unit_price' => $item['unit_price'],
+                    'total' => $item['total'],
+                ]);
+            }
+
+            // تسجيل الدفع
+            if ($request->payment_amount > 0) {
+                $paymentsArray = [
+                    'transaction_date' => $this->toSystemDateFormat($request->sale_date),
+                    'amount' => $request->payment_amount,
+                    'payment_type_id' => $request->payment_type_id,
+                    'note' => $request->payment_note ?? null,
+                    'payment_from_unique_code' => General::INVOICE->value,
+                ];
+
+                $this->paymentTransactionService->recordPayment($sale, $paymentsArray);
+                $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'تم إنشاء الفاتورة بنجاح',
+                'data' => [
+                    'id' => $sale->id,
+                    'sale_code' => $sale->sale_code,
+                    'grand_total' => $sale->grand_total,
+                    'paid_amount' => $sale->paid_amount ?? 0,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function __construct(
         PaymentTransactionService $paymentTransactionService,
         AccountTransactionService $accountTransactionService,
@@ -669,4 +787,9 @@ class SaleController extends Controller
             ], 500);
         }
     }
+
+
+
+
+
 }

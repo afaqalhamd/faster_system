@@ -256,6 +256,34 @@
                                     </div>
                                     <div class="card-header px-4 py-3">
                                         <h5 class="mb-0">{{ __('payment.payment') }}</h5>
+
+                                        @if(isset($order->inventory_status))
+                                            <div class="mt-2">
+                                                @if($order->inventory_status === 'pending')
+                                                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                                        <i class="bx bx-clock"></i>
+                                                        <strong>{{ __('Inventory Status') }}:</strong> {{ __('Reserved but not deducted') }}
+                                                        <br><small>{{ __('Inventory will be automatically deducted when payment is completed') }}</small>
+                                                    </div>
+                                                @elseif($order->inventory_status === 'deducted')
+                                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                        <i class="bx bx-check-circle"></i>
+                                                        <strong>{{ __('Inventory Status') }}:</strong> {{ __('Deducted') }}
+                                                        @if($order->inventory_deducted_at)
+                                                            <br><small>{{ __('Deducted on') }}: {{ $order->inventory_deducted_at->format('Y-m-d H:i:s') }}</small>
+                                                        @endif
+                                                    </div>
+                                                @endif
+
+                                                @if($order->inventory_status === 'pending' && auth()->user()->can('sale.order.manual.inventory.deduction'))
+                                                    <div class="mb-3">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" id="manualInventoryDeduction" data-order-id="{{ $order->id }}">
+                                                            <i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}
+                                                        </button>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
                                     <div class="card-body p-4 row g-3 ">
                                         <div class="payment-container">
@@ -335,4 +363,41 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
+
+<script>
+$(document).ready(function() {
+    // Manual inventory deduction functionality
+    $('#manualInventoryDeduction').on('click', function() {
+        const orderId = $(this).data('order-id');
+        const button = $(this);
+
+        if (confirm('{{ __('Are you sure you want to deduct inventory for this order?') }}')) {
+            button.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> {{ __('Processing...') }}');
+
+            $.ajax({
+                url: `{{ route('sale.order.manual.inventory.deduction', '') }}/${orderId}`,
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.status) {
+                        toastr.success(response.message);
+                        // Reload page to show updated status
+                        location.reload();
+                    } else {
+                        toastr.error(response.message);
+                        button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMessage = xhr.responseJSON?.message || '{{ __('An error occurred') }}';
+                    toastr.error(errorMessage);
+                    button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');
+                }
+            });
+        }
+    });
+});
+</script>
 @endsection

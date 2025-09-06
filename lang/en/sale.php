@@ -103,4 +103,11 @@ return [
     //2.3
     'sale_return'                   => 'Sale Return',
 
+    // Inventory Status
+    'inventory_deducted'            => 'Inventory Deducted',
+    'ready_for_deduction'           => 'Ready for Deduction',
+    'pending'                       => 'Pending',
+    'inventory_already_deducted'    => 'Inventory Already Deducted',
+    'inventory_deducted_successfully' => 'Inventory Deducted Successfully',
+
 ];

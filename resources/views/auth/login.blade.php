@@ -5,15 +5,16 @@
 
 	<!--wrapper-->
 	<div class="wrapper">
-		<div class="section-authentication-cover">
+		<div class="section-authentication-cover bg-white">
 			<div class="">
 				<div class="row g-0">
 
-					<div class="col-12 col-xl-7 col-xxl-8 auth-cover-left align-items-center justify-content-center d-none d-xl-flex">
+					<div class="col-12 col-xl-7 col-xxl-8 auth-cover-left align-items-center justify-content-center d-none d-xl-flex bg-white">
 
-                        <div class="card shadow-none bg-transparent shadow-none rounded-0 mb-0">
+                        <div class="card shadow-none bg-white rounded-0 mb-0">
 							<div class="card-body">
-                                 <img src="assets/images/login-images/login-cover.svg" class="img-fluid " width="650" alt=""/>
+                                <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.6.2/dist/dotlottie-wc.js" type="module"></script>
+                                <dotlottie-wc src="https://lottie.host/1c9bea6f-8e27-4e58-8d9a-3fc8c2773c68/kvp5jDakgw.lottie" style="width: 650px;height: 650px" speed="1" autoplay loop></dotlottie-wc>
 							</div>
 						</div>
 
@@ -21,7 +22,7 @@
 
 					<div class="col-12 col-xl-5 col-xxl-4 auth-cover-right align-items-center justify-content-center">
 
-						<div class="card rounded-0 m-3 shadow-none bg-transparent mb-0">
+						<div class="card rounded-0 m-3 shadow-none bg-white mb-0">
 							@if(config('demo.enabled'))
 						<div class="position-absolute top-0 end-0 mt-3 me-3">
 					      <div class="d-grid">

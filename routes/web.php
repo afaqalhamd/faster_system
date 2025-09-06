@@ -74,6 +74,8 @@ use App\Http\Controllers\Sale\SaleReturnController;
 use App\Http\Controllers\Payment\SaleOrderPaymentController;
 use App\Http\Controllers\Payment\SalePaymentController;
 use App\Http\Controllers\Payment\SaleReturnPaymentController;
+use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\Reports\StockAdjustmentReportController;
 use App\Http\Controllers\Sale\QuotationController;
 use App\Http\Controllers\Transaction\CashController;
 use App\Http\Controllers\Transaction\ChequeController;
@@ -483,6 +485,38 @@ Route::middleware('auth')->group(function () {
         Route::get('/pdf/{id}', [StockTransferController::class, 'generatePdf'])
                 ->middleware('can:stock_transfer.view')
                 ->name('stock_transfer.pdf');
+    });
+
+     /**
+     * Stock Adjustment
+     * */
+    Route::group(['prefix' => 'stock-adjustment'], function () {
+        Route::get('/create', [StockAdjustmentController::class, 'create'])
+                ->middleware('can:stock_adjustment.create')
+                ->name('stock_adjustment.create');//View
+        Route::get('/details/{id}', [StockAdjustmentController::class, 'details'])
+                    ->middleware('can:stock_adjustment.view')
+                    ->name('stock_adjustment.details');
+        Route::get('/edit/{id}', [StockAdjustmentController::class, 'edit'])
+                ->middleware('can:stock_adjustment.edit')
+                ->name('stock_adjustment.edit'); //Edit
+        Route::put('/update', [StockAdjustmentController::class, 'store'])->name('stock_adjustment.update'); //Update
+        Route::get('/list', [StockAdjustmentController::class, 'list'])
+                ->middleware('can:stock_adjustment.view')
+                ->name('stock_adjustment.list'); //List
+        Route::get('/datatable-list', [StockAdjustmentController::class, 'datatableList'])->name('stock_adjustment.datatable.list'); //Datatable List
+        Route::post('/store', [StockAdjustmentController::class, 'store'])->name('stock_adjustment.store');//Save operation
+        Route::post('/delete/', [StockAdjustmentController::class, 'delete'])
+                ->middleware('can:stock_adjustment.delete')
+                ->name('stock_adjustment.delete');//delete operation
+
+        Route::get('/print/{id}', [StockAdjustmentController::class, 'print'])
+                ->middleware('can:stock_adjustment.view')
+                ->name('stock_adjustment.print');
+
+        Route::get('/pdf/{id}', [StockAdjustmentController::class, 'generatePdf'])
+                ->middleware('can:stock_adjustment.view')
+                ->name('stock_adjustment.pdf');
     });
 
     /**
@@ -914,6 +948,21 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/stock-transfer/item/get-records', [StockTransferReportController::class, 'getStockTransferItemRecords'])->name('report.stock_transfer.item.ajax');
 
+                /*Report -> Stock Adjustment -> Stock Adjustment  */
+                Route::get('/stock-adjustment', function () {
+                    return view('report.stock-adjustment.stock-adjustment');
+                    })->middleware('can:report.stock_adjustment')
+                    ->name('report.stock_adjustment');//View
+
+        Route::post('/stock-adjustment/get-records', [StockAdjustmentReportController::class, 'getStockAdjustmentRecords'])->name('report.stock_adjustment.ajax');
+
+        /*Report -> Stock Adjustment -> Items*/
+        Route::get('/stock-adjustment/item', function () {
+                    return view('report.stock-adjustment.item-stock-adjustment');
+                    })->middleware('can:report.stock_adjustment.item')
+                    ->name('report.stock_adjustment.item');//View
+
+        Route::post('/stock-adjustment/item/get-records', [StockAdjustmentReportController::class, 'getStockAdjustmentItemRecords'])->name('report.stock_adjustment.item.ajax');
         /*Report -> Due Payments -> Customer */
         Route::get('/customer/due', function () {
                     return view('report.party.due-payment.customer');
@@ -1457,6 +1506,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', [SaleOrderController::class, 'store'])->name('sale.order.store');//Save operation
         Route::post('/delete/', [SaleOrderController::class, 'delete'])->middleware('can:sale.order.delete')->name('sale.order.delete');//delete operation
 
+        // Inventory deduction after payment completion
+        Route::post('/manual-inventory-deduction/{id}', [SaleOrderController::class, 'manualInventoryDeduction'])
+            ->middleware('can:sale.order.manual.inventory.deduction')
+            ->name('sale.order.manual.inventory.deduction');
+
         /**
          * Email
          * */
@@ -1527,6 +1581,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/datatable-list', [SaleController::class, 'datatableList'])->name('sale.invoice.datatable.list'); //Datatable List
         Route::post('/store', [SaleController::class, 'store'])->name('sale.invoice.store');//Save operation
         Route::post('/delete/', [SaleController::class, 'delete'])->middleware('can:sale.invoice.delete')->name('sale.invoice.delete');//delete operation
+
+        // Inventory deduction after payment completion
+        Route::post('/manual-inventory-deduction/{id}', [SaleController::class, 'manualInventoryDeduction'])
+            ->middleware('can:sale.invoice.manual.inventory.deduction')
+            ->name('sale.invoice.manual.inventory.deduction');
+
+        // Sales status management
+        Route::post('/update-sales-status/{id}', [SaleController::class, 'updateSalesStatus'])
+            ->middleware('can:sale.invoice.edit')
+            ->name('sale.invoice.update.sales.status');
+        Route::get('/get-sales-status-options', [SaleController::class, 'getSalesStatusOptions'])
+            ->name('sale.invoice.get.sales.status.options');
+
+        /**
+         * Email
+         * */
 
         /**
          * Email
@@ -1917,5 +1987,25 @@ Route::get('/download-contact-sheet', function() {
     }
     abort(404);
 })->name('download-contact-sheet');
+
+/**
+ * Delivery Routes
+ */
+Route::group(['prefix' => 'delivery', 'middleware' => 'auth'], function () {
+    Route::get('/dashboard', [App\Http\Controllers\Delivery\DeliveryController::class, 'dashboard'])
+        ->name('delivery.dashboard');
+    Route::get('/pending', [App\Http\Controllers\Delivery\DeliveryController::class, 'pendingDeliveries'])
+        ->name('delivery.pending');
+    Route::get('/completed', [App\Http\Controllers\Delivery\DeliveryController::class, 'completedDeliveries'])
+        ->name('delivery.completed');
+    Route::get('/pending/datatable-list', [App\Http\Controllers\Delivery\DeliveryController::class, 'pendingDeliveriesDatatable'])
+        ->name('delivery.pending.datatable.list');
+    Route::get('/completed/datatable-list', [App\Http\Controllers\Delivery\DeliveryController::class, 'completedDeliveriesDatatable'])
+        ->name('delivery.completed.datatable.list');
+    Route::get('/users', [App\Http\Controllers\Delivery\DeliveryController::class, 'getDeliveryUsers'])
+        ->name('delivery.users');
+    Route::post('/update-status/{id}', [App\Http\Controllers\Delivery\DeliveryController::class, 'updateDeliveryStatus'])
+        ->name('delivery.update-status');
+});
 
 require __DIR__.'/auth.php';

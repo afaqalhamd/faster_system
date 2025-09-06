@@ -48,6 +48,18 @@ class Sale extends Model
         'paid_amount',
         'currency_id',
         'exchange_rate',
+        'inventory_status',
+        'inventory_deducted_at',
+        'sales_status', // Add the new sales_status field
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'inventory_deducted_at' => 'datetime',
     ];
 
     /**

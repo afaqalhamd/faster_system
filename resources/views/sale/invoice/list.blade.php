@@ -76,6 +76,8 @@
                                         <th>{{ __('supplier.supplier') }}</th>
                                         <th>{{ __('app.total') }}</th>
                                         <th>{{ __('payment.balance') }}</th>
+                                        <th>{{ __('Inventory Status') }}</th>
+                                        <th>{{ __('Sales Status') }}</th>
                                         <th>{{ __('app.created_by') }}</th>
                                         <th>{{ __('app.created_at') }}</th>
                                         <th>{{ __('app.action') }}</th>

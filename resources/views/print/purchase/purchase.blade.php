@@ -31,7 +31,12 @@
                     <td class="address">
                         <span class="fw-bold cu-fs-18">{{ __('app.bill_from') }}</span><br>
                         <span>{{ $purchase->party->first_name.' '. $purchase->party->last_name }}<br>
-                        {{ $purchase->party->billing_address }}</span>
+                        {{ $purchase->party->billing_address }}<br>
+                        {{ $purchase->party->mobile }}
+
+
+
+                    </span>
                     </td>
                     <td class="address">
                         <span class="fw-bold cu-fs-18">{{ __('app.ship_from') }}</span><br>
@@ -51,6 +56,8 @@
             <thead>
                 <tr>
                     <th>#</th>
+                    <th>{{ __('item.sku') }}</th>
+
                     <th>{{ __('item.item') }}</th>
                     @if(app('company')['show_hsn'])
                     <th>{{ __('item.hsn') }}</th>
@@ -87,7 +94,7 @@
                     @if(app('company')['tax_type'] != 'no-tax')
                     <th>{{ __('tax.tax') }}</th>
                     @endif
-                   
+
                     <th>{{ __('app.total') }}</th>
                 </tr>
             </thead>
@@ -99,11 +106,14 @@
                 @foreach($purchase->itemTransaction as $transaction)
                 <tr>
                     <td class="no">{{ $i++ }}</td>
+                    <td>
+                        <b>{{ $transaction->item->sku }}</b>
+
+                         </td>
                     <td class="text-left">
                         <!-- Service Name -->
                         <b>{{ $transaction->item->name }}</b>
                         <!-- Description -->
-                        <small>{{ $transaction->description }}</small>
                         <small>
                             @if ($transaction->itemSerialTransaction->count() > 0)
                                 <br>{{ $transaction->itemSerialTransaction->pluck('itemSerialMaster.serial_code')->implode(',') }}<br>
@@ -176,7 +186,7 @@
                         <small>({{ $transaction->tax->rate }}%)</small>
                     </td>
                     @endif
-                   
+
                     <td class="text-end">
                         {{ $formatNumber->formatWithPrecision($transaction->total) }}
                     </td>
@@ -200,7 +210,7 @@
                             {{ $formatNumber->formatWithPrecision($purchase->itemTransaction->sum('tax_amount')) }}
                     </td>
                     @endif
-                    
+
                     <td class="text-end">
                             {{ $formatNumber->formatWithPrecision($purchase->itemTransaction->sum('total')) }}
                     </td>

@@ -20,8 +20,8 @@ class AdminSeeder extends Seeder
                                     'username' => 'Administrator',
                                     'first_name' => 'Super',
                                     'last_name' => 'Admin',
-                                    'email' => 'fasterxpress@gmail.com',
-                                    'password' => Hash::make('Admin@123'),
+                                    'email' => 'ad.fasterexpress@gmail.com',
+                                    'password' => Hash::make('fasterexp25'),
                                     'status' => 1,
                                 ]);
     }
