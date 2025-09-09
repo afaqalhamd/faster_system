@@ -1136,6 +1136,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/datatable-damaged-list', [ItemController::class, 'datatableDamagedList'])->name('item.datatable.damaged.list'); //Datatable List
         Route::post('/store', [ItemController::class, 'store'])->name('item.store');//Save operation
         Route::post('/delete/', [ItemController::class, 'delete'])->name('item.delete')->middleware('can:item.delete');//delete operation
+        Route::get('/download-stock-images/{id}', [ItemController::class, 'downloadStockImages'])
+            ->middleware('can:item.view')
+            ->name('item.download.stock.images');//Download Stock Images
+        Route::get('/download-single-stock-image/{itemId}/{mediaId}', [ItemController::class, 'downloadSingleStockImage'])
+            ->middleware('can:item.view')
+            ->name('item.download.single.stock.image');//Download Single Stock Image
 
         Route::get('/transaction/{id}', [ItemTransactionController::class, 'list'])
                     ->middleware('can:item.view')
@@ -1593,6 +1599,9 @@ Route::middleware('auth')->group(function () {
             ->name('sale.invoice.update.sales.status');
         Route::get('/get-sales-status-options', [SaleController::class, 'getSalesStatusOptions'])
             ->name('sale.invoice.get.sales.status.options');
+        Route::get('/get-sales-status-history/{id}', [SaleController::class, 'getSalesStatusHistory'])
+            ->middleware('can:sale.invoice.view')
+            ->name('sale.invoice.get.sales.status.history');
 
         /**
          * Email

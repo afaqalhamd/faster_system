@@ -111,6 +111,12 @@ return [
 'inventory_deducted'            => 'تم خصم المخزون',
 'ready_for_deduction'           => 'جاهز للخصم',
 'pending'                       => 'قيد الانتظار',
+'processing'                    => 'قيد المعالجة',
+'completed'                     => 'مكتمل',
+'delivery'                      => 'التسليم',
+'pod'                           => 'إثبات التسليم (POD)',
+'cancelled'                     => 'ملغي',
+'returned'                      => 'مُرجع',
 'inventory_already_deducted'    => 'تم خصم المخزون بالفعل',
 'inventory_deducted_successfully' => 'تم خصم المخزون بنجاح',
 

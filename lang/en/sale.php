@@ -107,6 +107,12 @@ return [
     'inventory_deducted'            => 'Inventory Deducted',
     'ready_for_deduction'           => 'Ready for Deduction',
     'pending'                       => 'Pending',
+    'processing'                    => 'Processing',
+    'completed'                     => 'Completed',
+    'delivery'                      => 'Delivery',
+    'pod'                           => 'POD (Proof of Delivery)',
+    'cancelled'                     => 'Cancelled',
+    'returned'                      => 'Returned',
     'inventory_already_deducted'    => 'Inventory Already Deducted',
     'inventory_deducted_successfully' => 'Inventory Deducted Successfully',
 

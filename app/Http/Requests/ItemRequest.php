@@ -81,6 +81,11 @@ class ItemRequest extends FormRequest
             'item_location'                   => ['nullable', ],
             'msp'                             => ['nullable', 'numeric'],
 
+            // Stock Images
+            'stock_images'                    => ['nullable', 'array'],
+            'stock_images.*'                  => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+            'remove_images'                   => ['nullable', 'string'],
+
 
         ];
 

@@ -363,6 +363,11 @@ class ItemController extends Controller
             //Update Item Master Average Purchase Price
             $this->itemTransactionService->updateItemMasterAveragePurchasePrice([$request->itemModel->id]);
 
+            /**
+             * Handle Stock Images Upload
+             * */
+            $this->handleStockImages($request, $request->itemModel);
+
             //exit;
             DB::commit();
 
@@ -1178,5 +1183,149 @@ class ItemController extends Controller
         $response = $response->toArray();
 
         return json_encode($response);
+    }
+
+    /**
+     * Handle stock images upload and removal
+     *
+     * @param ItemRequest $request
+     * @param Item $item
+     * @return void
+     */
+    private function handleStockImages(ItemRequest $request, Item $item): void
+    {
+        // Remove specified images
+        if ($request->has('remove_images')) {
+            $removedImages = json_decode($request->remove_images, true);
+            if (is_array($removedImages)) {
+                foreach ($removedImages as $mediaId) {
+                    $media = $item->getMedia('stock_images')->find($mediaId);
+                    if ($media) {
+                        $media->delete();
+                    }
+                }
+            }
+        }
+
+        // Add new images
+        if ($request->hasFile('stock_images')) {
+            // Get the count of existing stock images to continue indexing
+            $existingCount = $item->getMedia('stock_images')->count();
+
+            foreach ($request->file('stock_images') as $index => $image) {
+                if ($image->isValid()) {
+                    // Create filename using SKU + index + original extension
+                    $sku = $item->sku ?? $item->item_code ?? $item->id;
+                    $extension = $image->getClientOriginalExtension();
+                    $filename = $sku . '_' . ($existingCount + $index + 1) . '.' . $extension;
+
+                    $item->addMedia($image)
+                        ->usingFileName($filename)
+                        ->toMediaCollection('stock_images', 'public');
+                }
+            }
+        }
+    }
+
+    /**
+     * Download all stock images of an item as ZIP file
+     *
+     * @param int $id
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadStockImages($id)
+    {
+        $item = Item::findOrFail($id);
+        $stockImages = $item->getMedia('stock_images');
+
+        if ($stockImages->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => __('item.no_stock_images_found')
+            ], 404);
+        }
+
+        // Create a temporary directory for the ZIP
+        $tempDir = storage_path('app/temp');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $zipFileName = ($item->sku ?? $item->item_code) . '_stock_images_' . date('Y-m-d_H-i-s') . '.zip';
+        $zipFilePath = $tempDir . '/' . $zipFileName;
+
+        // Create ZIP archive
+        $zip = new \ZipArchive();
+        if ($zip->open($zipFilePath, \ZipArchive::CREATE) === TRUE) {
+            foreach ($stockImages as $index => $media) {
+                $filePath = $media->getPath();
+                if (file_exists($filePath)) {
+                    // Use SKU-based naming for files in ZIP
+                    $sku = $item->sku ?? $item->item_code ?? $item->id;
+                    // Get extension from the actual file path to preserve original format
+                    $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+                    // Fallback to media file_name if extension is empty
+                    if (empty($extension)) {
+                        $extension = pathinfo($media->file_name, PATHINFO_EXTENSION);
+                    }
+                    $zipEntryName = $sku . '_' . ($index + 1) . '.' . $extension;
+                    $zip->addFile($filePath, $zipEntryName);
+                }
+            }
+            $zip->close();
+
+            // Return the ZIP file as download and delete after sending
+            return response()->download($zipFilePath, $zipFileName)->deleteFileAfterSend(true);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => __('item.failed_to_create_zip')
+        ], 500);
+    }
+
+    /**
+     * Download a single stock image
+     *
+     * @param int $itemId
+     * @param int $mediaId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadSingleStockImage($itemId, $mediaId)
+    {
+        $item = Item::findOrFail($itemId);
+        $media = $item->getMedia('stock_images')->find($mediaId);
+
+        if (!$media) {
+            return response()->json([
+                'status' => false,
+                'message' => __('item.image_not_found')
+            ], 404);
+        }
+
+        $filePath = $media->getPath();
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'status' => false,
+                'message' => __('item.image_file_not_found')
+            ], 404);
+        }
+
+        // Create filename with SKU
+        $sku = $item->sku ?? $item->item_code ?? $item->id;
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+        if (empty($extension)) {
+            $extension = pathinfo($media->file_name, PATHINFO_EXTENSION);
+        }
+
+        // Find the position of this image in the collection for numbering
+        $stockImages = $item->getMedia('stock_images');
+        $index = $stockImages->search(function ($image) use ($mediaId) {
+            return $image->id == $mediaId;
+        });
+
+        $downloadName = $sku . '_' . ($index + 1) . '.' . $extension;
+
+        return response()->download($filePath, $downloadName);
     }
 }

@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 use App\Models\Tax;
 use App\Models\User;
@@ -13,9 +16,9 @@ use App\Models\Unit;
 use App\Models\Items\ItemCategory;
 use App\Models\Items\ItemGeneralQuantity;
 
-class Item extends Model
+class Item extends Model implements HasMedia
 {
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -67,6 +70,36 @@ class Item extends Model
 
         'brand_id',
     ];
+
+    /**
+     * Register media collections.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('stock_images')
+            ->acceptsMimeTypes(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
+            ->useDisk('public');
+    }
+
+    /**
+     * Register media conversions.
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(200)
+            ->height(200)
+            ->sharpen(10)
+            ->nonQueued()
+            ->performOnCollections('stock_images');
+
+        $this->addMediaConversion('medium')
+            ->width(500)
+            ->height(500)
+            ->sharpen(10)
+            ->nonQueued()
+            ->performOnCollections('stock_images');
+    }
 
     /**
      * Insert & update User Id's

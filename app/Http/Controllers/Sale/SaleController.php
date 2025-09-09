@@ -31,9 +31,11 @@ use App\Services\ItemService;
 use App\Services\PartyService;
 use App\Services\Communication\Email\SaleEmailNotificationService;
 use App\Services\Communication\Sms\SaleSmsNotificationService;
+use App\Services\SalesStatusService;
 use App\Enums\ItemTransactionUniqueCode;
 use App\Models\Sale\Quotation;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Exception;
 
 
@@ -67,6 +69,8 @@ class SaleController extends Controller
 
     private $generalDataService;
 
+    private $salesStatusService;
+
     public function __construct(PaymentTypeService           $paymentTypeService,
                                 PaymentTransactionService    $paymentTransactionService,
                                 AccountTransactionService    $accountTransactionService,
@@ -75,7 +79,8 @@ class SaleController extends Controller
                                 PartyService                 $partyService,
                                 SaleEmailNotificationService $saleEmailNotificationService,
                                 SaleSmsNotificationService   $saleSmsNotificationService,
-                                GeneralDataService           $generalDataService
+                                GeneralDataService           $generalDataService,
+                                SalesStatusService           $salesStatusService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -88,6 +93,7 @@ class SaleController extends Controller
         $this->saleEmailNotificationService = $saleEmailNotificationService;
         $this->saleSmsNotificationService = $saleSmsNotificationService;
         $this->generalDataService = $generalDataService;
+        $this->salesStatusService = $salesStatusService;
         $this->previousHistoryOfItems = [];
     }
 
@@ -590,7 +596,7 @@ class SaleController extends Controller
             $existingPayments = $newSale->refresh()->paymentTransaction;
             if ($existingPayments->isNotEmpty()) {
                 $skipPaymentProcessing = true;
-                \Log::info('Skipping payment processing - payments already transferred', [
+                Log::info('Skipping payment processing - payments already transferred', [
                     'sale_id' => $newSale->id,
                     'existing_payments_count' => $existingPayments->count()
                 ]);
@@ -741,13 +747,8 @@ class SaleController extends Controller
             }//amount>0
         }//for end
 
-        // After all payments are processed, refresh the model to get updated payment information
-        // and check if inventory should be deducted
-        if (isset($request->modelName)) {
-            // Refresh the model to get the latest payment data
-            $request->modelName->refresh();
-            $this->checkAndProcessInventoryDeduction($request->modelName);
-        }
+        // Remove automatic inventory deduction based on payment completion
+        // Inventory will now only be deducted when sales status is changed to POD
 
         return ['status' => true];
     }
@@ -1370,7 +1371,7 @@ class SaleController extends Controller
                         ];
                     })->toArray();
 
-                    \Log::info('Found existing payments in Sale Order', [
+                    Log::info('Found existing payments in Sale Order', [
                         'sale_order_id' => $saleOrder->id,
                         'payments_count' => count($existingPayments),
                         'total_amount' => collect($existingPayments)->sum('amount')
@@ -1407,7 +1408,7 @@ class SaleController extends Controller
         }
 
         // No existing payments, return default payment types
-        \Log::info('No existing payments found, returning default payment types', [
+        Log::info('No existing payments found, returning default payment types', [
             'converting_from' => $convertingFrom,
             'source_id' => $sale->id
         ]);
@@ -1434,7 +1435,7 @@ class SaleController extends Controller
      */
     private function transferPaymentsFromSaleOrder($saleOrderId, $sale)
     {
-        \Log::info('Starting payment transfer from Sale Order', [
+        Log::info('Starting payment transfer from Sale Order', [
             'sale_order_id' => $saleOrderId,
             'sale_id' => $sale->id
         ]);
@@ -1442,7 +1443,7 @@ class SaleController extends Controller
         $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction')->find($saleOrderId);
 
         if ($saleOrder && $saleOrder->paymentTransaction->isNotEmpty()) {
-            \Log::info('Found payments to transfer', [
+            Log::info('Found payments to transfer', [
                 'payments_count' => $saleOrder->paymentTransaction->count(),
                 'total_amount' => $saleOrder->paymentTransaction->sum('amount')
             ]);
@@ -1454,7 +1455,7 @@ class SaleController extends Controller
                 $newPayment->transaction_type = \App\Models\Sale\Sale::class;
                 $newPayment->save();
 
-                \Log::info('Payment transferred', [
+                Log::info('Payment transferred', [
                     'original_payment_id' => $payment->id,
                     'new_payment_id' => $newPayment->id,
                     'amount' => $payment->amount
@@ -1468,13 +1469,13 @@ class SaleController extends Controller
             $saleOrder->update(['paid_amount' => 0]);
             $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
 
-            \Log::info('Payment transfer completed', [
+            Log::info('Payment transfer completed', [
                 'sale_order_id' => $saleOrderId,
                 'sale_id' => $sale->id,
                 'new_paid_amount' => $sale->refresh()->paid_amount
             ]);
         } else {
-            \Log::info('No payments found to transfer', [
+            Log::info('No payments found to transfer', [
                 'sale_order_id' => $saleOrderId
             ]);
         }
@@ -1485,7 +1486,7 @@ class SaleController extends Controller
      */
     private function transferPaymentsFromQuotation($quotationId, $sale)
     {
-        \Log::info('Starting payment transfer from Quotation', [
+        Log::info('Starting payment transfer from Quotation', [
             'quotation_id' => $quotationId,
             'sale_id' => $sale->id
         ]);
@@ -1539,7 +1540,7 @@ class SaleController extends Controller
                 ]);
             }
 
-            \Log::info('Starting inventory deduction for sale', [
+            Log::info('Starting inventory deduction for sale', [
                 'sale_id' => $sale->id,
                 'items_count' => $sale->itemTransaction->count()
             ]);
@@ -1570,7 +1571,7 @@ class SaleController extends Controller
 
             DB::commit();
 
-            \Log::info('Inventory deduction completed for sale', ['sale_id' => $sale->id]);
+            Log::info('Inventory deduction completed for sale', ['sale_id' => $sale->id]);
 
             return response()->json([
                 'status' => true,
@@ -1579,7 +1580,7 @@ class SaleController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Inventory deduction failed for sale', [
+            Log::error('Inventory deduction failed for sale', [
                 'sale_id' => $sale->id,
                 'error' => $e->getMessage()
             ]);
@@ -1616,7 +1617,7 @@ class SaleController extends Controller
                 'unique_code' => ItemTransactionUniqueCode::SALE->value
             ]);
 
-            $this->itemTransactionService->updateItemSerialQuantityWarehouseWise(
+            $this->itemTransactionService->updateItemSerialCurrentStatusWarehouseWise(
                 $serialTransaction->item_serial_master_id
             );
         }
@@ -1635,7 +1636,7 @@ class SaleController extends Controller
         $totalPaid = $sale->paymentTransaction->sum('amount');
 
         // Log for debugging
-        \Log::info('Checking inventory deduction for sale', [
+        Log::info('Checking inventory deduction for sale', [
             'sale_id' => $sale->id,
             'total_paid' => $totalPaid,
             'grand_total' => $sale->grand_total,
@@ -1643,7 +1644,7 @@ class SaleController extends Controller
         ]);
 
         if ($totalPaid >= $sale->grand_total && $sale->inventory_status !== 'deducted') {
-            \Log::info('Processing inventory deduction for sale', ['sale_id' => $sale->id]);
+            Log::info('Processing inventory deduction for sale', ['sale_id' => $sale->id]);
             $result = $this->processInventoryDeduction($sale);
             return $result->getData()->status ?? false;
         }
@@ -1675,7 +1676,7 @@ class SaleController extends Controller
     }
 
     /**
-     * Update sales status
+     * Update sales status with enhanced logic
      *
      * @param Request $request
      * @param int $id
@@ -1686,21 +1687,71 @@ class SaleController extends Controller
         try {
             $sale = Sale::findOrFail($id);
 
-            // Validate the status
-            $validStatuses = ['Pending', 'Processing', 'Completed', 'Delivery', 'Cancelled', 'Returned'];
-            if (!in_array($request->sales_status, $validStatuses)) {
+            // Validate required fields for specific statuses
+            $statusesRequiringProof = $this->salesStatusService->getStatusesRequiringProof();
+
+            if (in_array($request->sales_status, $statusesRequiringProof)) {
+                $request->validate([
+                    'sales_status' => 'required|string',
+                    'notes' => 'required|string|max:1000',
+                    'proof_image' => 'nullable|image|max:2048', // 2MB max
+                ]);
+            } else {
+                $request->validate([
+                    'sales_status' => 'required|string',
+                    'notes' => 'nullable|string|max:1000',
+                ]);
+            }
+
+            // Update status using the service
+            $result = $this->salesStatusService->updateSalesStatus($sale, $request->sales_status, [
+                'notes' => $request->notes,
+                'proof_image' => $request->file('proof_image'),
+            ]);
+
+            if (!$result['success']) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Invalid sales status'
+                    'message' => $result['message']
                 ], 400);
             }
 
-            $sale->update(['sales_status' => $request->sales_status]);
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'],
+                'sales_status' => $request->sales_status,
+                'inventory_updated' => $result['inventory_updated'] ?? false
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
+
+    /**
+     * Get sales status history
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function getSalesStatusHistory(int $id): JsonResponse
+    {
+        try {
+            $sale = Sale::findOrFail($id);
+            $history = $this->salesStatusService->getStatusHistory($sale);
 
             return response()->json([
                 'status' => true,
-                'message' => 'Sales status updated successfully',
-                'sales_status' => $request->sales_status
+                'data' => $history
             ]);
         } catch (\Exception $e) {
             return response()->json([

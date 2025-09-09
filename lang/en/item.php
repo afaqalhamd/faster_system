@@ -187,4 +187,23 @@ return [
         'invalid_profit_margin'                     => 'Invalid Profit Margin',
         'exp'                                       => 'Exp.',
 
+        // Stock Images
+        'stock_images'                              => 'Stock Images',
+        'stock_images_desc'                         => 'Upload multiple images to showcase product variations, angles, or details.',
+        'click_to_upload_images'                    => 'Click to Upload Images',
+        'click_to_upload_new_images'                => 'Click to Upload New Images',
+        'or_drag_drop_images'                       => 'or drag and drop images here',
+        'supported_formats'                         => 'Supported formats',
+        'existing_images'                           => 'Existing Images',
+        'image_preview'                             => 'Image Preview',
+        'stock_image'                               => 'Stock Image',
+        'download_all'                              => 'Download All',
+        'download_all_images'                       => 'Download all stock images as ZIP file',
+        'download_single'                           => 'Download',
+        'download_single_image'                     => 'Download this image',
+        'image_not_found'                           => 'Image not found',
+        'image_file_not_found'                      => 'Image file not found on disk',
+        'no_stock_images_found'                     => 'No stock images found for this product',
+        'failed_to_create_zip'                      => 'Failed to create ZIP file',
+
 ];

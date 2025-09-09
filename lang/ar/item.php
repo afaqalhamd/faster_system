@@ -196,5 +196,23 @@ return [
 'invalid_profit_margin'                     => 'هامش الربح غير صالح',
 //Short form of expiry
 'exp'                                       => 'Exp.',
+  // Stock Images
+        'stock_images'                              => 'صور المخزون',
+        'stock_images_desc'                         => 'صور المخزون - قم بتحميل صور متعددة لعرض أشكال، زوايا، أو تفاصيل المنتج المختلفة.',
+        'click_to_upload_images'                    => ' انقر لتحميل الصور',
+        'click_to_upload_new_images'                => 'انقر لتحميل صور جديدة',
+        'or_drag_drop_images'                       => 'أو اسحب الصور وأفلتها هنا',
+        'supported_formats'                         => 'الصيغ المدعومة',
+        'existing_images'                           => 'الصور الموجودة',
+        'image_preview'                             => 'معاينة الصورة',
+        'stock_image'                               => 'صورة المخزون',
+        'download_all'                              => 'تحميل الكل',
+        'download_all_images'                       => 'تحميل جميع صور المخزون كملف مضغوط (ZIP)',
+        'download_single'                           => 'تحميل',
+        'download_single_image'                     => 'تحميل هذه الصورة',
+        'image_not_found'                           => 'لم يتم العثور على الصورة',
+        'image_file_not_found'                      => 'ملف الصورة غير موجود على القرص',
+        'no_stock_images_found'                     => 'لم يتم العثور على صور مخزون لهذا المنتج',
+        'failed_to_create_zip'                      => 'فشل في إنشاء ملف مضغوط (ZIP)',
 
 ];

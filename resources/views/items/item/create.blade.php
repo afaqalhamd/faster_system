@@ -295,8 +295,9 @@
 
                                         </div>
                                         <div class="tab-pane fade" id="successcontact" role="tabpanel">
-                                            <div class="col-md-12">
-                                                <x-label for="picture" name="{{ __('app.image') }}" />
+                                            <!-- Single Main Image -->
+                                            <div class="col-md-12 mb-4">
+                                                <x-label for="picture" name="{{ __('app.image') }} ({{ __('app.main') }})" />
                                                 <x-browse-image
                                                                 src="{{ url('/noimage/') }}"
                                                                 name='image'
@@ -306,6 +307,41 @@
                                                                 :enableDragDrop="true"
                                                                 />
                                             </div>
+
+                                            <!-- Multiple Stock Images -->
+                                            <div class="col-md-12 mb-4">
+                                                <div class="card">
+                                                    <div class="card-header">
+                                                        <h6 class="mb-0">{{ __('item.stock_images') }}</h6>
+                                                        <small class="text-muted">{{ __('item.stock_images_desc') }}</small>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="stock-images-upload-area">
+                                                            <input type="file"
+                                                                   id="stock_images"
+                                                                   name="stock_images[]"
+                                                                   multiple
+                                                                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                                                   class="d-none">
+
+                                                            <div class="upload-dropzone" onclick="document.getElementById('stock_images').click()">
+                                                                <div class="text-center p-4">
+                                                                    <i class="bx bx-cloud-upload display-4 text-primary"></i>
+                                                                    <h6 class="mt-2">{{ __('item.click_to_upload_images') }}</h6>
+                                                                    <p class="text-muted mb-0">{{ __('item.or_drag_drop_images') }}</p>
+                                                                    <small class="text-muted">{{ __('item.supported_formats') }}: JPG, PNG, GIF, WEBP</small>
+                                                                </div>
+                                                            </div>
+
+                                                            <div id="stock-images-preview" class="row mt-3" style="display: none;">
+                                                                <!-- Preview images will be inserted here -->
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Image URL -->
                                             <div class="col-md-12 mt-3">
                                                 <x-label for="image_url" name="{{ __('item.image_url') }}" />
                                                 <x-input type="text" name="image_url" :required="false" value=""/>
@@ -346,4 +382,108 @@
 <script src="{{ versionedAsset('custom/js/modals/item/brand/brand.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/category/category.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/unit/unit.js') }}"></script>
+
+<script>
+$(document).ready(function() {
+    // Stock Images Upload Handler
+    $('#stock_images').on('change', function() {
+        handleStockImagesPreview(this.files);
+    });
+
+    // Drag and Drop functionality
+    $('.upload-dropzone').on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('drag-over');
+    }).on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('drag-over');
+    }).on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('drag-over');
+
+        const files = e.originalEvent.dataTransfer.files;
+        document.getElementById('stock_images').files = files;
+        handleStockImagesPreview(files);
+    });
+
+    function handleStockImagesPreview(files) {
+        const previewContainer = $('#stock-images-preview');
+        previewContainer.empty();
+
+        if (files.length > 0) {
+            previewContainer.show();
+
+            Array.from(files).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imageHtml = `
+                            <div class="col-md-3 mb-3 stock-image-item" data-index="${index}">
+                                <div class="card">
+                                    <div class="card-body p-2">
+                                        <img src="${e.target.result}" class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;">
+                                        <div class="mt-2">
+                                            <small class="text-muted">${file.name}</small>
+                                            <button type="button" class="btn btn-danger btn-sm float-end remove-image" data-index="${index}">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        previewContainer.append(imageHtml);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        } else {
+            previewContainer.hide();
+        }
+    }
+
+    // Remove image handler
+    $(document).on('click', '.remove-image', function() {
+        const index = $(this).data('index');
+        const input = document.getElementById('stock_images');
+        const dt = new DataTransfer();
+
+        Array.from(input.files).forEach((file, i) => {
+            if (i !== index) {
+                dt.items.add(file);
+            }
+        });
+
+        input.files = dt.files;
+        $(this).closest('.stock-image-item').remove();
+
+        if (input.files.length === 0) {
+            $('#stock-images-preview').hide();
+        }
+    });
+});
+</script>
+
+<style>
+.upload-dropzone {
+    border: 2px dashed #007bff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+    border-color: #0056b3;
+    background-color: #f8f9ff;
+}
+
+.stock-image-item .card {
+    transition: transform 0.2s ease;
+}
+
+.stock-image-item .card:hover {
+    transform: translateY(-2px);
+}
+</style>
 @endsection

@@ -198,6 +198,8 @@ return [
 
     'error'                             => 'Error',
     'transactions'                      => 'Transactions',
+    'new'                               => 'New',
+    'main'                              => 'Main',
     'transaction_list'                  => 'Transaction List',
     'transaction_type'                  => 'Transaction Type',
     'reference_no'                      => 'Reference No.',

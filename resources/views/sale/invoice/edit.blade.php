@@ -86,14 +86,26 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <x-label for="sales_status" name="{{ __('Sales Status') }}" />
-                                                <select class="form-select" name="sales_status" id="sales_status">
-                                                    <option value="Pending" {{ $sale->sales_status == 'Pending' ? 'selected' : '' }}>{{ __('sale.pending') }}</option>
-                                                    <option value="Processing" {{ $sale->sales_status == 'Processing' ? 'selected' : '' }}>{{ __('sale.processing') }}</option>
-                                                    <option value="Completed" {{ $sale->sales_status == 'Completed' ? 'selected' : '' }}>{{ __('sale.completed') }}</option>
-                                                    <option value="Delivery" {{ $sale->sales_status == 'Delivery' ? 'selected' : '' }}>{{ __('sale.delivery') }}</option>
-                                                    <option value="Cancelled" {{ $sale->sales_status == 'Cancelled' ? 'selected' : '' }}>{{ __('sale.cancelled') }}</option>
-                                                    <option value="Returned" {{ $sale->sales_status == 'Returned' ? 'selected' : '' }}>{{ __('sale.returned') }}</option>
-                                                </select>
+                                                <div class="d-flex gap-2">
+                                                    <select class="form-select sales-status-select" name="sales_status" id="sales_status" data-sale-id="{{ $sale->id }}">
+                                                        <option value="Pending" {{ $sale->sales_status == 'Pending' ? 'selected' : '' }}>{{ __('sale.pending') }}</option>
+                                                        <option value="Processing" {{ $sale->sales_status == 'Processing' ? 'selected' : '' }}>{{ __('sale.processing') }}</option>
+                                                        <option value="Completed" {{ $sale->sales_status == 'Completed' ? 'selected' : '' }}>{{ __('sale.completed') }}</option>
+                                                        <option value="Delivery" {{ $sale->sales_status == 'Delivery' ? 'selected' : '' }}>{{ __('sale.delivery') }}</option>
+                                                        <option value="POD" {{ $sale->sales_status == 'POD' ? 'selected' : '' }}>{{ __('sale.pod') }}</option>
+                                                        <option value="Cancelled" {{ $sale->sales_status == 'Cancelled' ? 'selected' : '' }}>{{ __('sale.cancelled') }}</option>
+                                                        <option value="Returned" {{ $sale->sales_status == 'Returned' ? 'selected' : '' }}>{{ __('sale.returned') }}</option>
+                                                    </select>
+                                                    @if(isset($sale) && $sale->id)
+                                                    <button type="button" class="btn btn-outline-info view-status-history" data-sale-id="{{ $sale->id }}" title="{{ __('View Status History') }}">
+                                                        <i class="bx bx-history"></i>
+                                                    </button>
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="bx bx-info-circle"></i>
+                                                    {{ __('POD, Cancelled, and Returned statuses require proof images and notes') }}
+                                                </small>
                                             </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
@@ -355,4 +367,5 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sales-status-manager.js') }}"></script>
 @endsection

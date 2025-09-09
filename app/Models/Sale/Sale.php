@@ -17,6 +17,7 @@ use App\Models\Sale\SaleOrder;
 use App\Models\State;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
+use App\Models\SalesStatusHistory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
@@ -178,6 +179,14 @@ class Sale extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_id');
+    }
+
+    /**
+     * Get the sales status histories for the sale.
+     */
+    public function salesStatusHistories(): HasMany
+    {
+        return $this->hasMany(SalesStatusHistory::class, 'sale_id');
     }
 
 }

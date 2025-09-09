@@ -64,14 +64,21 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <x-label for="sales_status" name="{{ __('Sales Status') }}" />
-                                                <select class="form-select" name="sales_status" id="sales_status">
-                                                    <option value="Pending">{{ __('sale.pending') }}</option>
-                                                    <option value="Processing">{{ __('sale.processing') }}</option>
-                                                    <option value="Completed">{{ __('sale.completed') }}</option>
-                                                    <option value="Delivery">{{ __('sale.delivery') }}</option>
-                                                    <option value="Cancelled">{{ __('sale.cancelled') }}</option>
-                                                    <option value="Returned">{{ __('sale.returned') }}</option>
-                                                </select>
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <select class="form-select sales-status-select" name="sales_status" id="sales_status" data-sale-id="new">
+                                                        <option value="Pending" selected>{{ __('sale.pending') }}</option>
+                                                        <option value="Processing">{{ __('sale.processing') }}</option>
+                                                        <option value="Completed">{{ __('sale.completed') }}</option>
+                                                        <option value="Delivery">{{ __('sale.delivery') }}</option>
+                                                        <option value="POD">{{ __('sale.pod') }}</option>
+                                                        <option value="Cancelled">{{ __('sale.cancelled') }}</option>
+                                                        <option value="Returned">{{ __('sale.returned') }}</option>
+                                                    </select>
+                                                    <span class="badge bg-info text-dark" title="{{ __('POD status allows image and notes input for proof of delivery') }}">
+                                                        <i class="bx bx-info-circle"></i>
+                                                    </span>
+                                                </div>
+                                                <small class="text-muted">{{ __('Note: POD status requires proof image and notes') }}</small>
                                             </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
@@ -269,4 +276,5 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sales-status-manager.js') }}"></script>
 @endsection

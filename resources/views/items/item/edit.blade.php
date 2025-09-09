@@ -293,9 +293,10 @@
 
                                         </div>
                                         <div class="tab-pane fade" id="successcontact" role="tabpanel">
+                                            <!-- Main Image -->
                                             <div class="row">
                                                 <div class="col-md-6">
-                                                    <x-label for="picture" name="{{ __('app.image') }}" />
+                                                    <x-label for="picture" name="{{ __('app.image') }} ({{ __('app.main') }})" />
                                                     <x-browse-image
                                                                     src="{{ url('/item/getimage/' . $item->image_path) }}"
                                                                     name='image'
@@ -316,6 +317,97 @@
                                                         </div>
                                                     @endif
                                                     <x-input type="text" name="image_url" :required="false" value="{{ $item->image_url }}"/>
+                                                </div>
+                                            </div>
+
+                                            <hr class="my-4">
+
+                                            <!-- Stock Images Section -->
+                                            <div class="col-md-12">
+                                                @php
+                                                    $stockImages = $item->getMedia('stock_images');
+                                                @endphp
+                                                <div class="card">
+                                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h6 class="mb-0">{{ __('item.stock_images') }}</h6>
+                                                            <small class="text-muted">{{ __('item.stock_images_desc') }}</small>
+                                                        </div>
+                                                        @if($stockImages->count() > 0)
+                                                            <a href="{{ route('item.download.stock.images', $item->id) }}"
+                                                               class="btn btn-primary btn-sm"
+                                                               title="{{ __('item.download_all_images') }}">
+                                                                <i class="bx bx-download me-1"></i>
+                                                                {{ __('item.download_all') }} ({{ $stockImages->count() }})
+                                                            </a>
+                                                        @endif
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <!-- Existing Stock Images -->
+
+                                                        @if($stockImages->count() > 0)
+                                                            <div class="row mb-3" id="existing-stock-images">
+                                                                <h6 class="mb-3">{{ __('item.existing_images') }} ({{ $stockImages->count() }})</h6>
+                                                                @foreach($stockImages as $media)
+                                                                    <div class="col-md-3 mb-3 existing-image-item" data-media-id="{{ $media->id }}">
+                                                                        <div class="card">
+                                                                            <div class="card-body p-2">
+                                                                                <img src="{{ $media->getUrl('medium') }}"
+                                                                                     class="img-fluid rounded"
+                                                                                     style="height: 400px; width: 100%; object-fit: cover;"
+                                                                                     data-bs-toggle="modal"
+                                                                                     data-bs-target="#imagePreviewModal"
+                                                                                     data-image-url="{{ $media->getUrl() }}"
+                                                                                     onerror="this.src='{{ $media->getUrl() }}'; this.onerror=null;">
+                                                                                <div class="mt-2">
+                                                                                    <small class="text-muted">{{ $media->name }}</small>
+                                                                                    <div class="btn-group float-end" role="group">
+                                                                                        <a href="{{ route('item.download.single.stock.image', [$item->id, $media->id]) }}"
+                                                                                           class="btn btn-success btn-sm"
+                                                                                           title="{{ __('item.download_single_image') }}">
+                                                                                            <i class="bx bx-download"></i>
+                                                                                        </a>
+                                                                                        <button type="button"
+                                                                                                class="btn btn-danger btn-sm remove-existing-image"
+                                                                                                data-media-id="{{ $media->id }}"
+                                                                                                title="{{ __('app.delete') }}">
+                                                                                            <i class="bx bx-trash"></i>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                            <hr>
+                                                        @endif
+
+                                                        <!-- Add New Stock Images -->
+                                                        <div class="stock-images-upload-area">
+                                                            <input type="file"
+                                                                   id="stock_images"
+                                                                   name="stock_images[]"
+                                                                   multiple
+                                                                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                                                   class="d-none">
+
+                                                            <input type="hidden" id="removed_images" name="remove_images" value="">
+
+                                                            <div class="upload-dropzone" onclick="document.getElementById('stock_images').click()">
+                                                                <div class="text-center p-4">
+                                                                    <i class="bx bx-cloud-upload display-4 text-primary"></i>
+                                                                    <h6 class="mt-2">{{ __('item.click_to_upload_new_images') }}</h6>
+                                                                    <p class="text-muted mb-0">{{ __('item.or_drag_drop_images') }}</p>
+                                                                    <small class="text-muted">{{ __('item.supported_formats') }}: JPG, PNG, GIF, WEBP</small>
+                                                                </div>
+                                                            </div>
+
+                                                            <div id="stock-images-preview" class="row mt-3" style="display: none;">
+                                                                <!-- Preview new images will be inserted here -->
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -363,6 +455,9 @@
 
     // Handle image reset
     $(document).ready(function() {
+        let removedImages = [];
+
+        // Main image reset handler
         $('.image-reset-class-1').on('click', function() {
             // Clear the file input
             $('.input-box-class-1').val('');
@@ -380,6 +475,157 @@
                 }).appendTo('#itemForm');
             }
         });
+
+        // Stock Images Upload Handler
+        $('#stock_images').on('change', function() {
+            handleStockImagesPreview(this.files);
+        });
+
+        // Drag and Drop functionality for stock images
+        $('.upload-dropzone').on('dragover', function(e) {
+            e.preventDefault();
+            $(this).addClass('drag-over');
+        }).on('dragleave', function(e) {
+            e.preventDefault();
+            $(this).removeClass('drag-over');
+        }).on('drop', function(e) {
+            e.preventDefault();
+            $(this).removeClass('drag-over');
+
+            const files = e.originalEvent.dataTransfer.files;
+            document.getElementById('stock_images').files = files;
+            handleStockImagesPreview(files);
+        });
+
+        // Handle stock images preview
+        function handleStockImagesPreview(files) {
+            const previewContainer = $('#stock-images-preview');
+            previewContainer.empty();
+
+            if (files.length > 0) {
+                previewContainer.show();
+
+                Array.from(files).forEach((file, index) => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imageHtml = `
+                                <div class="col-md-3 mb-3 new-stock-image-item" data-index="${index}">
+                                    <div class="card">
+                                        <div class="card-body p-2">
+                                            <img src="${e.target.result}" class="img-fluid rounded" style="height: 120px; width: 100%; object-fit: cover;">
+                                            <div class="mt-2">
+                                                <small class="text-success">{{ __('app.new') }}: ${file.name}</small>
+                                                <button type="button" class="btn btn-danger btn-sm float-end remove-new-image" data-index="${index}">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            previewContainer.append(imageHtml);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            } else {
+                previewContainer.hide();
+            }
+        }
+
+        // Remove new image handler
+        $(document).on('click', '.remove-new-image', function() {
+            const index = $(this).data('index');
+            const input = document.getElementById('stock_images');
+            const dt = new DataTransfer();
+
+            Array.from(input.files).forEach((file, i) => {
+                if (i !== index) {
+                    dt.items.add(file);
+                }
+            });
+
+            input.files = dt.files;
+            $(this).closest('.new-stock-image-item').remove();
+
+            if (input.files.length === 0) {
+                $('#stock-images-preview').hide();
+            }
+        });
+
+        // Remove existing image handler
+        $(document).on('click', '.remove-existing-image', function() {
+            const mediaId = $(this).data('media-id');
+            removedImages.push(mediaId);
+
+            // Update hidden input with removed images
+            $('#removed_images').val(JSON.stringify(removedImages));
+
+            // Remove from UI with animation
+            $(this).closest('.existing-image-item').fadeOut(300, function() {
+                $(this).remove();
+
+                // Update count
+                const remaining = $('#existing-stock-images .existing-image-item:visible').length;
+                if (remaining === 0) {
+                    $('#existing-stock-images').hide();
+                }
+            });
+        });
+
+        // Image preview modal handler
+        $(document).on('click', '[data-bs-target="#imagePreviewModal"]', function() {
+            const imageUrl = $(this).data('image-url');
+            $('#previewModalImage').attr('src', imageUrl);
+        });
     });
 </script>
+
+<style>
+.upload-dropzone {
+    border: 2px dashed #007bff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+    border-color: #0056b3;
+    background-color: #f8f9ff;
+}
+
+.stock-image-item .card,
+.existing-image-item .card,
+.new-stock-image-item .card {
+    transition: transform 0.2s ease;
+}
+
+.stock-image-item .card:hover,
+.existing-image-item .card:hover,
+.new-stock-image-item .card:hover {
+    transform: translateY(-2px);
+}
+
+.existing-image-item img {
+    cursor: pointer;
+}
+</style>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imagePreviewModalLabel">{{ __('item.image_preview') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="previewModalImage" src="" class="img-fluid" alt="{{ __('item.stock_image') }}">
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
