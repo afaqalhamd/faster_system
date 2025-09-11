@@ -591,8 +591,9 @@
     function setBottomInvoiceTotal(){
         var sumOfTotalColumn = returnSumOfTotalColumn();
         var getRoundOff = getCurrentRoundOffAmount();
+        var shipping_charge = returnDecimalValueByName('shipping_charge')
 
-        sumOfTotalColumn = parseFloat(sumOfTotalColumn) + parseFloat(getRoundOff);
+        sumOfTotalColumn = parseFloat(sumOfTotalColumn) + parseFloat(getRoundOff) + parseFloat(shipping_charge);
 
         //Set Grand Total
         $(".grand_total").val(_parseFix(sumOfTotalColumn));
@@ -633,6 +634,13 @@
      * */
     $(document).on('change', '.round_off', function(){
         setRoundOffAmount('manual');
+        setBottomInvoiceTotal();
+    });
+
+    /**
+     * Shipping Charge Change
+     * */
+    $(document).on('change input', 'input[name="shipping_charge"]', function(){
         setBottomInvoiceTotal();
     });
 

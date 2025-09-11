@@ -18,6 +18,7 @@ use App\Models\State;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
 use App\Models\SalesStatusHistory;
+use App\Models\Carrier;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
@@ -43,6 +44,7 @@ class Sale extends Model
         'reference_no',
         'party_id',
         'state_id',
+        'carrier_id',
         'note',
         'round_off',
         'grand_total',
@@ -52,6 +54,10 @@ class Sale extends Model
         'inventory_status',
         'inventory_deducted_at',
         'sales_status', // Add the new sales_status field
+        'post_delivery_action',
+        'post_delivery_action_at',
+        'shipping_charge',
+        'is_shipping_charge_distributed',
     ];
 
     /**
@@ -187,6 +193,16 @@ class Sale extends Model
     public function salesStatusHistories(): HasMany
     {
         return $this->hasMany(SalesStatusHistory::class, 'sale_id');
+    }
+
+    /**
+     * Define the relationship between Sale and Carrier.
+     *
+     * @return BelongsTo
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 
 }

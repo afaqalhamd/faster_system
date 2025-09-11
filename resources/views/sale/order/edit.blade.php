@@ -72,9 +72,45 @@
                                                 <x-dropdown-states selected="{{ $order->state_id }}" dropdownName='state_id'/>
                                             </div>
                                             @endif
+
+                                            @if(app('company')['is_enable_carrier'] || $order->carrier_id !== null)
+                                            <div class="col-md-4">
+                                                <x-label for="carrier_id" name="{{ __('carrier.shipping_carrier') }} <i class='bx bx-package' ></i>" />
+                                                <div class="input-group mb-3">
+                                                    <x-dropdown-carrier selected="{{ $order->carrier_id }}" :showSelectOptionAll=true name='carrier_id' />
+                                                </div>
+                                            </div>
+                                            @endif
+
                                             <div class="col-md-4">
                                                 <x-label for="order_status" name="{{ __('sale.order_status') }}" />
-                                                <x-dropdown-general optionNaming="saleOrderStatus" selected="{{ $order->order_status }}" dropdownName='order_status'/>
+                                                <div class="d-flex gap-2">
+                                                    <div class="position-relative flex-grow-1">
+                                                        <select class="form-select sale-order-status-select" name="order_status" id="order_status" data-order-id="{{ $order->id }}">
+                                                            @php
+                                                                $generalDataService = new \App\Services\GeneralDataService();
+                                                                $statusOptions = $generalDataService->getSaleOrderStatus();
+                                                            @endphp
+                                                            @foreach($statusOptions as $status)
+                                                                <option value="{{ $status['id'] }}"
+                                                                        data-icon="{{ $status['icon'] }}"
+                                                                        data-color="{{ $status['color'] }}"
+                                                                        {{ $order->order_status == $status['id'] ? 'selected' : '' }}>
+                                                                    {{ $status['name'] }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    @if(isset($order) && $order->id)
+                                                    <button type="button" class="btn btn-outline-info view-status-history" data-order-id="{{ $order->id }}" title="{{ __('View Status History') }}">
+                                                        <i class="bx bx-history"></i>
+                                                    </button>
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="bx bx-info-circle"></i>
+                                                    {{ __('POD, Cancelled, and Returned statuses require proof images and notes') }}
+                                                </small>
                                             </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
@@ -164,6 +200,20 @@
                                             <div class="col-md-4 mt-4">
                                                 <table class="table mb-0 table-striped">
                                                    <tbody>
+                                                    @if(app('company')['is_enable_carrier_charge'])
+                                                       <tr>
+                                                         <td>
+                                                            <span class="fw-bold">{{ __('carrier.shipping_charge') }}</span>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="is_shipping_charge_distributed" name="is_shipping_charge_distributed" {{ $order->is_shipping_charge_distributed ? 'checked' : '' }}>
+                                                                <label class="form-check-label small cursor-pointer" for="is_shipping_charge_distributed">{{ __('carrier.distribute_across_items') }}</label>
+                                                            </div>
+                                                        </td>
+                                                         <td>
+                                                            <x-input type="text" additionalClasses="text-end" name="shipping_charge" :required="true" placeholder="Shipping Charge" value="{{ $formatNumber->formatWithPrecision($order->shipping_charge ?? 0) }}"/>
+                                                        </td>
+                                                      </tr>
+                                                      @endif
                                                       <tr>
                                                          <td class="w-50">
                                                             <div class="form-check">
@@ -205,6 +255,7 @@
                                                 </table>
                                             </div>
                                     </div>
+
                                     <div class="card-header px-4 py-3">
                                         <h5 class="mb-0">{{ __('payment.history') }}</h5>
                                     </div>
@@ -317,6 +368,175 @@
                                         </div>
                                     </div>
 
+                                    {{-- Status Change History Section --}}
+                                    <div class="card-header px-4 py-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h5 class="mb-0">Status Change History</h5>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-light text-muted me-2 small" id="statusHistoryCount">
+                                                    {{ $order->saleOrderStatusHistories->count() }} changes
+                                                </span>
+                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#statusHistoryCollapse" aria-expanded="true" aria-controls="statusHistoryCollapse">
+                                                    <i class="bx bx-chevron-up fs-6"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="collapse show" id="statusHistoryCollapse">
+                                        <div class="card-body p-4 row g-3">
+                                            <div class="col-md-12" id="statusHistoryContent">
+                                                @if($order->saleOrderStatusHistories->count() > 0)
+                                                    @foreach($order->saleOrderStatusHistories->sortByDesc('changed_at') as $history)
+                                                        @php
+                                                            $statusConfig = [
+                                                                'Pending' => ['icon' => 'bx-time-five', 'color' => 'warning'],
+                                                                'Processing' => ['icon' => 'bx-loader-circle', 'color' => 'primary'],
+                                                                'Completed' => ['icon' => 'bx-check-circle', 'color' => 'success'],
+                                                                'Delivery' => ['icon' => 'bx-package', 'color' => 'info'],
+                                                                'POD' => ['icon' => 'bx-receipt', 'color' => 'success'],
+                                                                'Cancelled' => ['icon' => 'bx-x-circle', 'color' => 'danger'],
+                                                                'Returned' => ['icon' => 'bx-undo', 'color' => 'warning']
+                                                            ];
+                                                            $currentStatus = $statusConfig[$history->new_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary'];
+                                                            $previousStatus = $history->previous_status ? ($statusConfig[$history->previous_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary']) : null;
+                                                        @endphp
+
+                                                        <div class="d-flex align-items-start mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }} position-relative">
+                                                            <div class="me-3 position-relative">
+                                                                <div class="bg-{{ $currentStatus['color'] }} text-white rounded-circle d-flex align-items-center justify-content-center timeline-status-circle" style="width: 28px; height: 28px; font-size: 12px; position: relative; z-index: 2;">
+                                                                    <i class="bx {{ $currentStatus['icon'] }}"></i>
+                                                                </div>
+                                                                @if(!$loop->last)
+                                                                    @php
+                                                                        $connectorColor = match($currentStatus['color']) {
+                                                                            'warning' => '#ffc107',
+                                                                            'primary' => '#0d6efd',
+                                                                            'success' => '#198754',
+                                                                            'info' => '#0dcaf0',
+                                                                            'danger' => '#dc3545',
+                                                                            default => '#6c757d'
+                                                                        };
+                                                                    @endphp
+                                                                    <div class="timeline-connector" style="position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 2px; height: 40px; background: linear-gradient(180deg, {{ $connectorColor }} 0%, #e9ecef 100%); z-index: 1;"></div>
+                                                                @endif
+                                                            </div>
+                                                            <div class="flex-grow-1">
+                                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                                    <div>
+                                                                        @if($history->previous_status)
+                                                                            <div class="d-flex align-items-center gap-1 mb-1">
+                                                                                <span class="badge bg-{{ $previousStatus['color'] }} text-white small">
+                                                                                    <i class="bx {{ $previousStatus['icon'] }} me-1"></i>{{ $history->previous_status }}
+                                                                                </span>
+                                                                                <i class="bx bx-right-arrow-alt text-muted" style="font-size: 12px;"></i>
+                                                                                <span class="badge bg-{{ $currentStatus['color'] }} text-white small">
+                                                                                    <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ $history->new_status }}
+                                                                                </span>
+                                                                            </div>
+                                                                        @else
+                                                                            <span class="badge bg-{{ $currentStatus['color'] }} text-white small">
+                                                                                <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ $history->new_status }} <small>(Initial)</small>
+                                                                            </span>
+                                                                        @endif
+                                                                    </div>
+                                                                    <div class="text-end">
+                                                                        <small class="text-primary fw-semibold">{{ $history->changed_at->format('M d, H:i') }}</small>
+                                                                        <small class="text-muted d-block">{{ $history->changed_at->diffForHumans() }}</small>
+                                                                    </div>
+                                                                </div>
+
+                                                                @if($history->notes)
+                                                                    <div class="bg-light rounded p-2 mb-2">
+                                                                        <small><i class="bx bx-note text-primary me-1"></i><strong>Notes:</strong> {{ $history->notes }}</small>
+                                                                    </div>
+                                                                @endif
+
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-muted">
+                                                                        <i class="bx bx-user text-danger me-1"></i>
+                                                                        @if($history->changedBy)
+                                                                            {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
+                                                                        @elseif($history->changed_by)
+                                                                            @php
+                                                                                $user = \App\Models\User::find($history->changed_by);
+                                                                                $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                            @endphp
+                                                                            {{ $userName }}
+                                                                        @else
+                                                                            System Auto
+                                                                        @endif
+                                                                    </small>
+
+                                                                    @if($history->proof_image)
+                                                                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#proofImageModal{{ $history->id }}">
+                                                                            <i class="bx bx-image me-1"></i>View Proof
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {{-- Compact Proof Image Modal --}}
+                                                        @if($history->proof_image)
+                                                        <div class="modal fade" id="proofImageModal{{ $history->id }}" tabindex="-1">
+                                                            <div class="modal-dialog modal-lg">
+                                                                <div class="modal-content">
+                                                                    <div class="modal-header">
+                                                                        <h6 class="modal-title">{{ $history->new_status }} Proof Image</h6>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <div class="modal-body text-center">
+                                                                        <img src="{{ asset('storage/' . $history->proof_image) }}"
+                                                                             alt="{{ $history->new_status }} Proof"
+                                                                             class="img-fluid rounded">
+
+                                                                        @if($history->notes)
+                                                                            <div class="mt-3 p-3 bg-light rounded">
+                                                                                <strong>Notes:</strong>
+                                                                                <p class="mb-0">{{ $history->notes }}</p>
+                                                                            </div>
+                                                                        @endif
+
+                                                                        <div class="mt-3 text-muted">
+                                                                            <small>
+                                                                                Changed by:
+                                                                                @if($history->changedBy)
+                                                                                    {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
+                                                                                @elseif($history->changed_by)
+                                                                                    @php
+                                                                                        $user = \App\Models\User::find($history->changed_by);
+                                                                                        $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                                    @endphp
+                                                                                    {{ $userName }}
+                                                                                @else
+                                                                                    System Auto
+                                                                                @endif
+                                                                                 | {{ $history->changed_at->format('M d, Y H:i') }}
+                                                                            </small>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <a href="{{ asset('storage/' . $history->proof_image) }}" download class="btn btn-primary btn-sm">
+                                                                            <i class="bx bx-download me-1"></i>Download
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        @endif
+                                                    @endforeach
+                                                @else
+                                                    <div class="text-center py-5" id="noStatusHistoryMessage">
+                                                        <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>
+                                                        <p class="text-muted mt-3">No status history available yet.</p>
+                                                        <p class="text-muted small">Status changes will be recorded here.</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="card-header px-4 py-3"></div>
                                     <div class="card-body p-4 row g-3">
                                             <div class="col-md-12">
@@ -354,6 +574,7 @@
 </script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/sale-order-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking-settings.js') }}"></script>
@@ -363,10 +584,364 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
 
 <script>
+// Timeline Animation
 $(document).ready(function() {
-    // Manual inventory deduction functionality
+    // Animate timeline connectors on page load
+    setTimeout(function() {
+        $('.timeline-connector').addClass('animate');
+    }, 500);
+
+    // Add hover effects to timeline items
+    $('.timeline-status-circle').hover(
+        function() {
+            $(this).closest('.position-relative').find('.timeline-connector').css('opacity', '1');
+        },
+        function() {
+            $(this).closest('.position-relative').find('.timeline-connector').css('opacity', '0.6');
+        }
+    );
+
+    // Automatically load status history on page load
+    const orderId = $('.view-status-history').data('order-id');
+    if (orderId) {
+        // Show loading indicator
+        $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');
+
+        // Fetch status history via AJAX
+        $.ajax({
+            url: `/sale/order/status-history/${orderId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    updateStatusHistorySection(response.data);
+                } else {
+                    $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + (response.message || 'Unknown error') + '</p></div>');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while fetching status history.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + errorMessage + '</p></div>');
+            }
+        });
+    }
+
+    // Status update functionality
+    const proofRequiredStatuses = ['POD', 'Cancelled', 'Returned'];
+
+    // Show/hide proof image section based on selected status
+    $('#order_status').on('change', function() {
+        const selectedStatus = $(this).val();
+        if (proofRequiredStatuses.includes(selectedStatus)) {
+            // For statuses requiring proof, we'll show a modal
+            if (selectedStatus === 'POD' || selectedStatus === 'Cancelled' || selectedStatus === 'Returned') {
+                showStatusUpdateModal($(this).data('order-id'), selectedStatus);
+            }
+        }
+    });
+
+    // Show status update modal for proof-required statuses
+    function showStatusUpdateModal(orderId, status) {
+        const modal = `
+            <div class="modal fade" id="statusUpdateModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Update Status to ${status}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form class="status-update-form" data-order-id="${orderId}" data-status="${status}">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Notes *</label>
+                                    <textarea name="notes" class="form-control" rows="3" required
+                                        placeholder="Please provide notes for this status change..."></textarea>
+                                </div>
+                                ${status !== 'Cancelled' ? `
+                                <div class="mb-3">
+                                    <label class="form-label">Proof Image ${status === 'POD' ? '*' : ''}</label>
+                                    <input type="file" name="proof_image" class="form-control"
+                                        accept="image/*" ${status === 'POD' ? 'required' : ''}>
+                                    <small class="text-muted">Maximum size: 2MB. Supported formats: JPG, PNG, GIF</small>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Update Status</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        $('#statusUpdateModal').remove();
+
+        // Add modal to body and show
+        $('body').append(modal);
+        $('#statusUpdateModal').modal('show');
+    }
+
+    // Status update form submission
+    $(document).on('submit', '.status-update-form', function(e) {
+        e.preventDefault();
+        const orderId = $(this).data('order-id');
+        const status = $(this).data('status');
+        const formData = new FormData(this);
+
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        formData.append('status', status);
+        formData.append('_token', csrfToken);
+
+        // Show loading state
+        $('.status-update-form button[type="submit"]').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'
+        );
+
+        $.ajax({
+            url: '/sale/order/update-status',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            },
+            success: function(response) {
+                if (response.success) {
+                    iziToast.success({
+                        title: 'Success',
+                        message: response.message,
+                        position: 'topRight'
+                    });
+                    $('#statusUpdateModal').modal('hide');
+                    // Reload page to show updated status
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    iziToast.error({
+                        title: 'Error',
+                        message: response.message,
+                        position: 'topRight'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while updating the status.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                iziToast.error({
+                    title: 'Error',
+                    message: errorMessage,
+                    position: 'topRight'
+                });
+            },
+            complete: function() {
+                $('.status-update-form button[type="submit"]').prop('disabled', false).html('Update Status');
+            }
+        });
+    });
+
+    // Status history button click handler (kept for backward compatibility)
+    $(document).on('click', '.view-status-history', function(e) {
+        e.preventDefault();
+        const orderId = $(this).data('order-id');
+
+        // Show loading indicator
+        $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');
+
+        // Make sure the collapse is shown
+        if (!$('#statusHistoryCollapse').hasClass('show')) {
+            $('#statusHistoryCollapse').collapse('show');
+            // Update the toggle button icon
+            $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');
+        }
+
+        // Scroll to the status history section
+        $('html, body').animate({
+            scrollTop: $('#statusHistoryCollapse').offset().top - 100
+        }, 500);
+
+        // Fetch status history via AJAX
+        $.ajax({
+            url: `/sale/order/status-history/${orderId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    updateStatusHistorySection(response.data);
+                } else {
+                    $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + (response.message || 'Unknown error') + '</p></div>');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while fetching status history.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + errorMessage + '</p></div>');
+            }
+        });
+    });
+
+    // Update the status history section with new data
+    function updateStatusHistorySection(history) {
+        // Update the count badge
+        $('#statusHistoryCount').text(history.length + ' changes');
+
+        let historyHtml = '';
+
+        if (history.length === 0) {
+            historyHtml = `
+                <div class="text-center py-5" id="noStatusHistoryMessage">
+                    <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3">No status history available yet.</p>
+                    <p class="text-muted small">Status changes will be recorded here.</p>
+                </div>
+            `;
+        } else {
+            // Sort history by changed_at descending (newest first)
+            history.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+
+            history.forEach((item, index) => {
+                // Status configuration for icons and colors
+                const statusConfig = {
+                    'Pending': {'icon': 'bx-time-five', 'color': 'warning'},
+                    'Processing': {'icon': 'bx-loader-circle', 'color': 'primary'},
+                    'Completed': {'icon': 'bx-check-circle', 'color': 'success'},
+                    'Delivery': {'icon': 'bx-package', 'color': 'info'},
+                    'POD': {'icon': 'bx-receipt', 'color': 'success'},
+                    'Cancelled': {'icon': 'bx-x-circle', 'color': 'danger'},
+                    'Returned': {'icon': 'bx-undo', 'color': 'warning'}
+                };
+
+                const currentStatus = statusConfig[item.new_status] || {'icon': 'bx-circle', 'color': 'secondary'};
+                const previousStatus = item.previous_status ? (statusConfig[item.previous_status] || {'icon': 'bx-circle', 'color': 'secondary'}) : null;
+
+                // Determine connector color
+                let connectorColor = '#6c757d'; // default gray
+                if (currentStatus.color === 'warning') connectorColor = '#ffc107';
+                else if (currentStatus.color === 'primary') connectorColor = '#0d6efd';
+                else if (currentStatus.color === 'success') connectorColor = '#198754';
+                else if (currentStatus.color === 'info') connectorColor = '#0dcaf0';
+                else if (currentStatus.color === 'danger') connectorColor = '#dc3545';
+
+                historyHtml += `
+                    <div class="d-flex align-items-start mb-3 pb-3 ${index !== history.length - 1 ? 'border-bottom' : ''} position-relative">
+                        <div class="me-3 position-relative">
+                            <div class="bg-${currentStatus.color} text-white rounded-circle d-flex align-items-center justify-content-center timeline-status-circle" style="width: 28px; height: 28px; font-size: 12px; position: relative; z-index: 2;">
+                                <i class="bx ${currentStatus.icon}"></i>
+                            </div>
+                            ${index !== history.length - 1 ? `
+                                <div class="timeline-connector" style="position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 2px; height: 40px; background: linear-gradient(180deg, ${connectorColor} 0%, #e9ecef 100%); z-index: 1;"></div>
+                            ` : ''}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    ${item.previous_status ? `
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <span class="badge bg-${previousStatus.color} text-white small">
+                                                <i class="bx ${previousStatus.icon} me-1"></i>${item.previous_status}
+                                            </span>
+                                            <i class="bx bx-right-arrow-alt text-muted" style="font-size: 12px;"></i>
+                                            <span class="badge bg-${currentStatus.color} text-white small">
+                                                <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status}
+                                            </span>
+                                        </div>
+                                    ` : `
+                                        <span class="badge bg-${currentStatus.color} text-white small">
+                                            <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status} <small>(Initial)</small>
+                                        </span>
+                                    `}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-primary fw-semibold">${new Date(item.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${new Date(item.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</small>
+                                    <small class="text-muted d-block">${timeSince(new Date(item.changed_at))}</small>
+                                </div>
+                            </div>
+
+                            ${item.notes ? `
+                                <div class="bg-light rounded p-2 mb-2">
+                                    <small><i class="bx bx-note text-primary me-1"></i><strong>Notes:</strong> ${item.notes}</small>
+                                </div>
+                            ` : ''}
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="bx bx-user text-danger me-1"></i>
+                                    ${item.changed_by?.name || item.changed_by_name || 'Unknown User'}
+                                </small>
+
+                                ${item.proof_image ? `
+                                    <a href="/storage/${item.proof_image}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bx bx-image me-1"></i>View Proof
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        $('#statusHistoryContent').html(historyHtml);
+
+        // Re-animate timeline connectors
+        setTimeout(function() {
+            $('.timeline-connector').addClass('animate');
+        }, 100);
+    }
+
+    // Helper function to calculate time since
+    function timeSince(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+
+        let interval = seconds / 31536000;
+        if (interval > 1) {
+            return Math.floor(interval) + " years ago";
+        }
+
+        interval = seconds / 2592000;
+        if (interval > 1) {
+            return Math.floor(interval) + " months ago";
+        }
+
+        interval = seconds / 86400;
+        if (interval > 1) {
+            return Math.floor(interval) + " days ago";
+        }
+
+        interval = seconds / 3600;
+        if (interval > 1) {
+            return Math.floor(interval) + " hours ago";
+        }
+
+        interval = seconds / 60;
+        if (interval > 1) {
+            return Math.floor(interval) + " minutes ago";
+        }
+
+        return Math.floor(seconds) + " seconds ago";
+    }
+
+    // Handle collapse events for status history section
+    $('#statusHistoryCollapse').on('hide.bs.collapse', function () {
+        $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-up').addClass('bx-chevron-down');
+    });
+
+    $('#statusHistoryCollapse').on('show.bs.collapse', function () {
+        $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');
+    });
+
     $('#manualInventoryDeduction').on('click', function() {
         const orderId = $(this).data('order-id');
         const button = $(this);
@@ -382,17 +957,31 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (response.status) {
-                        toastr.success(response.message);
+                        iziToast.success({
+                            title: 'Success',
+                            message: response.message,
+                            position: 'topRight'
+                        });
                         // Reload page to show updated status
-                        location.reload();
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
                     } else {
-                        toastr.error(response.message);
+                        iziToast.error({
+                            title: 'Error',
+                            message: response.message,
+                            position: 'topRight'
+                        });
                         button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');
                     }
                 },
                 error: function(xhr) {
                     const errorMessage = xhr.responseJSON?.message || '{{ __('An error occurred') }}';
-                    toastr.error(errorMessage);
+                    iziToast.error({
+                        title: 'Error',
+                        message: errorMessage,
+                        position: 'topRight'
+                    });
                     button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');
                 }
             });
@@ -400,4 +989,109 @@ $(document).ready(function() {
     });
 });
 </script>
+
+<style>
+/* Compact Status History Styles */
+.status-history-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.status-history-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.timeline-item {
+    transition: all 0.2s ease;
+}
+
+.timeline-item:hover {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px;
+    margin: -8px;
+}
+
+.status-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* Timeline Connector Styles */
+.timeline-connector {
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.timeline-connector:hover {
+    opacity: 1;
+}
+
+/* Enhanced Timeline Connector with Animation */
+.timeline-connector::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background: inherit;
+    transition: height 0.5s ease;
+}
+
+.timeline-connector.animate::before {
+    height: 100%;
+}
+
+/* Status Circle Hover Effect */
+.timeline-status-circle {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-status-circle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .timeline-item {
+        font-size: 14px;
+    }
+
+    .status-icon {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 11px;
+    }
+
+    .badge {
+        font-size: 10px;
+    }
+
+    .timeline-connector {
+        height: 30px !important;
+    }
+
+    .timeline-status-circle {
+        width: 24px !important;
+        height: 24px !important;
+    }
+}
+
+/* Remove old complex styles */
+.enhanced-timeline-wrapper,
+.timeline-progress-bar,
+.timeline-progress-fill,
+.enhanced-timeline-item,
+.timeline-marker-container,
+.timeline-marker-outer,
+.timeline-marker {
+    display: none !important;
+}
+</style>
 @endsection

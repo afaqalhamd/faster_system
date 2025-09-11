@@ -117,7 +117,7 @@ $(function() {
                     className: 'text-center',
                     render: function(data, type, full, meta) {
                         // If data already contains HTML, return it as is
-                        if (data.includes('<div class="badge')) {
+                        if (typeof data === 'string' && data.includes('<div class="badge')) {
                             return data;
                         }
 
@@ -129,21 +129,60 @@ $(function() {
                             'Deducted': { class: 'bg-light-success text-success', text: 'Inventory Deducted' },
                             'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
                             'Ready for Deduction': { class: 'bg-light-primary text-primary', text: 'Ready for Deduction' }
+                            // Removed 'deducted_delivered' entry as it's handled dynamically below
                         };
 
                         // Check if we have a translation for this status
                         let displayText = data;
+                        let statusClass = 'bg-light-secondary text-secondary'; // default
+                        let statusIcon = ''; // default no icon
+
                         if (data === 'deducted') {
                             displayText = 'Inventory Deducted';
+                            statusClass = 'bg-light-success text-success';
                         } else if (data === 'pending') {
                             displayText = 'Pending';
+                            statusClass = 'bg-light-warning text-warning';
                         } else if (data === 'ready_for_deduction') {
                             displayText = 'Ready for Deduction';
+                            statusClass = 'bg-light-primary text-primary';
+                        } else if (data === 'deducted_delivered') {
+                            // Check the post_delivery_action to determine the correct text
+                            const postDeliveryAction = full.post_delivery_action ? full.post_delivery_action.toString().trim() : '';
+
+                            if (postDeliveryAction === 'Cancelled') {
+                                displayText = 'Post-Delivery Cancelled';
+                                statusClass = 'bg-light-danger text-danger'; // Red for cancellation
+                                statusIcon = 'bx-x-circle';
+                            } else if (postDeliveryAction === 'Returned') {
+                                displayText = 'Post-Delivery Return';
+                                statusClass = 'bg-light-warning text-warning'; // Orange for return
+                                statusIcon = 'bx-undo';
+                            } else {
+                                // Fallback - check sales_status as backup
+                                const salesStatus = full.sales_status ? full.sales_status.toString().trim() : '';
+                                if (salesStatus === 'Cancelled') {
+                                    displayText = 'Post-Delivery Cancelled';
+                                    statusClass = 'bg-light-danger text-danger'; // Red for cancellation
+                                    statusIcon = 'bx-x-circle';
+                                } else if (salesStatus === 'Returned') {
+                                    displayText = 'Post-Delivery Return';
+                                    statusClass = 'bg-light-warning text-warning'; // Orange for return
+                                    statusIcon = 'bx-undo';
+                                } else {
+                                    // Final fallback - use a generic text
+                                    displayText = 'Post-Delivery Action';
+                                    statusClass = 'bg-light-secondary text-secondary';
+                                    statusIcon = 'bx-help-circle';
+                                }
+                            }
                         }
 
-                        const statusInfo = statusMap[data] || { class: 'bg-light-secondary text-secondary', text: displayText };
+                        const statusInfo = statusMap[data] || { class: statusClass, text: displayText };
 
-                        return `<div class="badge ${statusInfo.class} p-2 text-uppercase px-3">${statusInfo.text}</div>`;
+                        // Create the badge with icon if available
+                        const iconHtml = statusIcon ? `<i class="bx ${statusIcon} me-1"></i>` : '';
+                        return `<div class="badge ${statusInfo.class} p-2 px-3">${iconHtml}${statusInfo.text}</div>`;
                     }
                 },
                 {
@@ -153,29 +192,40 @@ $(function() {
                     className: 'text-center',
                     render: function(data, type, full, meta) {
                         // If data already contains HTML, return it as is
-                        if (data.includes('<div class="badge')) {
+                        if (typeof data === 'string' && data.includes('<div class="badge')) {
                             return data;
                         }
 
-                        // Otherwise, create the badge HTML
+                        // Otherwise, create the badge HTML based on getSaleStatus() method
                         const statusMap = {
-                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
-                            'Processing': { class: 'bg-light-primary text-primary', text: 'Processing' },
-                            'Completed': { class: 'bg-light-success text-success', text: 'Completed' },
-                            'Delivery': { class: 'bg-light-info text-info', text: 'Delivery' },
-                            'Cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled' },
-                            'Returned': { class: 'bg-light-secondary text-secondary', text: 'Returned' },
-                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
-                            'processing': { class: 'bg-light-primary text-primary', text: 'Processing' },
-                            'completed': { class: 'bg-light-success text-success', text: 'Completed' },
-                            'delivery': { class: 'bg-light-info text-info', text: 'Delivery' },
-                            'cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled' },
-                            'returned': { class: 'bg-light-secondary text-secondary', text: 'Returned' }
+                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending', icon: 'bx-time-five' },
+                            'Processing': { class: 'bg-light-primary text-primary', text: 'Processing', icon: 'bx-loader-circle bx-spin' },
+                            'Completed': { class: 'bg-light-success text-success', text: 'Completed', icon: 'bx-check-circle' },
+                            'Delivery': { class: 'bg-light-info text-info', text: 'Delivery', icon: 'bx-package' },
+                            'POD': { class: 'bg-light-success text-success', text: 'POD', icon: 'bx-receipt' },
+                            'Cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled', icon: 'bx-x-circle' },
+                            'Returned': { class: 'bg-light-warning text-warning', text: 'Returned', icon: 'bx-undo' },
+                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending', icon: 'bx-time-five' },
+                            'processing': { class: 'bg-light-primary text-primary', text: 'Processing', icon: 'bx-loader-circle bx-spin' },
+                            'completed': { class: 'bg-light-success text-success', text: 'Completed', icon: 'bx-check-circle' },
+                            'delivery': { class: 'bg-light-info text-info', text: 'Delivery', icon: 'bx-package' },
+                            'pod': { class: 'bg-light-success text-success', text: 'POD', icon: 'bx-receipt' },
+                            'cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled', icon: 'bx-x-circle' },
+                            'returned': { class: 'bg-light-warning text-warning', text: 'Returned', icon: 'bx-undo' }
                         };
 
-                        const statusInfo = statusMap[data] || { class: 'bg-light-secondary text-secondary', text: data };
+                        // Try to get status info from the map
+                        let statusInfo = statusMap[data];
 
-                        return `<div class="badge ${statusInfo.class} p-2 text-uppercase px-3">${statusInfo.text}</div>`;
+                        // If not found, try to get translation from the service method
+                        if (!statusInfo) {
+                            // Default fallback
+                            statusInfo = { class: 'bg-light-secondary text-secondary', text: data, icon: '' };
+                        }
+
+                        // Create the badge with icon if available
+                        const iconHtml = statusInfo.icon ? `<i class="bx ${statusInfo.icon} me-1"></i>` : '';
+                        return `<div class="badge ${statusInfo.class} p-2 px-3">${iconHtml}${statusInfo.text}</div>`;
                     }
                 },
                 {data: 'username', name: 'username'},

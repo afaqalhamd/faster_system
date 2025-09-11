@@ -247,6 +247,12 @@
                     <td colspan="1" class="text-end">{{ $formatNumber->formatWithPrecision($taxAmount) }}</td>
                 </tr>
                 @endif
+                @if($order->shipping_charge > 0)
+                <tr>
+                    <td colspan="2" class="text-end fw-bold">{{ __('carrier.shipping_charge') }}</td>
+                    <td colspan="1" class="text-end">{{ $formatNumber->formatWithPrecision($order->shipping_charge) }}</td>
+                </tr>
+                @endif
                 <tr>
                     <td colspan="2" class="text-end fw-bold">{{ __('app.round_off') }}</td>
                     <td colspan="1" class="text-end">{{ $formatNumber->formatWithPrecision($order->round_off) }}</td>

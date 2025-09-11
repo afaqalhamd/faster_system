@@ -24,8 +24,8 @@
 
                                     @if($order->sale)
                                         <a href="{{ route('sale.invoice.details', ['id' => $order->sale->id]) }}" class="btn btn-outline-success"><i class="bx bx-check-double"></i>{{ __('app.view_invoice') }}</a>
-                                    @else
-                                        <a href="{{ route('sale.invoice.convert', ['id' => $order->id]) }}" class="btn btn-outline-success"><i class="bx bx-transfer-alt"></i>{{ __('sale.convert_to_sale') }}</a>
+                                    {{-- @else
+                                        <a href="{{ route('sale.invoice.convert', ['id' => $order->id]) }}" class="btn btn-outline-success"><i class="bx bx-transfer-alt"></i>{{ __('sale.convert_to_sale') }}</a> --}}
                                     @endif
 
                                     @can(['sale.order.edit'])
@@ -217,6 +217,12 @@
                                                     <td colspan="{{ $columnCount }}" class="tfoot-first-td">{{ __('tax.tax') }}</td>
                                                     <td>{{ $formatNumber->formatWithPrecision($taxAmount) }}</td>
                                                 </tr>
+                                                @if($order->shipping_charge > 0)
+                                                <tr>
+                                                    <td colspan="{{ $columnCount }}" class="tfoot-first-td">{{ __('carrier.shipping_charge') }}</td>
+                                                    <td>{{ $formatNumber->formatWithPrecision($order->shipping_charge) }}</td>
+                                                </tr>
+                                                @endif
                                                 <tr>
                                                     <td colspan="{{ $columnCount }}" class="tfoot-first-td">{{ __('app.round_off') }}</td>
                                                     <td>{{ $formatNumber->formatWithPrecision($order->round_off) }}</td>

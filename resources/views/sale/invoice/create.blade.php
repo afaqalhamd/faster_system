@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', __('sale.invoice'))
 
+@section('css')
+<link href="{{ asset('custom/css/sale-status-icons.css') }}" rel="stylesheet">
+@endsection
+
         @section('content')
         <!--start page wrapper -->
         <div class="page-wrapper">
@@ -65,15 +69,22 @@
                                             <div class="col-md-4">
                                                 <x-label for="sales_status" name="{{ __('Sales Status') }}" />
                                                 <div class="d-flex gap-2 align-items-center">
-                                                    <select class="form-select sales-status-select" name="sales_status" id="sales_status" data-sale-id="new">
-                                                        <option value="Pending" selected>{{ __('sale.pending') }}</option>
-                                                        <option value="Processing">{{ __('sale.processing') }}</option>
-                                                        <option value="Completed">{{ __('sale.completed') }}</option>
-                                                        <option value="Delivery">{{ __('sale.delivery') }}</option>
-                                                        <option value="POD">{{ __('sale.pod') }}</option>
-                                                        <option value="Cancelled">{{ __('sale.cancelled') }}</option>
-                                                        <option value="Returned">{{ __('sale.returned') }}</option>
-                                                    </select>
+                                                    <div class="position-relative flex-grow-1">
+                                                        <select class="form-select sales-status-select" name="sales_status" id="sales_status" data-sale-id="new">
+                                                            @php
+                                                                $generalDataService = new \App\Services\GeneralDataService();
+                                                                $statusOptions = $generalDataService->getSaleStatus();
+                                                            @endphp
+                                                            @foreach($statusOptions as $status)
+                                                                <option value="{{ $status['id'] }}"
+                                                                        data-icon="{{ $status['icon'] }}"
+                                                                        data-color="{{ $status['color'] }}"
+                                                                        {{ $status['id'] == 'Pending' ? 'selected' : '' }}>
+                                                                    {{ $status['name'] }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
                                                     <span class="badge bg-info text-dark" title="{{ __('POD status allows image and notes input for proof of delivery') }}">
                                                         <i class="bx bx-info-circle"></i>
                                                     </span>
@@ -94,6 +105,15 @@
                                             <div class="col-md-4">
                                                 <x-label for="state_id" name="{{ __('app.state_of_supply') }}" />
                                                 <x-dropdown-states selected="" dropdownName='state_id'/>
+                                            </div>
+                                            @endif
+
+                                            @if(app('company')['is_enable_carrier'])
+                                            <div class="col-md-4">
+                                                <x-label for="carrier_id" name="{{ __('carrier.shipping_carrier') }} <i class='bx bx-package' ></i>" />
+                                                <div class="input-group mb-3">
+                                                    <x-dropdown-carrier selected="" :showSelectOptionAll=true name='carrier_id' />
+                                                </div>
                                             </div>
                                             @endif
 
@@ -170,6 +190,20 @@
                                             <div class="col-md-4 mt-4">
                                                 <table class="table mb-0 table-striped">
                                                    <tbody>
+                                                    @if(app('company')['is_enable_carrier_charge'])
+                                                       <tr>
+                                                         <td>
+                                                            <span class="fw-bold">{{ __('carrier.shipping_charge') }}</span>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="is_shipping_charge_distributed" name="is_shipping_charge_distributed">
+                                                                <label class="form-check-label small cursor-pointer" for="is_shipping_charge_distributed">{{ __('carrier.distribute_across_items') }}</label>
+                                                            </div>
+                                                        </td>
+                                                         <td>
+                                                            <x-input type="text" additionalClasses="text-end" name="shipping_charge" :required="true" placeholder="Shipping Charge" value="0"/>
+                                                        </td>
+                                                      </tr>
+                                                      @endif
                                                       <tr>
                                                          <td class="w-50">
                                                             <div class="form-check">
@@ -266,6 +300,7 @@
 
 @section('js')
 <script src="{{ versionedAsset('custom/js/sale/sale.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/sale-status-icons.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking-settings.js') }}"></script>

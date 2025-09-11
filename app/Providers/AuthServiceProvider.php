@@ -5,6 +5,13 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+// Add missing imports
+use App\Models\Service;
+use App\Models\Customer;
+use App\Models\User;
+use App\Policies\ServicePolicy;
+use App\Policies\CustomerPolicy;
+use App\Policies\UserPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -25,12 +32,12 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         // Register other policies
-        
+
         /**
          * Use this code in controller
-         * 
+         *
          * Example: $this->authorize('create', Service::class);
-         * 
+         *
          * */
         Gate::policy(Service::class, ServicePolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
@@ -42,7 +49,7 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole('Admin') ? true : null;
         });
 
-        
+
 
         /**
          * Add wildcard-like support for permissions

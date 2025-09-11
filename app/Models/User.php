@@ -13,6 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\Role;
 use App\Models\UserWarehouse;
 use App\Models\OrderedProduct;
+use App\Models\Carrier;
 
 
 class User extends Authenticatable
@@ -32,6 +33,7 @@ class User extends Authenticatable
         'password',
         'username',
         'role_id',
+        'carrier_id',
         'status',
         'avatar',
         'mobile',
@@ -113,6 +115,16 @@ class User extends Authenticatable
 
         // Retrieve warehouse details for the assigned IDs
         return Warehouse::whereIn('id', $warehouseIds)->get();
+    }
+
+    /**
+     * Define the relationship between User and Carrier.
+     *
+     * @return BelongsTo
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 
 }

@@ -163,8 +163,9 @@ class UserController extends Controller
 
     public function datatableList(Request $request){
 
-        $data = User::select('users.*', 'roles.name as role_name')
+        $data = User::select('users.*', 'roles.name as role_name', 'carriers.name as carrier_name')
                     ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+                    ->leftJoin('carriers', 'users.carrier_id', '=', 'carriers.id')
                     ->where('users.id', '!=', auth()->id());
 
 
@@ -175,6 +176,9 @@ class UserController extends Controller
                     })
                     ->addColumn('role_name', function ($row) {
                         return $row->role->name ?? null;
+                    })
+                    ->addColumn('carrier_name', function ($row) {
+                        return $row->carrier_name ?? 'N/A';
                     })
                     ->addColumn('action', function($row){
                             $id = $row->id;

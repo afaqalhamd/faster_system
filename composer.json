@@ -53,7 +53,8 @@
         "files": [
             "app/Helpers/TaxHelper.php",
             "app/Helpers/UnitHelper.php",
-            "app/Helpers/GeneralHelper.php"
+            "app/Helpers/GeneralHelper.php",
+            "app/Helpers/MediaHelper.php"
         ]
     },
     "autoload-dev": {

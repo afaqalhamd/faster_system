@@ -18,11 +18,14 @@
                         <span class="cu-fs-16">{{ __('app.date') }}: {{ $sale->formatted_sale_date }}</span><br>
                         <span class="cu-fs-16">{{ __('app.time') }}: {{ $sale->format_created_time }}</span><br>
                         @if($sale->reference_no)
-                        <span class="cu-fs-16">{{ __('supplier.supplier_invoice_number') }}: {{ $sale->reference_no  }}</span><br>
+                        <span class="cu-fs-16">{{ __('customer.cus_invoice_number') }}: {{ $sale->reference_no  }}</span><br>
                         @endif
                         @if($sale->sale_order_id)
                         <span class="cu-fs-16">{{ __('sale.order.order') }}: {{ $sale->saleOrder->order_code  }}</span><br>
                         @endif
+                         <span class="cu-fs-16">{{ __('app.status') }}:  {{ $sale->sales_status }}</span><br>
+
+
                     </td>
                 </tr>
             </table>
@@ -253,6 +256,12 @@
                 <tr>
                     <td colspan="2" class="text-end fw-bold">{{ __('tax.tax') }}</td>
                     <td colspan="1" class="text-end">{{ $formatNumber->formatWithPrecision($taxAmount) }}</td>
+                </tr>
+                @endif
+                @if($sale->shipping_charge > 0)
+                <tr>
+                    <td colspan="2" class="text-end fw-bold">{{ __('carrier.shipping_charge') }}</td>
+                    <td colspan="1" class="text-end">{{ $formatNumber->formatWithPrecision($sale->shipping_charge) }}</td>
                 </tr>
                 @endif
                 <tr>

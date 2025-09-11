@@ -46,9 +46,12 @@ class SaleOrderRequest extends FormRequest
             'grand_total'          => ['required', 'numeric'],
             'note'                 => ['nullable', 'string','max:250'],
             'state_id'             => ['nullable', 'integer', Rule::exists('states', 'id')],
+            'carrier_id'           => ['nullable', 'integer', Rule::exists('carriers', 'id')],
             'row_count'            => ['required', 'integer', 'min:1'],
             'currency_id'          => ['nullable', 'integer', 'min:1'],
             'exchange_rate'        => ['nullable', 'numeric', 'min:0'],
+            'shipping_charge'      => ['nullable', 'numeric', 'min:0'],
+            'is_shipping_charge_distributed' => ['nullable', 'boolean'],
         ];
 
         if ($this->isMethod('PUT')) {
@@ -76,6 +79,8 @@ class SaleOrderRequest extends FormRequest
             'due_date' => (!empty($dueDate)) ? $this->toSystemDateFormat($dueDate) : null,
             'order_code' => $this->getOrderCode(),
             'state_id' => (!empty($this->input('state_id'))) ? $this->input('state_id') : null,
+            'shipping_charge' => $this->input('shipping_charge') ?? 0,
+            'is_shipping_charge_distributed' => $this->has('is_shipping_charge_distributed') && $this->input('shipping_charge') > 0 ? 1 : 0,
         ]);
 
         //check is invoice_currency_id is exist or not

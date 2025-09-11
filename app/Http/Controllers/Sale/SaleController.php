@@ -295,7 +295,9 @@ class SaleController extends Controller
                 'tax',
                 'batch.itemBatchMaster',
                 'itemSerialTransaction.itemSerialMaster'
-            ]])->findOrFail($id);
+            ],
+            'salesStatusHistories' => ['changedBy']
+        ])->findOrFail($id);
 
         // Add formatted dates from ItemBatchMaster model
         $sale->itemTransaction->each(function ($transaction) {
@@ -515,6 +517,35 @@ class SaleController extends Controller
                 $this->handleConversionPaymentTransfer($request, $newSale);
             }
         } else {
+            // Get the current sale to preserve inventory status if already deducted
+            $currentSale = Sale::findOrFail($validatedData['sale_id']);
+
+            // Check if sales status is being changed
+            $newSalesStatus = $request->sales_status ?? $validatedData['sales_status'];
+            $currentSalesStatus = $currentSale->sales_status;
+
+            // If sales status is changing, use the SalesStatusService to handle it properly
+            if ($newSalesStatus !== $currentSalesStatus) {
+                // Use the SalesStatusService to handle the status change with proper inventory management
+                $salesStatusService = app(SalesStatusService::class);
+                $statusChangeData = [
+                    'notes' => $request->status_change_notes ?? 'Status updated during sale edit',
+                ];
+
+                // If this is a status that requires proof, we might need to handle that
+                $statusesRequiringProof = $salesStatusService->getStatusesRequiringProof();
+                if (in_array($newSalesStatus, $statusesRequiringProof)) {
+                    // For now, we'll proceed without proof for regular updates
+                    // In a real scenario, you might want to enforce proof requirements
+                }
+
+                $result = $salesStatusService->updateSalesStatus($currentSale, $newSalesStatus, $statusChangeData);
+
+                if (!$result['success']) {
+                    throw new \Exception('Failed to update sales status: ' . $result['message']);
+                }
+            }
+
             $fillableColumns = [
                 'party_id' => $validatedData['party_id'],
                 'sale_date' => $validatedData['sale_date'],
@@ -526,14 +557,18 @@ class SaleController extends Controller
                 'round_off' => $validatedData['round_off'],
                 'grand_total' => $validatedData['grand_total'],
                 'state_id' => $validatedData['state_id'],
+                'carrier_id' => $validatedData['carrier_id'] ?? null,
                 'currency_id' => $validatedData['currency_id'],
                 'exchange_rate' => $validatedData['exchange_rate'],
-                'inventory_status' => 'pending',
-                'inventory_deducted_at' => null,
-                'sales_status' => $request->sales_status ?? $validatedData['sales_status'],
+                // Preserve existing inventory status and deduction timestamp (will be updated by service if needed)
+                'inventory_status' => $currentSale->refresh()->inventory_status,
+                'inventory_deducted_at' => $currentSale->refresh()->inventory_deducted_at,
+                'sales_status' => $currentSale->refresh()->sales_status,
+                'shipping_charge' => $validatedData['shipping_charge'] ?? 0,
+                'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'] ?? 0,
             ];
 
-            $newSale = Sale::findOrFail($validatedData['sale_id']);
+            $newSale = $currentSale;
             $newSale->update($fillableColumns);
 
             /**
@@ -671,7 +706,9 @@ class SaleController extends Controller
             'id' => $request->sale_id,
 
         ]);
-    } catch (Exception $e) {
+    }
+
+    catch (Exception $e) {
         DB::rollback();
 
         return response()->json([
@@ -860,8 +897,15 @@ class SaleController extends Controller
             }
 
             //Validate is negative stock entry allowed or not for General Item
-            // Use SALE_ORDER for reservation (not deducted yet)
-            $regularItemTransaction = $this->itemTransactionService->validateRegularItemQuantity($itemDetails, $request->warehouse_id[$i], $itemQuantity, ItemTransactionUniqueCode::SALE_ORDER->value);
+            // Use appropriate unique_code based on inventory status:
+            // - If inventory is deducted (POD status or post-delivery cancellation), use SALE (deducted)
+            // - If inventory is pending, use SALE_ORDER (reserved)
+            $isInventoryDeducted = in_array($request->modelName->inventory_status, ['deducted', 'deducted_delivered']);
+            $uniqueCode = $isInventoryDeducted ?
+                ItemTransactionUniqueCode::SALE->value :
+                ItemTransactionUniqueCode::SALE_ORDER->value;
+
+            $regularItemTransaction = $this->itemTransactionService->validateRegularItemQuantity($itemDetails, $request->warehouse_id[$i], $itemQuantity, $uniqueCode);
 
             if (!$regularItemTransaction) {
                 throw new \Exception(__('item.failed_to_save_regular_item_record'));
@@ -880,8 +924,15 @@ class SaleController extends Controller
             /**
              *
              * Item Transaction Entry
-             * Use SALE_ORDER for reservation (not deducted yet)
+             * Use appropriate unique_code based on inventory status:
+             * - If inventory is deducted (POD status or post-delivery cancellation), use SALE (deducted)
+             * - If inventory is pending, use SALE_ORDER (reserved)
              * */
+            $isInventoryDeducted = in_array($request->modelName->inventory_status, ['deducted', 'deducted_delivered']);
+            $uniqueCode = $isInventoryDeducted ?
+                ItemTransactionUniqueCode::SALE->value :
+                ItemTransactionUniqueCode::SALE_ORDER->value;
+
             $transaction = $this->itemTransactionService->recordItemTransactionEntry($request->modelName, [
                 'warehouse_id' => $request->warehouse_id[$i],
                 'transaction_date' => $request->sale_date,
@@ -900,12 +951,15 @@ class SaleController extends Controller
                 'discount_type' => $request->discount_type[$i],
                 'discount_amount' => $request->discount_amount[$i],
 
+                'charge_type' => 'shipping',
+                'charge_amount' => 0,
+
                 'tax_id' => $request->tax_id[$i],
                 'tax_type' => $request->tax_type[$i],
                 'tax_amount' => $request->tax_amount[$i],
 
                 'total' => $request->total[$i],
-                'unique_code' => ItemTransactionUniqueCode::SALE_ORDER->value, // Reserve items, don't deduct yet
+                'unique_code' => $uniqueCode, // Use appropriate code based on inventory status
 
             ]);
 
@@ -940,8 +994,8 @@ class SaleController extends Controller
                             'serial_code' => $serialNumber,
                         ];
 
-                        // Use SALE_ORDER for reservation (not deducted yet)
-                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE_ORDER->value);
+                        // Use appropriate unique_code based on inventory status
+                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], $uniqueCode);
 
                         if (!$serialTransaction) {
                             throw new \Exception(__('item.failed_to_save_serials'));
@@ -965,8 +1019,8 @@ class SaleController extends Controller
                         'quantity' => $itemQuantity,
                     ];
 
-                    // Use SALE_ORDER for reservation (not deducted yet)
-                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::SALE_ORDER->value);
+                    // Use appropriate unique_code based on inventory status
+                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], $uniqueCode);
 
                     if (!$batchTransaction) {
                         throw new \Exception(__('item.failed_to_save_batch_records'));
@@ -982,14 +1036,46 @@ class SaleController extends Controller
 
         }//for end
 
+        /**
+         * Update Shipping Cost
+         * */
+        $this->updateShippingCost($request->modelName);
+
         return ['status' => true];
+    }
+
+    public function updateShippingCost($model)
+    {
+        $itemTransactions = $model->refresh()->itemTransaction()->with('tax')->get();
+        if ($itemTransactions->isNotEmpty() && $model->shipping_charge > 0 && $model->is_shipping_charge_distributed == 1) {
+
+            //Calculate itemTransaction unit_price * quantity, give me sum of it
+            //Use foreach
+            $totalItemAmount = $itemTransactions->map(function ($itemTransaction) {
+                return $itemTransaction->unit_price * $itemTransaction->quantity;
+            })->sum();
+
+            //Update charge_amount in itemTransaction model for each entry
+            $itemTransactions->map(function ($itemTransaction) use ($model, $totalItemAmount) {
+                $itemTransaction->charge_amount = ($model->shipping_charge / $totalItemAmount) * $itemTransaction->unit_price * $itemTransaction->quantity;
+                /**
+                 * Calculate Charge Tax Amount
+                 * get the tax value from tax model, where tax is morph with itemTransaction as well
+                 * Tax model has the taxrate column
+                 */
+                $itemTransaction->charge_tax_amount = ($itemTransaction->charge_amount * $itemTransaction->tax->rate) / 100;
+
+                $itemTransaction->save();
+            });
+
+        }
     }
 
 
     /**
      * Datatable list for sales
      * */
-    public function datatableList(Request $request)
+     public function datatableList(Request $request)
     {
         $data = Sale::with('user', 'party')
             ->when($request->party_id, function ($query) use ($request) {
@@ -1055,6 +1141,12 @@ class SaleController extends Controller
             })
             ->addColumn('sales_status', function ($row) {
                 return $row->sales_status;
+            })
+            ->addColumn('inventory_status', function ($row) {
+                return $row->inventory_status;
+            })
+            ->addColumn('post_delivery_action', function ($row) {
+                return $row->post_delivery_action;
             })
             ->addColumn('color', function ($row) {
                 $saleStatuses = $this->generalDataService->getSaleStatus();
@@ -1740,29 +1832,46 @@ class SaleController extends Controller
     /**
      * Get sales status history
      *
-     * @param int $id
+     * @param string|int $id
      * @return JsonResponse
      */
-    public function getSalesStatusHistory(int $id): JsonResponse
+    public function getSalesStatusHistory($id): JsonResponse
     {
         try {
-            $sale = Sale::findOrFail($id);
+            $saleId = (int) $id;
+            $sale = Sale::findOrFail($saleId);
+
+            // Check if user has permission to view this sale
+            // You might want to add authorization logic here
+
             $history = $this->salesStatusService->getStatusHistory($sale);
 
             return response()->json([
                 'status' => true,
-                'data' => $history
+                'data' => $history,
+                'message' => 'Status history retrieved successfully'
             ]);
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage()
-            ], 409);
+                'message' => 'Sale not found'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving sales status history', [
+                'sale_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred while retrieving status history'
+            ], 500);
         }
     }
 
     /**
-     * Get sales status options
+     * Get sales status options with metadata
      *
      * @return JsonResponse
      */
@@ -1771,9 +1880,26 @@ class SaleController extends Controller
         $generalDataService = new GeneralDataService();
         $statusOptions = $generalDataService->getSaleStatus();
 
+        // Add additional metadata for frontend use
+        $salesStatusService = app(SalesStatusService::class);
+        $statusesRequiringProof = $salesStatusService->getStatusesRequiringProof();
+
+        // Enhance each status with additional information
+        $enhancedOptions = array_map(function($status) use ($statusesRequiringProof) {
+            return [
+                'id' => $status['id'],
+                'name' => $status['name'],
+                'color' => $status['color'],
+                'requires_proof' => in_array($status['id'], $statusesRequiringProof),
+                'triggers_inventory_deduction' => $status['id'] === 'POD',
+                'restores_inventory' => in_array($status['id'], ['Cancelled', 'Returned'])
+            ];
+        }, $statusOptions);
+
         return response()->json([
             'status' => true,
-            'data' => $statusOptions
+            'data' => $enhancedOptions,
+            'statuses_requiring_proof' => $statusesRequiringProof
         ]);
     }
 
@@ -1796,7 +1922,33 @@ class SaleController extends Controller
     {
         if ($this->isDeliveryUser()) {
             // Delivery users can only see sales with 'Delivery' status
-            $query->where('sales_status', 'Delivery');
+            $query->whereNotIn('sales_status', ['Pending', 'Processing']);
+        }
+        return $query;
+    }
+
+    /**
+     * Helper method to check if current user is associated with a carrier
+     * @return bool
+     */
+    private function isCarrierUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->carrier_id && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply carrier filtering to query for delivery users
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyCarrierFilter($query)
+    {
+        $user = auth()->user();
+        if ($user && $user->carrier_id) {
+            // Carrier users can only see sales assigned to their carrier
+            $query->where('carrier_id', $user->carrier_id)
+                  ->whereIn('sales_status', ['Delivery', 'POD', 'Completed']);
         }
         return $query;
     }

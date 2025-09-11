@@ -148,9 +148,16 @@ class SalesStatusManager {
      * Update status directly without proof requirements
      */
     updateStatusDirectly(saleId, status) {
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+        if (!csrfToken) {
+            this.showAlert('danger', 'CSRF token not found. Please refresh the page and try again.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('sales_status', status);
-        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('_token', csrfToken);
 
         this.submitStatusUpdateRequest(saleId, formData);
     }
@@ -163,8 +170,15 @@ class SalesStatusManager {
         const status = $(form).data('status');
         const formData = new FormData(form);
 
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+        if (!csrfToken) {
+            this.showAlert('danger', 'CSRF token not found. Please refresh the page and try again.');
+            return;
+        }
+
         formData.append('sales_status', status);
-        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('_token', csrfToken);
 
         this.submitStatusUpdateRequest(saleId, formData);
     }
@@ -176,6 +190,21 @@ class SalesStatusManager {
         // Show loading state
         this.showLoading(true);
 
+        // Debug: Check if CSRF token is available
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        console.log('CSRF Token:', csrfToken);
+
+        if (!csrfToken) {
+            this.showAlert('danger', 'CSRF token not found. Please refresh the page and try again.');
+            this.showLoading(false);
+            return;
+        }
+
+        // Make sure the token is in FormData
+        if (!formData.has('_token')) {
+            formData.append('_token', csrfToken);
+        }
+
         $.ajax({
             url: `/sale/invoice/update-sales-status/${saleId}`,
             method: 'POST',
@@ -183,13 +212,14 @@ class SalesStatusManager {
             processData: false,
             contentType: false,
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                'X-CSRF-TOKEN': csrfToken
             },
             success: (response) => {
                 this.handleSuccessResponse(response);
                 $('#statusUpdateModal').modal('hide');
             },
             error: (xhr) => {
+                console.log('AJAX Error:', xhr);
                 this.handleErrorResponse(xhr);
             },
             complete: () => {

@@ -45,9 +45,12 @@ class SaleRequest extends FormRequest
             'grand_total'          => ['required', 'numeric'],
             'note'                 => ['nullable', 'string','max:250'],
             'state_id'             => ['nullable', 'integer', Rule::exists('states', 'id')],
+            'carrier_id'           => ['nullable', 'integer', Rule::exists('carriers', 'id')],
             'row_count'            => ['required', 'integer', 'min:1'],
             'currency_id'          => ['nullable', 'integer', 'min:1'],
             'exchange_rate'        => ['nullable', 'numeric', 'min:0'],
+            'shipping_charge'      => ['nullable', 'numeric', 'min:0'],
+            'is_shipping_charge_distributed' => ['nullable', 'boolean'],
         ];
 
         //For Update Operation
@@ -92,6 +95,8 @@ class SaleRequest extends FormRequest
             'is_wholesale_customer' => Party::select('is_wholesale_customer')
                                             ->find($this->input('party_id'))
                                             ?->is_wholesale_customer ?? false,
+            'shipping_charge' => $this->input('shipping_charge') ?? 0,
+            'is_shipping_charge_distributed' => $this->has('is_shipping_charge_distributed') && $this->input('shipping_charge') > 0 ? 1 : 0,
         ]);
 
 

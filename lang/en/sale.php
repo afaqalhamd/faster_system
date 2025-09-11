@@ -102,6 +102,7 @@ return [
 
     //2.3
     'sale_return'                   => 'Sale Return',
+    'inventory_deduction_only_for_pod' => 'Inventory deduction only allowed for POD status',
 
     // Inventory Status
     'inventory_deducted'            => 'Inventory Deducted',
@@ -115,5 +116,15 @@ return [
     'returned'                      => 'Returned',
     'inventory_already_deducted'    => 'Inventory Already Deducted',
     'inventory_deducted_successfully' => 'Inventory Deducted Successfully',
+    'post_delivery_cancelled'       => 'Post-Delivery Cancelled',
+
+    // Status History
+    'status_change_history'         => 'Status Change History',
+    'notes'                         => 'Notes',
+    'proof_image'                   => 'Proof Image',
+    'changed_by'                    => 'Changed by',
+    'view_full_size'                => 'View Full Size',
+    'download'                      => 'Download',
+    'close'                         => 'Close',
 
 ];

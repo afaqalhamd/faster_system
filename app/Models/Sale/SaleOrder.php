@@ -18,6 +18,7 @@ use App\Models\Sale\Sale;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
 use App\Models\StatusHistory;
+use App\Models\Carrier;
 
 class SaleOrder extends Model
 {
@@ -41,6 +42,7 @@ class SaleOrder extends Model
         //'warehouse_id',
         'party_id',
         'state_id',
+        'carrier_id',
         'note',
         'round_off',
         'grand_total',
@@ -50,6 +52,10 @@ class SaleOrder extends Model
         'exchange_rate',
         'inventory_status',
         'inventory_deducted_at',
+        'shipping_charge',
+        'is_shipping_charge_distributed',
+        'post_delivery_action',
+        'post_delivery_action_at',
     ];
 
     /**
@@ -59,6 +65,7 @@ class SaleOrder extends Model
      */
     protected $casts = [
         'inventory_deducted_at' => 'datetime',
+        'post_delivery_action_at' => 'datetime',
     ];
 
     /**
@@ -182,9 +189,29 @@ class SaleOrder extends Model
         return $this->morphMany(StatusHistory::class, 'statusable');
     }
 
+    /**
+     * Define the relationship between Sale Order Status History & Sale Order table.
+     *
+     * @return HasMany
+     */
+    public function saleOrderStatusHistories(): HasMany
+    {
+        return $this->hasMany(SaleOrderStatusHistory::class, 'sale_order_id');
+    }
+
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_id');
+    }
+
+    /**
+     * Define the relationship between SaleOrder and Carrier.
+     *
+     * @return BelongsTo
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 
 }

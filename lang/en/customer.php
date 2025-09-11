@@ -20,4 +20,5 @@ return [
     'due_payment_report'        => "Customer Due Payment Report",
     /*1.2.1*/
     'default_customer'          => "Set as a default Customer",
+    'cus_invoice_number'=> "Customer Invoice No",
 ];

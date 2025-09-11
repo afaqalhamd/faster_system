@@ -76,35 +76,100 @@ class SalesStatusService
      */
     private function handleInventoryForStatusChange(Sale $sale, string $previousStatus, string $newStatus): array
     {
+        Log::info('Handling inventory for status change', [
+            'sale_id' => $sale->id,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'current_inventory_status' => $sale->inventory_status
+        ]);
+
         // Status that should trigger inventory deduction
         $deductionStatuses = ['POD'];
 
-        // Statuses that should restore inventory
+        // Statuses that should restore inventory (with conditions)
         $restorationStatuses = ['Cancelled', 'Returned'];
 
         $inventoryUpdated = false;
 
         // If moving TO POD status - deduct inventory
         if (in_array($newStatus, $deductionStatuses) && $sale->inventory_status !== 'deducted') {
+            Log::info('Attempting inventory deduction', [
+                'sale_id' => $sale->id,
+                'new_status' => $newStatus,
+                'current_inventory_status' => $sale->inventory_status
+            ]);
+
             $result = $this->deductInventory($sale);
             if (!$result['success']) {
+                Log::error('Inventory deduction failed', [
+                    'sale_id' => $sale->id,
+                    'error' => $result['message']
+                ]);
                 return $result;
             }
             $inventoryUpdated = true;
+
+            Log::info('Inventory deduction successful', [
+                'sale_id' => $sale->id,
+                'inventory_updated' => true
+            ]);
+        } else {
+            Log::info('Skipping inventory deduction', [
+                'sale_id' => $sale->id,
+                'reason' => $sale->inventory_status === 'deducted' ? 'Already deducted' : 'Not POD status',
+                'new_status' => $newStatus,
+                'is_pod_status' => in_array($newStatus, $deductionStatuses),
+                'current_inventory_status' => $sale->inventory_status
+            ]);
         }
 
-        // If moving TO Cancelled/Returned status - restore inventory (only if it was deducted)
+        // NEW LOGIC: Handle Cancelled/Returned status with POD consideration
         if (in_array($newStatus, $restorationStatuses) && $sale->inventory_status === 'deducted') {
-            $result = $this->restoreInventory($sale);
-            if (!$result['success']) {
-                return $result;
+            // Check if the previous status was POD
+            if ($previousStatus === 'POD') {
+                // If coming from POD, keep inventory deducted (delivered items should remain as completed transactions)
+                Log::info('Keeping inventory deducted - sale was already delivered (POD)', [
+                    'sale_id' => $sale->id,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'reason' => 'Items were delivered, treating cancellation/return as separate transaction'
+                ]);
+
+                // Update sale status to indicate this is a post-delivery cancellation/return
+                $sale->update([
+                    'inventory_status' => 'deducted_delivered', // New status to indicate delivered but cancelled/returned
+                    'post_delivery_action' => $newStatus, // Track what action was taken after delivery
+                    'post_delivery_action_at' => now()
+                ]);
+
+                
+                // Note: Any return/cancellation of delivered items should be handled as a separate
+                // return transaction or credit note, not by restoring the original sale inventory
+            } else {
+                // If NOT coming from POD, restore inventory (normal cancellation before delivery)
+                Log::info('Restoring inventory - sale was not delivered yet', [
+                    'sale_id' => $sale->id,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'reason' => 'Items were not delivered, safe to restore inventory'
+                ]);
+
+                $result = $this->restoreInventory($sale);
+                if (!$result['success']) {
+                    return $result;
+                }
+                $inventoryUpdated = true;
             }
-            $inventoryUpdated = true;
         }
 
         // If moving FROM POD to other status (except Cancelled/Returned) - keep inventory deducted
         if ($previousStatus === 'POD' && !in_array($newStatus, array_merge($deductionStatuses, $restorationStatuses))) {
             // Keep inventory deducted, no action needed
+            Log::info('Keeping inventory deducted when moving from POD', [
+                'sale_id' => $sale->id,
+                'previous_status' => $previousStatus,
+                'new_status' => $newStatus
+            ]);
         }
 
         return [
@@ -121,14 +186,33 @@ class SalesStatusService
         try {
             Log::info('Starting inventory deduction for sale', [
                 'sale_id' => $sale->id,
+                'current_inventory_status' => $sale->inventory_status,
                 'items_count' => $sale->itemTransaction->count()
             ]);
 
+            // Check if sale has items
+            if ($sale->itemTransaction->count() == 0) {
+                Log::warning('No item transactions found for sale', ['sale_id' => $sale->id]);
+                return ['success' => false, 'message' => 'No items found for inventory deduction'];
+            }
+
             // Process inventory deduction for each item
             foreach ($sale->itemTransaction as $transaction) {
+                Log::debug('Processing transaction', [
+                    'transaction_id' => $transaction->id,
+                    'item_id' => $transaction->item_id,
+                    'current_unique_code' => $transaction->unique_code,
+                    'quantity' => $transaction->quantity
+                ]);
+
                 // Update the transaction unique code from SALE_ORDER to SALE
                 $transaction->update([
                     'unique_code' => ItemTransactionUniqueCode::SALE->value
+                ]);
+
+                Log::debug('Updated transaction unique_code to SALE', [
+                    'transaction_id' => $transaction->id,
+                    'new_unique_code' => $transaction->unique_code
                 ]);
 
                 // Update inventory quantities
@@ -148,14 +232,19 @@ class SalesStatusService
                 'inventory_deducted_at' => now()
             ]);
 
-            Log::info('Inventory deduction completed for sale', ['sale_id' => $sale->id]);
+            Log::info('Inventory deduction completed for sale', [
+                'sale_id' => $sale->id,
+                'new_inventory_status' => 'deducted',
+                'deducted_at' => now()
+            ]);
 
             return ['success' => true, 'message' => 'Inventory deducted successfully'];
 
         } catch (Exception $e) {
             Log::error('Inventory deduction failed for sale', [
                 'sale_id' => $sale->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             return ['success' => false, 'message' => 'Failed to deduct inventory: ' . $e->getMessage()];
         }
@@ -282,8 +371,8 @@ class SalesStatusService
 
         // Define allowed transitions
         $allowedTransitions = [
-            'Pending' => ['Processing', 'Completed', 'Delivery', 'Cancelled'],
-            'Processing' => ['Completed', 'Delivery', 'Cancelled'],
+            'Pending' => ['Processing', 'Completed', 'Delivery', 'POD', 'Cancelled'],
+            'Processing' => ['Completed', 'Delivery', 'POD', 'Cancelled'],
             'Completed' => ['Delivery', 'POD', 'Cancelled', 'Returned'],
             'Delivery' => ['POD', 'Cancelled', 'Returned'],
             'POD' => ['Completed', 'Delivery', 'Cancelled', 'Returned'],
@@ -310,13 +399,49 @@ class SalesStatusService
      */
     private function recordStatusHistory(Sale $sale, ?string $previousStatus, string $newStatus, ?string $notes, ?string $proofImage): void
     {
+        $changedBy = auth()->id();
+
+        // Fallback to a system user if no authenticated user (for console commands, etc.)
+        if (!$changedBy) {
+            // Try to find the first admin user or system user
+            $systemUser = \App\Models\User::where('email', 'like', '%admin%')
+                ->orWhere('first_name', 'like', '%system%')
+                ->orWhere('first_name', 'like', '%admin%')
+                ->orWhere('last_name', 'like', '%system%')
+                ->orWhere('last_name', 'like', '%admin%')
+                ->first();
+
+            if ($systemUser) {
+                $changedBy = $systemUser->id;
+            } else {
+                // If no admin found, use the first user in the system
+                $firstUser = \App\Models\User::first();
+                if ($firstUser) {
+                    $changedBy = $firstUser->id;
+                } else {
+                    // Log warning and skip creating history if no users exist
+                    Log::warning('Status change recorded without any users in system', [
+                        'sale_id' => $sale->id,
+                        'new_status' => $newStatus
+                    ]);
+                    return;
+                }
+            }
+
+            Log::info('Status change recorded with fallback user', [
+                'sale_id' => $sale->id,
+                'new_status' => $newStatus,
+                'fallback_user_id' => $changedBy
+            ]);
+        }
+
         SalesStatusHistory::create([
             'sale_id' => $sale->id,
             'previous_status' => $previousStatus,
             'new_status' => $newStatus,
             'notes' => $notes,
             'proof_image' => $proofImage,
-            'changed_by' => auth()->id(),
+            'changed_by' => $changedBy,
             'changed_at' => now(),
         ]);
     }
@@ -326,11 +451,42 @@ class SalesStatusService
      */
     public function getStatusHistory(Sale $sale): array
     {
-        return $sale->salesStatusHistories()
-            ->with('changedBy')
+        $histories = $sale->salesStatusHistories()
+            ->with(['changedBy:id,first_name,last_name,email'])
             ->orderBy('changed_at', 'desc')
-            ->get()
-            ->toArray();
+            ->get();
+
+        // Transform the data to ensure user information is included
+        return $histories->map(function ($history) {
+            $data = $history->toArray();
+
+            // Ensure user data is properly included
+            if ($history->changedBy) {
+                $data['changed_by'] = [
+                    'id' => $history->changedBy->id,
+                    'name' => trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name),
+                    'email' => $history->changedBy->email
+                ];
+            } else {
+                // Try to load the user manually if relationship failed
+                $user = \App\Models\User::find($history->changed_by);
+                if ($user) {
+                    $data['changed_by'] = [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ' ' . $user->last_name),
+                        'email' => $user->email
+                    ];
+                } else {
+                    $data['changed_by'] = [
+                        'id' => $history->changed_by,
+                        'name' => 'User Not Found (ID: ' . $history->changed_by . ')',
+                        'email' => null
+                    ];
+                }
+            }
+
+            return $data;
+        })->toArray();
     }
 
     /**

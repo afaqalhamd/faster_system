@@ -20,5 +20,6 @@ return [
     'due_payment_report'        => "تقرير المدفوعات المستحقة للعميل",
     /*1.2.1*/
 'default_customer' => 'تعيين كعميل افتراضي',
+'cus_invoice_number'=> 'رقم فاتورة العميل',
 
 ];

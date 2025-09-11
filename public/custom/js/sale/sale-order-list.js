@@ -12,12 +12,13 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9,10,11];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
             serverSide: true,
             method:'get',
+            destroy: true, // Force destroy any existing table
             ajax: {
                     url: baseURL+'/sale/order/datatable-list',
                     data:{
@@ -80,9 +81,97 @@ $(function() {
                     orderable: false,
                     className: 'text-center',
                     render: function(data, type, full, meta) {
+                        // If data already contains HTML, return it as is
+                        if (data.order_status && data.order_status.includes('<div class="badge')) {
+                            return data.order_status;
+                        }
 
-                        return `<div class="badge text-${data.color} bg-light-${data.color} p-2 text-uppercase px-3">${data.order_status}</div>`;
+                        // Status mapping with icons and colors
+                        const statusMap = {
+                            'Pending': {
+                                class: 'bg-light-warning text-warning',
+                                text: 'Pending',
+                                icon: 'bx-time-five'
+                            },
+                            'Processing': {
+                                class: 'bg-light-primary text-primary',
+                                text: 'Processing',
+                                icon: 'bx-loader-circle bx-spin'
+                            },
+                            'Completed': {
+                                class: 'bg-light-success text-success',
+                                text: 'Completed',
+                                icon: 'bx-check-circle'
+                            },
+                            'Delivery': {
+                                class: 'bg-light-info text-info',
+                                text: 'Delivery',
+                                icon: 'bx-package'
+                            },
+                            'POD': {
+                                class: 'bg-light-primary text-primary',
+                                text: 'POD',
+                                icon: 'bx-receipt'
+                            },
+                            'Cancelled': {
+                                class: 'bg-light-danger text-danger',
+                                text: 'Cancelled',
+                                icon: 'bx-x-circle'
+                            },
+                            'No Status': {
+                                class: 'bg-light-secondary text-secondary',
+                                text: 'No Status',
+                                icon: 'bx-help-circle'
+                            },
+                            // Handle lowercase variants
+                            'pending': {
+                                class: 'bg-light-warning text-warning',
+                                text: 'Pending',
+                                icon: 'bx-time-five'
+                            },
+                            'processing': {
+                                class: 'bg-light-primary text-primary',
+                                text: 'Processing',
+                                icon: 'bx-loader-circle bx-spin'
+                            },
+                            'completed': {
+                                class: 'bg-light-success text-success',
+                                text: 'Completed',
+                                icon: 'bx-check-circle'
+                            },
+                            'delivery': {
+                                class: 'bg-light-info text-info',
+                                text: 'Delivery',
+                                icon: 'bx-package'
+                            },
+                            'pod': {
+                                class: 'bg-light-primary text-primary',
+                                text: 'POD',
+                                icon: 'bx-receipt'
+                            },
+                            'cancelled': {
+                                class: 'bg-light-danger text-danger',
+                                text: 'Cancelled',
+                                icon: 'bx-x-circle'
+                            },
+                            'no status': {
+                                class: 'bg-light-secondary text-secondary',
+                                text: 'No Status',
+                                icon: 'bx-help-circle'
+                            }
+                        };
 
+                        const statusText = data.order_status || 'No Status';
+                        const statusInfo = statusMap[statusText] || statusMap[statusText.toLowerCase()] || {
+                            class: 'bg-light-secondary text-secondary',
+                            text: statusText,
+                            icon: 'bx-help-circle'
+                        };
+
+                        return `<div class="badge ${statusInfo.class} p-2 text-uppercase px-3 d-flex align-items-center gap-1">
+                                    <i class="fadeIn animated bx ${statusInfo.icon}"></i>
+                                    <span>${statusInfo.text}</span>
+                                </div>`;
                     }
                 },
                 {
@@ -95,6 +184,7 @@ $(function() {
                         return data;
                     }
                 },
+                {data: 'carrier_name', name: 'carrier_name', orderable: false, className: 'text-center'},
                 {data: 'username', name: 'username'},
                 {data: 'created_at', name: 'created_at'},
                 {data: 'action', name: 'action', orderable: false, searchable: false},

@@ -119,5 +119,15 @@ return [
 'returned'                      => 'مُرجع',
 'inventory_already_deducted'    => 'تم خصم المخزون بالفعل',
 'inventory_deducted_successfully' => 'تم خصم المخزون بنجاح',
+'post_delivery_cancelled'       => 'ملغي بعد التسليم',
+
+// Status History
+'status_change_history'         => 'سجل تغيير الحالات',
+'notes'                         => 'الملاحظات',
+'proof_image'                   => 'صورة الإثبات',
+'changed_by'                    => 'تم التغيير بواسطة',
+'view_full_size'                => 'عرض بالحجم الكامل',
+'download'                      => 'تحميل',
+'close'                         => 'إغلاق',
 
 ];

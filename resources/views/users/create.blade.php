@@ -23,12 +23,12 @@
                                     <input type="hidden" id="base_url" value="{{ url('/') }}">
                                     <div class="col-md-6">
                                         <x-label for="user_picture" name="{{ __('user.user_picture') }}" />
-                                        <x-browse-image 
-                                                        src="{{ url('/users/noimage/') }}" 
-                                                        name='avatar' 
-                                                        imageid='uploaded-image-1' 
-                                                        inputBoxClass='input-box-class-1' 
-                                                        imageResetClass='image-reset-class-1' 
+                                        <x-browse-image
+                                                        src="{{ url('/users/noimage/') }}"
+                                                        name='avatar'
+                                                        imageid='uploaded-image-1'
+                                                        inputBoxClass='input-box-class-1'
+                                                        imageResetClass='image-reset-class-1'
                                                         />
                                     </div>
                                     <br>
@@ -58,6 +58,12 @@
                                         <div class="valid-feedback"></div>
                                     </div>
                                     <div class="col-md-6">
+                                        <x-label for="carrier_id" name="{{ __('carrier.shipping_carrier') }} <i class='bx bx-package' ></i>" />
+                                        <div class="input-group mb-3">
+                                            <x-dropdown-carrier selected="" :showSelectOptionAll=true name='carrier_id' />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
                                         <x-label for="password" name="{{ __('user.password') }}" />
                                         <x-input type="password" name="password" :required="true" value=""/>
                                     </div>
@@ -84,7 +90,7 @@
                                             <x-dropdown-warehouse selected="" dropdownName='warehouse_ids[]' :multiSelect='true'/>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-md-12">
                                         <div class="d-md-flex d-grid align-items-center gap-3">
                                             <x-button type="submit" class="primary px-4" text="{{ __('app.submit') }}" />

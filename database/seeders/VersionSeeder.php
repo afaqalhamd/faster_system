@@ -64,7 +64,7 @@ class VersionSeeder extends Seeder
             //validate is the version exist in it?
             if(!in_array($version, $existingVersions)){
                 DB::table('versions')->insert([
-                    'version' => $version,
+                    'version' => $version, // Fixed: Use the actual version instead of hardcoded 2.3
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

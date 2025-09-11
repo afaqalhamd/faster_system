@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sale Order Status History Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Sale Order Status History Test</h1>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">Order Status</h5>
+                    <button type="button" class="btn btn-outline-info view-status-history" data-order-id="1">
+                        <i class="bx bx-history"></i> View History
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <select class="form-select" id="order_status">
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Delivery">Delivery</option>
+                    <option value="POD">POD</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Returned">Returned</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Status Change History Section -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">Status Change History</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-light text-muted me-2 small" id="statusHistoryCount">0 changes</span>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#statusHistoryCollapse">
+                            <i class="bx bx-chevron-down fs-6"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="collapse" id="statusHistoryCollapse">
+                <div class="card-body">
+                    <div id="statusHistoryContent">
+                        <div class="text-center py-5" id="noStatusHistoryMessage">
+                            <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No status history available yet.</p>
+                            <p class="text-muted small">Status changes will be recorded here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Status history button click handler
+            $(document).on('click', '.view-status-history', function(e) {
+                e.preventDefault();
+                const orderId = $(this).data('order-id');
+
+                console.log('View status history clicked for order ID:', orderId);
+
+                // Show loading indicator
+                $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');
+
+                // Make sure the collapse is shown
+                if (!$('#statusHistoryCollapse').hasClass('show')) {
+                    $('#statusHistoryCollapse').collapse('show');
+                    // Update the toggle button icon
+                    $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');
+                }
+
+                // Simulate AJAX call with mock data
+                setTimeout(function() {
+                    const mockHistory = [
+                        {
+                            id: 1,
+                            previous_status: null,
+                            new_status: 'Pending',
+                            notes: 'Order created',
+                            proof_image: null,
+                            changed_by_name: 'John Doe',
+                            changed_at: '2023-01-01T10:00:00Z'
+                        },
+                        {
+                            id: 2,
+                            previous_status: 'Pending',
+                            new_status: 'Processing',
+                            notes: 'Order is being processed',
+                            proof_image: null,
+                            changed_by_name: 'Jane Smith',
+                            changed_at: '2023-01-01T12:00:00Z'
+                        },
+                        {
+                            id: 3,
+                            previous_status: 'Processing',
+                            new_status: 'POD',
+                            notes: 'Order delivered successfully',
+                            proof_image: 'proofs/12345.jpg',
+                            changed_by_name: 'Delivery Team',
+                            changed_at: '2023-01-02T15:00:00Z'
+                        }
+                    ];
+
+                    updateStatusHistorySection(mockHistory);
+                }, 1000);
+            });
+
+            // Update the status history section with new data
+            function updateStatusHistorySection(history) {
+                // Update the count badge
+                $('#statusHistoryCount').text(history.length + ' changes');
+
+                let historyHtml = '';
+
+                if (history.length === 0) {
+                    historyHtml = `
+                        <div class="text-center py-5" id="noStatusHistoryMessage">
+                            <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No status history available yet.</p>
+                            <p class="text-muted small">Status changes will be recorded here.</p>
+                        </div>
+                    `;
+                } else {
+                    // Sort history by changed_at descending (newest first)
+                    history.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));
+
+                    history.forEach((item, index) => {
+                        // Status configuration for icons and colors
+                        const statusConfig = {
+                            'Pending': {'icon': 'bx-time-five', 'color': 'warning'},
+                            'Processing': {'icon': 'bx-loader-circle', 'color': 'primary'},
+                            'Completed': {'icon': 'bx-check-circle', 'color': 'success'},
+                            'Delivery': {'icon': 'bx-package', 'color': 'info'},
+                            'POD': {'icon': 'bx-receipt', 'color': 'success'},
+                            'Cancelled': {'icon': 'bx-x-circle', 'color': 'danger'},
+                            'Returned': {'icon': 'bx-undo', 'color': 'warning'}
+                        };
+
+                        const currentStatus = statusConfig[item.new_status] || {'icon': 'bx-circle', 'color': 'secondary'};
+                        const previousStatus = item.previous_status ? (statusConfig[item.previous_status] || {'icon': 'bx-circle', 'color': 'secondary'}) : null;
+
+                        // Determine connector color
+                        let connectorColor = '#6c757d'; // default gray
+                        if (currentStatus.color === 'warning') connectorColor = '#ffc107';
+                        else if (currentStatus.color === 'primary') connectorColor = '#0d6efd';
+                        else if (currentStatus.color === 'success') connectorColor = '#198754';
+                        else if (currentStatus.color === 'info') connectorColor = '#0dcaf0';
+                        else if (currentStatus.color === 'danger') connectorColor = '#dc3545';
+
+                        historyHtml += `
+                            <div class="d-flex align-items-start mb-3 pb-3 ${index !== history.length - 1 ? 'border-bottom' : ''} position-relative">
+                                <div class="me-3 position-relative">
+                                    <div class="bg-${currentStatus.color} text-white rounded-circle d-flex align-items-center justify-content-center timeline-status-circle" style="width: 28px; height: 28px; font-size: 12px; position: relative; z-index: 2;">
+                                        <i class="bx ${currentStatus.icon}"></i>
+                                    </div>
+                                    ${index !== history.length - 1 ? `
+                                        <div class="timeline-connector" style="position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 2px; height: 40px; background: linear-gradient(180deg, ${connectorColor} 0%, #e9ecef 100%); z-index: 1;"></div>
+                                    ` : ''}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            ${item.previous_status ? `
+                                                <div class="d-flex align-items-center gap-1 mb-1">
+                                                    <span class="badge bg-${previousStatus.color} text-white small">
+                                                        <i class="bx ${previousStatus.icon} me-1"></i>${item.previous_status}
+                                                    </span>
+                                                    <i class="bx bx-right-arrow-alt text-muted" style="font-size: 12px;"></i>
+                                                    <span class="badge bg-${currentStatus.color} text-white small">
+                                                        <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status}
+                                                    </span>
+                                                </div>
+                                            ` : `
+                                                <span class="badge bg-${currentStatus.color} text-white small">
+                                                    <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status} <small>(Initial)</small>
+                                                </span>
+                                            `}
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-primary fw-semibold">${new Date(item.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${new Date(item.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</small>
+                                            <small class="text-muted d-block">${timeSince(new Date(item.changed_at))}</small>
+                                        </div>
+                                    </div>
+
+                                    ${item.notes ? `
+                                        <div class="bg-light rounded p-2 mb-2">
+                                            <small><i class="bx bx-note text-primary me-1"></i><strong>Notes:</strong> ${item.notes}</small>
+                                        </div>
+                                    ` : ''}
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bx bx-user text-danger me-1"></i>
+                                            ${item.changed_by_name || 'Unknown User'}
+                                        </small>
+
+                                        ${item.proof_image ? `
+                                            <a href="/storage/${item.proof_image}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bx bx-image me-1"></i>View Proof
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                $('#statusHistoryContent').html(historyHtml);
+
+                // Re-animate timeline connectors
+                setTimeout(function() {
+                    $('.timeline-connector').addClass('animate');
+                }, 100);
+            }
+
+            // Helper function to calculate time since
+            function timeSince(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+
+                let interval = seconds / 31536000;
+                if (interval > 1) {
+                    return Math.floor(interval) + " years ago";
+                }
+
+                interval = seconds / 2592000;
+                if (interval > 1) {
+                    return Math.floor(interval) + " months ago";
+                }
+
+                interval = seconds / 86400;
+                if (interval > 1) {
+                    return Math.floor(interval) + " days ago";
+                }
+
+                interval = seconds / 3600;
+                if (interval > 1) {
+                    return Math.floor(interval) + " hours ago";
+                }
+
+                interval = seconds / 60;
+                if (interval > 1) {
+                    return Math.floor(interval) + " minutes ago";
+                }
+
+                return Math.floor(seconds) + " seconds ago";
+            }
+
+            // Handle collapse events for status history section
+            $('#statusHistoryCollapse').on('hide.bs.collapse', function () {
+                $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-up').addClass('bx-chevron-down');
+            });
+
+            $('#statusHistoryCollapse').on('show.bs.collapse', function () {
+                $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');
+            });
+        });
+    </script>
+
+    <style>
+        /* Compact Status History Styles */
+        .status-history-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .status-history-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .timeline-item {
+            transition: all 0.2s ease;
+        }
+
+        .timeline-item:hover {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 8px;
+            margin: -8px;
+        }
+
+        .status-icon {
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Timeline Connector Styles */
+        .timeline-connector {
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .timeline-connector:hover {
+            opacity: 1;
+        }
+
+        /* Enhanced Timeline Connector with Animation */
+        .timeline-connector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0;
+            background: inherit;
+            transition: height 0.5s ease;
+        }
+
+        .timeline-connector.animate::before {
+            height: 100%;
+        }
+
+        /* Status Circle Hover Effect */
+        .timeline-status-circle {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .timeline-status-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .timeline-item {
+                font-size: 14px;
+            }
+
+            .status-icon {
+                width: 24px !important;
+                height: 24px !important;
+                font-size: 11px;
+            }
+
+            .badge {
+                font-size: 10px;
+            }
+
+            .timeline-connector {
+                height: 30px !important;
+            }
+
+            .timeline-status-circle {
+                width: 24px !important;
+                height: 24px !important;
+            }
+        }
+
+        /* Remove old complex styles */
+        .enhanced-timeline-wrapper,
+        .timeline-progress-bar,
+        .timeline-progress-fill,
+        .enhanced-timeline-item,
+        .timeline-marker-container,
+        .timeline-marker-outer,
+        .timeline-marker {
+            display: none !important;
+        }
+    </style>
+</body>
+</html>

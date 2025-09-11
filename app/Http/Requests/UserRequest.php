@@ -36,6 +36,7 @@ class UserRequest extends FormRequest
             'first_name'                            => ['required', 'string', 'max:100'],
             'last_name'                             => ['required', 'string', 'max:100'],
             'role_id'                               => ['required'],
+            'carrier_id'                            => ['nullable', 'integer', Rule::exists('carriers', 'id')],
             'status'                                => ['required', 'max:1'],
             'mylogo'                                => ['nullable','image','mimes:jpeg,png,jpg,gif','max:1024'],
         ];
@@ -49,14 +50,14 @@ class UserRequest extends FormRequest
             if (!empty($this->input('password'))) {
                 $rulesArray['password'] = ['required', 'confirmed', Rules\Password::defaults()];
             }
-            
+
         }else{
              $rulesArray['username']    = ['required', 'string', 'max:100', 'unique:users'];
              $rulesArray['email']       = ['required', 'string', 'email', 'max:255', 'unique:'.User::class];
              $rulesArray['password']    = ['required', 'confirmed', Rules\Password::defaults()];
              $rulesArray['mobile']       = ['nullable', 'string', 'max:20', Rule::unique('users')];
         }
-        
+
         return $rulesArray;
 
     }

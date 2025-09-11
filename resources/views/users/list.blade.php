@@ -20,7 +20,7 @@
 					    <div>
 					    	<h5 class="mb-0 text-uppercase">{{ __('user.users_list') }}</h5>
 					    </div>
-					    
+
 					    @can('user.create')
 					    <!-- Button pushed to the right side -->
 					    <x-anchor-tag href="{{ route('user.create') }}" text="{{ __('user.create_user') }}" class="btn btn-primary px-5" />
@@ -43,6 +43,7 @@
 											<th>{{ __('app.email') }}</th>
 											<th>{{ __('app.mobile') }}</th>
 											<th>{{ __('app.role') }}</th>
+											<th>{{ __('carrier.carrier') }}</th>
 											<th>{{ __('app.status') }}</th>
 											<th>{{ __('app.created_at') }}</th>
 											<th>{{ __('app.action') }}</th>

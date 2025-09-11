@@ -1529,6 +1529,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/sms/get-content/{id}', [SaleOrderController::class, 'getSMSContent'])
                 ->middleware('can:sale.order.create');
 
+        // Add this new route for status updates
+        Route::post('/update-status', [SaleOrderController::class, 'updateStatus'])
+            ->middleware('can:sale.order.edit')
+            ->name('sale.order.update.status');
+
+        // Add route for status history
+        Route::get('/status-history/{id}', [SaleOrderController::class, 'getStatusHistory'])
+            ->middleware('can:sale.order.view')
+            ->name('sale.order.status.history');
 
     });
 
@@ -1549,22 +1558,6 @@ Route::middleware('auth')->group(function () {
      * Sale Bill
      * */
     Route::group(['prefix' => 'sale/invoice'], function () {
-
-        /*Sale Order to Sale : Start*/
-        Route::get('/convert/{id}', [SaleController::class, 'convertToSale'])
-                ->middleware('can:sale.invoice.create')
-                ->name('sale.invoice.convert');//View
-        Route::post('/convert-to/sale/save', [SaleController::class, 'store'])->name('sale-order.to.sale.save'); //save
-        /*Sale Order to Sale : End*/
-
-        /*Quotation to Sale : Start*/
-        Route::get('/convert-quotation-to-sale/{id}', [SaleController::class, 'convertQuotationToSale'])
-                ->middleware('can:sale.quotation.create')
-                ->name('convert.quotation.to.sale.invoice');//View
-        //Route::post('/convert-quotation-to-sale/save', [SaleController::class, 'store'])->name('quotation.to.sale.save'); //save
-        /*Quotation to Sale : End*/
-
-
         Route::get('/create', [SaleController::class, 'create'])
                 ->middleware('can:sale.invoice.create')
                 ->name('sale.invoice.create');//View
@@ -1602,6 +1595,24 @@ Route::middleware('auth')->group(function () {
         Route::get('/get-sales-status-history/{id}', [SaleController::class, 'getSalesStatusHistory'])
             ->middleware('can:sale.invoice.view')
             ->name('sale.invoice.get.sales.status.history');
+
+        /**
+         * Email
+         */
+        Route::get('/email', [SaleController::class, 'email'])
+            ->middleware('can:sale.invoice.view')
+            ->name('sale.invoice.email');
+
+        /**
+         * Test routes
+         */
+        Route::get('/datatable-test', function() {
+            return view('datatable_test');
+        })->name('sale.invoice.datatable.test');
+
+        Route::get('/ajax-test', function() {
+            return view('ajax_test');
+        })->name('sale.invoice.ajax.test');
 
         /**
          * Email
@@ -1764,11 +1775,8 @@ Route::middleware('auth')->group(function () {
 
         //get Cheque Adjustment details
         Route::get('/cheque/details/get/{id}', [ChequeController::class, 'getChequeTransactionDetails']);
-
-
         //Reopen cheque deposit
         Route::get('/cheque/re-open/{id}', [ChequeController::class, 'updateChequeReopen']);
-
         Route::get('/cash/list', [CashController::class, 'list'])
                 ->middleware('can:transaction.cash.view')
                 ->name('transaction.cash.list'); //List

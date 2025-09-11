@@ -3,6 +3,7 @@
 
 @section('css')
 <link href="{{ asset('assets/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
+<link href="{{ asset('custom/css/sale-status-icons.css') }}" rel="stylesheet">
 @endsection
         @section('content')
 
@@ -78,8 +79,8 @@
                                         <th>{{ __('payment.balance') }}</th>
                                         <th>{{ __('Inventory Status') }}</th>
                                         <th>{{ __('Sales Status') }}</th>
+                                        <th>{{ __('carrier.carrier') }}</th>
                                         <th>{{ __('app.created_by') }}</th>
-                                        <th>{{ __('app.created_at') }}</th>
                                         <th>{{ __('app.action') }}</th>
                                     </tr>
                                 </thead>
@@ -106,6 +107,7 @@
 <script src="{{ versionedAsset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-list.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/sale-status-icons.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/payment/invoice-payment.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>

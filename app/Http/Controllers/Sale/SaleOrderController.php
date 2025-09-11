@@ -27,6 +27,7 @@ use App\Services\StatusHistoryService;
 use App\Services\Communication\Email\SaleOrderEmailNotificationService;
 use App\Services\Communication\Sms\SaleOrderSmsNotificationService;
 use App\Enums\ItemTransactionUniqueCode;
+use App\Services\SaleOrderStatusService; // Added this line
 
 use Mpdf\Mpdf;
 use App\Notifications\NewSaleOrderNotification;
@@ -57,6 +58,8 @@ class SaleOrderController extends Controller
 
     public $statusHistoryService;
 
+    public $saleOrderStatusService; // Added this line
+
     public function __construct(
         PaymentTypeService                $paymentTypeService,
         PaymentTransactionService         $paymentTransactionService,
@@ -65,7 +68,8 @@ class SaleOrderController extends Controller
         SaleOrderEmailNotificationService $saleOrderEmailNotificationService,
         SaleOrderSmsNotificationService   $saleOrderSmsNotificationService,
         GeneralDataService                $generalDataService,
-        StatusHistoryService              $statusHistoryService
+        StatusHistoryService              $statusHistoryService,
+        SaleOrderStatusService            $saleOrderStatusService // Added this parameter
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -77,6 +81,7 @@ class SaleOrderController extends Controller
         $this->saleOrderSmsNotificationService = $saleOrderSmsNotificationService;
         $this->generalDataService = $generalDataService;
         $this->statusHistoryService = $statusHistoryService;
+        $this->saleOrderStatusService = $saleOrderStatusService; // Added this line
     }
 
     /**
@@ -137,6 +142,9 @@ class SaleOrderController extends Controller
                 'tax',
                 'batch.itemBatchMaster',
                 'itemSerialTransaction.itemSerialMaster'
+            ],
+            'saleOrderStatusHistories' => [
+                'changedBy'
             ]])->findOrFail($id);
         // Add formatted dates from ItemBatchMaster model
         $order->itemTransaction->each(function ($transaction) {
@@ -203,6 +211,9 @@ class SaleOrderController extends Controller
                 'tax',
                 'batch.itemBatchMaster',
                 'itemSerialTransaction.itemSerialMaster'
+            ],
+            'saleOrderStatusHistories' => [
+                'changedBy'
             ]])->find($id);
 
         //Payment Details
@@ -306,9 +317,12 @@ class SaleOrderController extends Controller
                     'round_off' => $validatedData['round_off'],
                     'grand_total' => $validatedData['grand_total'],
                     'state_id' => $validatedData['state_id'],
+                    'carrier_id' => $validatedData['carrier_id'] ?? null,
                     'order_status' => $validatedData['order_status'],
                     'currency_id' => $validatedData['currency_id'],
                     'exchange_rate' => $validatedData['exchange_rate'],
+                    'shipping_charge' => $validatedData['shipping_charge'] ?? 0,
+                    'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'] ?? 0,
                 ];
 
                 $newSaleOrder = SaleOrder::findOrFail($validatedData['sale_order_id']);
@@ -356,20 +370,8 @@ class SaleOrderController extends Controller
                 throw new \Exception($saleOrderPaymentsArray['message']);
             }
 
-            /**
-             * Payment Should not be less than 0
-             * */
-            $paidAmount = $newSaleOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
-            if ($paidAmount < 0) {
-                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
-            }
-
-            /**
-             * Paid amount should not be greater than grand total
-             * */
-            if ($paidAmount > $newSaleOrder->grand_total) {
-                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($newSaleOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $newSaleOrder->grand_total));
-            }
+            // Removed payment amount validation to allow saving orders regardless of payment status
+            // Payment validation can be handled at a later stage
 
             /**
              * Update Sale Order Model
@@ -499,12 +501,11 @@ class SaleOrderController extends Controller
                 ]);
             }
 
-            // Check if payment is complete
-            $totalPaid = $saleOrder->paymentTransaction->sum('amount');
-            if ($totalPaid < $saleOrder->grand_total) {
+            // Only deduct inventory if status is POD
+            if ($saleOrder->order_status !== 'POD') {
                 return response()->json([
                     'status' => false,
-                    'message' => __('payment.payment_not_complete')
+                    'message' => __('sale.inventory_deduction_only_for_pod')
                 ]);
             }
 
@@ -528,7 +529,6 @@ class SaleOrderController extends Controller
 
             // Update sale order status
             $saleOrder->update([
-                'order_status' => 'Completed',
                 'inventory_status' => 'deducted',
                 'inventory_deducted_at' => now()
             ]);
@@ -577,14 +577,7 @@ class SaleOrderController extends Controller
      */
     public function checkAndProcessInventoryDeduction(SaleOrder $saleOrder): bool
     {
-        // Check if payment is now complete
-        $totalPaid = $saleOrder->paymentTransaction->sum('amount');
-
-        if ($totalPaid >= $saleOrder->grand_total && $saleOrder->inventory_status !== 'deducted') {
-            $result = $this->processInventoryDeduction($saleOrder);
-            return $result->getData()->status ?? false;
-        }
-
+        // Always return false since inventory deduction is now only handled by status change
         return false;
     }
 
@@ -600,12 +593,12 @@ class SaleOrderController extends Controller
     {
         $saleOrder = SaleOrder::with(['itemTransaction', 'paymentTransaction'])->findOrFail($id);
 
-        // Check permissions
-        if (!auth()->user()->can('sale.order.manual.inventory.deduction')) {
+        // Only allow manual deduction if status is POD
+        if ($saleOrder->order_status !== 'POD') {
             return response()->json([
                 'status' => false,
-                'message' => __('auth.unauthorized')
-            ], 403);
+                'message' => __('sale.inventory_deduction_only_for_pod')
+            ], 400);
         }
 
         return $this->processInventoryDeduction($saleOrder);
@@ -659,6 +652,9 @@ class SaleOrderController extends Controller
                 'discount' => $request->discount[$i],
                 'discount_type' => $request->discount_type[$i],
                 'discount_amount' => $request->discount_amount[$i],
+
+                'charge_type' => 'shipping',
+                'charge_amount' => 0,
 
                 'tax_id' => $request->tax_id[$i],
                 'tax_type' => $request->tax_type[$i],
@@ -738,7 +734,39 @@ class SaleOrderController extends Controller
 
         }//for end
 
+        /**
+         * Update Shipping Cost
+         * */
+        $this->updateShippingCost($request->modelName);
+
         return ['status' => true];
+    }
+
+    public function updateShippingCost($model)
+    {
+        $itemTransactions = $model->refresh()->itemTransaction()->with('tax')->get();
+        if ($itemTransactions->isNotEmpty() && $model->shipping_charge > 0 && $model->is_shipping_charge_distributed == 1) {
+
+            //Calculate itemTransaction unit_price * quantity, give me sum of it
+            //Use foreach
+            $totalItemAmount = $itemTransactions->map(function ($itemTransaction) {
+                return $itemTransaction->unit_price * $itemTransaction->quantity;
+            })->sum();
+
+            //Update charge_amount in itemTransaction model for each entry
+            $itemTransactions->map(function ($itemTransaction) use ($model, $totalItemAmount) {
+                $itemTransaction->charge_amount = ($model->shipping_charge / $totalItemAmount) * $itemTransaction->unit_price * $itemTransaction->quantity;
+                /**
+                 * Calculate Charge Tax Amount
+                 * get the tax value from tax model, where tax is morph with itemTransaction as well
+                 * Tax model has the taxrate column
+                 */
+                $itemTransaction->charge_tax_amount = ($itemTransaction->charge_amount * $itemTransaction->tax->rate) / 100;
+
+                $itemTransaction->save();
+            });
+
+        }
     }
 
 
@@ -767,12 +795,38 @@ class SaleOrderController extends Controller
     }
 
     /**
+     * Helper method to check if current user is associated with a carrier
+     * @return bool
+     */
+    private function isCarrierUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->carrier_id && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply carrier filtering to query for delivery users
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyCarrierFilter($query)
+    {
+        $user = auth()->user();
+        if ($user && $user->carrier_id) {
+            // Carrier users can only see orders assigned to their carrier
+            $query->where('carrier_id', $user->carrier_id)
+                  ->whereIn('order_status', ['Delivery', 'Completed']);
+        }
+        return $query;
+    }
+
+    /**
      * Datatabale
      * */
     public function datatableList(Request $request)
     {
 
-        $data = SaleOrder::with('user', 'party', 'sale')
+        $data = SaleOrder::with('user', 'party', 'sale', 'carrier')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
             })
@@ -796,6 +850,10 @@ class SaleOrderController extends Controller
             // Apply delivery user filter - restrict to completed orders only
             ->when($this->isDeliveryUser(), function ($query) {
                 return $this->applyDeliveryUserFilter($query);
+            })
+            // Apply carrier filtering for delivery users
+            ->when($this->isCarrierUser(), function ($query) {
+                return $this->applyCarrierFilter($query);
             });
 
         return DataTables::of($data)
@@ -812,6 +870,9 @@ class SaleOrderController extends Controller
                             })
                             ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
                                 $userQuery->where('username', 'like', "%{$searchTerm}%");
+                            })
+                            ->orWhereHas('carrier', function ($carrierQuery) use ($searchTerm) {
+                                $carrierQuery->where('name', 'like', "%{$searchTerm}%");
                             });
                     });
                 }
@@ -862,6 +923,9 @@ class SaleOrderController extends Controller
                     'url' => "",
                 ];
             })
+            ->addColumn('carrier_name', function ($row) {
+                return $row->carrier ? $row->carrier->name : 'N/A';
+            })
             ->addColumn('color', function ($row) {
                 $saleOrderStatus = $this->generalDataService->getSaleOrderStatus();
 
@@ -875,15 +939,15 @@ class SaleOrderController extends Controller
                 $editUrl = route('sale.order.edit', ['id' => $id]);
 
                 //Verify is it converted or not
-                if ($row->sale) {
-                    $convertToSale = route('sale.invoice.details', ['id' => $row->sale->id]);
-                    $convertToSaleText = __('app.view_bill');
-                    $convertToSaleIcon = 'check-double';
-                } else {
-                    $convertToSale = route('sale.invoice.convert', ['id' => $id]);
-                    $convertToSaleText = __('sale.convert_to_sale');
-                    $convertToSaleIcon = 'transfer-alt';
-                }
+                // if ($row->sale) {
+                //     $convertToSale = route('sale.invoice.details', ['id' => $row->sale->id]);
+                //     $convertToSaleText = __('app.view_bill');
+                //     $convertToSaleIcon = 'check-double';
+                // } else {
+                //     $convertToSale = route('sale.invoice.convert', ['id' => $id]);
+                //     $convertToSaleText = __('sale.convert_to_sale');
+                //     $convertToSaleIcon = 'transfer-alt';
+                // }
 
                 $detailsUrl = route('sale.order.details', ['id' => $id]);
                 $printUrl = route('sale.order.print', ['id' => $id]);
@@ -896,9 +960,7 @@ class SaleOrderController extends Controller
                                 <li>
                                     <a class="dropdown-item" href="' . $editUrl . '"><i class="bx bx-edit"></i> ' . __('app.edit') . '</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="' . $convertToSale . '"><i class="bx bx-' . $convertToSaleIcon . '"></i> ' . $convertToSaleText . '</a>
-                                </li>
+
                                 <li>
                                     <a class="dropdown-item" href="' . $detailsUrl . '"></i><i class="bx bx-show-alt"></i> ' . __('app.details') . '</a>
                                 </li>
@@ -1096,43 +1158,62 @@ class SaleOrderController extends Controller
      * */
     public function getStatusHistory($id): JsonResponse
     {
-
-        $data = $this->statusHistoryService->getStatusHistoryData(SaleOrder::find($id));
-
-        return response()->json([
-            'status' => true,
-            'message' => '',
-            'data' => $data,
-        ]);
-
-    }
-
-    public function updateStatus(Request $request)
-    {
         try {
-            DB::beginTransaction();
+            $saleOrder = SaleOrder::findOrFail($id);
 
-            $saleOrder = SaleOrder::findOrFail($request->id);
-            $oldStatus = $saleOrder->order_status;
-            $saleOrder->order_status = $request->status;
-            $saleOrder->save();
+            // Use the SaleOrderStatusService to get the status history
+            $history = $this->saleOrderStatusService->getStatusHistory($saleOrder);
 
-            // Send notification to all users with appropriate permissions
-            $users = User::permission('sale.order.view')->get();
-            foreach ($users as $user) {
-                $user->notify(new SaleOrderStatusNotification($saleOrder, $request->status));
-            }
-
-            // Record status history
-            $this->statusHistoryService->RecordStatusHistory($saleOrder);
-
-            DB::commit();
-            return response()->json(['status' => true]);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json(['status' => false, 'message' => $e->getMessage()]);
+            return response()->json([
+                'success' => true,
+                'data' => $history
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve status history: ' . $e->getMessage()
+            ], 500);
         }
     }
+
+    /**
+     * Update sale order status
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateStatus(Request $request): JsonResponse
+    {
+        try {
+            $saleOrder = SaleOrder::findOrFail($request->id);
+
+            // Use the SaleOrderStatusService to update the status
+            $result = $this->saleOrderStatusService->updateSaleOrderStatus(
+                $saleOrder,
+                $request->status,
+                [
+                    'notes' => $request->notes,
+                    'proof_image' => $request->file('proof_image')
+                ]
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $result['message']
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], 400);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update sale order status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
-
-

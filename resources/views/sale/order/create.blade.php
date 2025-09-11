@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', __('sale.order.order'))
 
+@section('css')
+<link href="{{ asset('custom/css/sale-status-icons.css') }}" rel="stylesheet">
+@endsection
+
         @section('content')
         <!--start page wrapper -->
         <div class="page-wrapper">
@@ -75,9 +79,34 @@
                                                 <x-dropdown-states selected="" dropdownName='state_id'/>
                                             </div>
                                             @endif
+
+                                            @if(app('company')['is_enable_carrier'])
+                                            <div class="col-md-4">
+                                                <x-label for="carrier_id" name="{{ __('carrier.shipping_carrier') }} <i class='bx bx-package' ></i>" />
+                                                <div class="input-group mb-3">
+                                                    <x-dropdown-carrier selected="" :showSelectOptionAll=true name='carrier_id' />
+                                                </div>
+                                            </div>
+                                            @endif
+
                                             <div class="col-md-4">
                                                 <x-label for="order_status" name="{{ __('sale.order_status') }}" />
-                                                <x-dropdown-general optionNaming="saleOrderStatus" selected="" dropdownName='order_status'/>
+                                                <div class="position-relative">
+                                                    <select class="form-select sale-order-status-select" name="order_status" id="order_status" data-order-id="new">
+                                                        @php
+                                                            $generalDataService = new \App\Services\GeneralDataService();
+                                                            $statusOptions = $generalDataService->getSaleOrderStatus();
+                                                        @endphp
+                                                        @foreach($statusOptions as $status)
+                                                            <option value="{{ $status['id'] }}"
+                                                                    data-icon="{{ $status['icon'] }}"
+                                                                    data-color="{{ $status['color'] }}"
+                                                                    {{ $status['id'] == 'Pending' ? 'selected' : '' }}>
+                                                                {{ $status['name'] }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
@@ -169,6 +198,20 @@
                                             <div class="col-md-4 mt-4">
                                                 <table class="table mb-0 table-striped">
                                                    <tbody>
+                                                    @if(app('company')['is_enable_carrier_charge'])
+                                                       <tr>
+                                                         <td>
+                                                            <span class="fw-bold">{{ __('carrier.shipping_charge') }}</span>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="is_shipping_charge_distributed" name="is_shipping_charge_distributed">
+                                                                <label class="form-check-label small cursor-pointer" for="is_shipping_charge_distributed">{{ __('carrier.distribute_across_items') }}</label>
+                                                            </div>
+                                                        </td>
+                                                         <td>
+                                                            <x-input type="text" additionalClasses="text-end" name="shipping_charge" :required="true" placeholder="Shipping Charge" value="0"/>
+                                                        </td>
+                                                      </tr>
+                                                      @endif
                                                       <tr>
                                                          <td class="w-50">
                                                             <div class="form-check">
@@ -273,6 +316,7 @@
         const taxList = JSON.parse('{!! $taxList !!}');
 </script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/sale-order-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking-settings.js') }}"></script>

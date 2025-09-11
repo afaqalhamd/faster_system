@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -36,6 +36,7 @@ $(function() {
                 {data: "email", name: "email"},
                 {data: "mobile", name: "mobile"},
                 {data: "role_name", name: "role_name"},
+                {data: "carrier_name", name: "carrier_name"},
 
                 {
                     data: 'status',
@@ -246,7 +247,7 @@ $(function() {
             },
         });
         jqxhr.done(function(data) {
-            
+
             iziToast.success({title: 'Success', layout: 2, message: data.message});
         });
         jqxhr.fail(function(response) {

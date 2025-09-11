@@ -43,77 +43,96 @@ class GeneralDataService{
                     'id'    =>  'Pending',
                     'name'    =>  'Pending',
                     'color'    =>  'warning',
+                    'icon'    =>  'bx-time-five',
                 ],
                 [
                     'id'    =>  'Processing',
                     'name'    =>  'Processing',
                     'color'    =>  'primary',
+                    'icon'    =>  'bx-loader-circle bx-spin',
                 ],
                 [
                     'id'    =>  'Completed',
                     'name'    =>  'Completed',
                     'color'    =>  'success',
+                    'icon'    =>  'bx-check-circle',
                 ],
                 [
                     'id'    =>  'Delivery',
                     'name'    =>  'Delivery',
                     'color'    =>  'info',
+                    'icon'    =>  'bx-package',
                 ],
                 [
                     'id'    =>  'POD',
                     'name'    =>  'POD',
                     'color'    =>  'primary',
+                    'icon'    =>  'bx-receipt',
                 ],
                 [
                     'id'    =>  'Cancelled',
                     'name'    =>  'Cancelled',
                     'color'    =>  'danger',
+                    'icon'    =>  'bx-x-circle',
+                ],
+                [
+                    'id'    =>  'Returned',
+                    'name'    =>  'Returned',
+                    'color'    =>  'warning',
+                    'icon'    =>  'bx-undo',
                 ],
                 [
                     'id'    =>  'No Status',
                     'name'    =>  'No Status',
                     'color'    =>  'secondary',
+                    'icon'    =>  'bx-help-circle',
                 ],
         ];
      }
 
      function getSaleStatus() : array{
         return [
-
                 [
                     'id'    =>  'Pending',
-                    'name'    =>  'Pending',
+                    'name'    =>  __('sale.pending'),
                     'color'    =>  'warning',
+                    'icon'    =>  'bx-time-five',
                 ],
                 [
                     'id'    =>  'Processing',
-                    'name'    =>  'Processing',
+                    'name'    =>  __('sale.processing'),
                     'color'    =>  'primary',
+                    'icon'    =>  'bx-loader-circle bx-spin',
                 ],
                 [
                     'id'    =>  'Completed',
-                    'name'    =>  'Completed',
+                    'name'    =>  __('sale.completed'),
                     'color'    =>  'success',
+                    'icon'    =>  'bx-check-circle',
                 ],
                 [
                     'id'    =>  'Delivery',
-                    'name'    =>  'Delivery',
+                    'name'    =>  __('sale.delivery'),
                     'color'    =>  'info',
+                    'icon'    =>  'bx-package',
                 ],
                 [
                     'id'    =>  'POD',
-                    'name'    =>  'POD',
-                    'color'    =>  'primary',
+                    'name'    =>  __('sale.pod'),
+                    'color'    =>  'success',
+                    'icon'    =>  'bx-receipt',
                 ],
                 [
                     'id'    =>  'Cancelled',
-                    'name'    =>  'Cancelled',
+                    'name'    =>  __('sale.cancelled'),
                     'color'    =>  'danger',
+                    'icon'    =>  'bx-x-circle',
                 ],
                 [
                     'id'    =>  'Returned',
-                    'name'    =>  'Returned',
-                    'color'    =>  'secondary',
+                    'name'    =>  __('sale.returned'),
+                    'color'    =>  'warning',
+                    'icon'    =>  'bx-undo',
                 ],
         ];
      }
