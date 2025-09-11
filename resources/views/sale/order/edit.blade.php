@@ -16,7 +16,7 @@
                         @csrf
                         @method('PUT')
 
-                        <input type="hidden" name="sale_order_id" value="{{ $order->id }}">
+                        <input type="hidden" id="sale_order_id" name="sale_order_id" value="{{ $order->id }}">
                         <input type="hidden" name="row_count" value="0">
                         <input type="hidden" name="row_count_payments" value="0">
                         <input type="hidden" id="base_url" value="{{ url('/') }}">
@@ -690,66 +690,69 @@ $(document).ready(function() {
     }
 
     // Status update form submission
-    $(document).on('submit', '.status-update-form', function(e) {
-        e.preventDefault();
-        const orderId = $(this).data('order-id');
-        const status = $(this).data('status');
-        const formData = new FormData(this);
-
-        const csrfToken = $('meta[name="csrf-token"]').attr('content');
-        formData.append('status', status);
-        formData.append('_token', csrfToken);
-
-        // Show loading state
-        $('.status-update-form button[type="submit"]').prop('disabled', true).html(
-            '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'
-        );
-
-        $.ajax({
-            url: '/sale/order/update-status',
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': csrfToken
-            },
-            success: function(response) {
-                if (response.success) {
-                    iziToast.success({
-                        title: 'Success',
-                        message: response.message,
-                        position: 'topRight'
-                    });
-                    $('#statusUpdateModal').modal('hide');
-                    // Reload page to show updated status
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    iziToast.error({
-                        title: 'Error',
-                        message: response.message,
-                        position: 'topRight'
-                    });
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'An error occurred while updating the status.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                iziToast.error({
-                    title: 'Error',
-                    message: errorMessage,
-                    position: 'topRight'
-                });
-            },
-            complete: function() {
-                $('.status-update-form button[type="submit"]').prop('disabled', false).html('Update Status');
-            }
-        });
-    });
+    // $(document).on('submit', '.status-update-form', function(e) {
+    //     e.preventDefault();
+    //     const orderId = $(this).data('sale_order_id');
+    //     const status = $(this).data('status');
+    //     const formData = new FormData();
+    //
+    //     console.log(orderId);
+    //
+    //     const csrfToken = $('meta[name="csrf-token"]').attr('content');
+    //     formData.append('order_id', orderId);
+    //     formData.append('status', status);
+    //     formData.append('_token', csrfToken);
+    //
+    //     // Show loading state
+    //     $('.status-update-form button[type="submit"]').prop('disabled', true).html(
+    //         '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'
+    //     );
+    //
+    //     $.ajax({
+    //         url: '/sale/order/update-status',
+    //         method: 'POST',
+    //         data: formData,
+    //         processData: false,
+    //         contentType: false,
+    //         headers: {
+    //             'X-CSRF-TOKEN': csrfToken
+    //         },
+    //         success: function(response) {
+    //             if (response.success) {
+    //                 iziToast.success({
+    //                     title: 'Success',
+    //                     message: response.message,
+    //                     position: 'topRight'
+    //                 });
+    //                 $('#statusUpdateModal').modal('hide');
+    //                 // Reload page to show updated status
+    //                 setTimeout(() => {
+    //                     location.reload();
+    //                 }, 1500);
+    //             } else {
+    //                 iziToast.error({
+    //                     title: 'Error',
+    //                     message: response.message,
+    //                     position: 'topRight'
+    //                 });
+    //             }
+    //         },
+    //         error: function(xhr) {
+    //             let errorMessage = 'An error occurred while updating the status.';
+    //             if (xhr.responseJSON && xhr.responseJSON.message) {
+    //                 errorMessage = xhr.responseJSON.message;
+    //             }
+    //             iziToast.error({
+    //                 title: 'Error',
+    //                 message: errorMessage,
+    //                 position: 'topRight'
+    //             });
+    //         },
+    //         complete: function() {
+    //             $('.status-update-form button[type="submit"]').prop('disabled', false).html('Update Status');
+    //         }
+    //     });
+    // });
 
     // Status history button click handler (kept for backward compatibility)
     $(document).on('click', '.view-status-history', function(e) {

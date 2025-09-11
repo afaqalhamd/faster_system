@@ -59,7 +59,7 @@ class SaleOrderStatusManager {
      */
     handleStatusChange(selectElement) {
         const selectedStatus = selectElement.value;
-        const orderId = $(selectElement).data('order-id');
+        const orderId = $('#sale_order_id').val();
 
         if (this.statusesRequiringProof.includes(selectedStatus)) {
             this.showStatusUpdateModal(orderId, selectedStatus);
@@ -119,6 +119,7 @@ class SaleOrderStatusManager {
      */
     updateStatusDirectly(orderId, status) {
         const formData = new FormData();
+
         formData.append('status', status);
         formData.append('notes', ''); // Empty notes for direct updates
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
@@ -130,9 +131,10 @@ class SaleOrderStatusManager {
      * Submit status update form with proof
      */
     submitStatusUpdate(form) {
-        const orderId = $(form).data('order-id');
+        const orderId = $(form).data('sale_order_id');
         const status = $(form).data('status');
         const formData = new FormData(form);
+
 
         formData.append('status', status);
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
@@ -146,7 +148,7 @@ class SaleOrderStatusManager {
     submitStatusUpdateRequest(orderId, formData) {
         // Show loading state
         this.showLoading(true);
-
+        formData.append('order_id', orderId);
         $.ajax({
             url: `/sale/order/update-status`,
             method: 'POST',

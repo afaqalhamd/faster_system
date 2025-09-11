@@ -1185,7 +1185,10 @@ class SaleOrderController extends Controller
     public function updateStatus(Request $request): JsonResponse
     {
         try {
-            $saleOrder = SaleOrder::findOrFail($request->id);
+
+            $id = $request->order_id ?? $request->id;
+            $saleOrder = SaleOrder::findOrFail($id);
+
 
             // Use the SaleOrderStatusService to update the status
             $result = $this->saleOrderStatusService->updateSaleOrderStatus(
@@ -1205,7 +1208,7 @@ class SaleOrderController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => $result['message']
+                    'message' =>  $result['message']
                 ], 400);
             }
         } catch (Exception $e) {
