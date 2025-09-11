@@ -145,9 +145,10 @@ class SaleOrderStatusManager {
     /**
      * Submit the actual status update request
      */
-    submitStatusUpdateRequest(orderId, formData) {
+    submitStatusUpdateRequest(orderId2, formData) {
         // Show loading state
         this.showLoading(true);
+        const orderId = $('#sale_order_id').val();
         formData.append('order_id', orderId);
         $.ajax({
             url: `/sale/order/update-status`,
