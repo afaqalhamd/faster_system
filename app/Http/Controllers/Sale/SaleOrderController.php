@@ -1168,7 +1168,7 @@ class SaleOrderController extends Controller
                 'success' => true,
                 'data' => $history
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve status history: ' . $e->getMessage()
@@ -1211,7 +1211,7 @@ class SaleOrderController extends Controller
                     'message' =>  $result['message']
                 ], 400);
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update sale order status: ' . $e->getMessage()

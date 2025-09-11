@@ -1,4 +1,5 @@
 
+
 /**
  * Sale Order Status Management JavaScript Module
  * Handles status updates with image upload and notes for POD, Cancelled, and Returned statuses
