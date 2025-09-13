@@ -321,6 +321,8 @@ return [
     'increase'                          => 'زيادة',
     'decrease'                          => 'نقصان',
     'receive' => 'استلام',
+    'changes'                           => 'تغييرات',
+    'initial'                           => 'ابتدائي',
 
 
 ];

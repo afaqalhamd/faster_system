@@ -46,6 +46,17 @@ return [
 'sale_invoice' => 'فاتورة بيع',
 'invoice_date' => 'تاريخ الفاتورة',
 
+// Sales Analytics
+'sales_analytics' => 'تحليلات المبيعات',
+'paid' => 'مدفوع',
+'unpaid' => 'غير مدفوع',
+'paid_invoices' => 'الفواتير المدفوعة',
+'unpaid_invoices' => 'الفواتير غير المدفوعة',
+'payment_summary' => 'ملخص الدفع',
+'daily_sales' => 'المبيعات اليومية',
+'monthly_target' => 'الهدف الشهري',
+'status_distribution' => 'توزيع الحالات',
+
 'return' => [
 'return' => 'إقرار بيع/مذكرة محاسبية',
 'create' => 'إنشاء إقرار بيع',

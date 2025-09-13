@@ -106,6 +106,12 @@
             <x-label for="cust_num_t" name="{{ __('item.customer_number_t') }}" />
             <x-input type="number" name="cust_num_t" :required="false" value=""/>
         </div>
+        @if(app('company')['enable_size'])
+        <div class="col-md-4">
+            <x-label for="size" name="{{ __('item.size') }}" />
+            <x-input type="text" name="size" :required="false" value=""/>
+        </div>
+        @endif
         <div class="col-md-4">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="is_damaged" name="is_damaged" value="1">
@@ -193,7 +199,7 @@
                                                 <div class="col-md-4">
                                                     <x-label for="sale_price" name="{{ __('item.sale_price') }}" />
                                                     <div class="input-group mb-3">
-                                                        <x-input type="text" name="sale_price" :required="true" additionalClasses='cu_numeric' value="0"/>
+                                                        <x-input type="text" name="sale_price" :required="true" additionalClasses='cu_numeric' value=""/>
                                                         <x-dropdown-general optionNaming="withOrWithoutTax" selected="" dropdownName='is_sale_price_with_tax'/>
                                                     </div>
                                                 </div>

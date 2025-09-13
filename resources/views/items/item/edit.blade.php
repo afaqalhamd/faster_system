@@ -104,6 +104,12 @@
                                                 <x-label for="cust_num_t" name="{{ __('item.customer_number_t') }}" />
                                                 <x-input type="text" name="cust_num_t" :required="false" value="{{ $item->cust_num_t }}"/>
                                             </div>
+                                            @if(app('company')['enable_size'])
+                                            <div class="col-md-4">
+                                                <x-label for="size" name="{{ __('item.size') }}" />
+                                                <x-input type="text" name="size" :required="false" value="{{ $item->size }}"/>
+                                            </div>
+                                            @endif
                                             <div class="col-md-4">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="is_damaged" name="is_damaged" value="1" {{ $item->is_damaged ? 'checked' : '' }}>

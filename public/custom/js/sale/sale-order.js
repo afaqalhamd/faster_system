@@ -287,6 +287,12 @@ function addRowToInvoiceItemsTable(recordObject, loadedFromUpdateOperation = fal
     var inputItemName = `<label class="form-label" role="button">${recordObject.name}</label> ` + itemInfoIcon(recordObject.tracking_type);
     var inputDescription = '<textarea rows="1" type="text" name="description[' + currentRowId + ']" class="form-control" placeholder="Description">' + recordObject.description + '</textarea>';
 
+    // SKU display - only show if sku exists and is not empty
+    var skuDisplay = '';
+    if (recordObject.sku && recordObject.sku.trim() !== '') {
+        skuDisplay = `<span class="badge bg-secondary">${recordObject.sku}</span>`;
+    }
+
     var serialTracking = `<i class="fadeIn animated bx bx-list-ol text-primary serialBtnForInvoice" role='button' data-bs-toggle="tooltip" data-bs-placement="top" data-bs-original-title="${_lang.clickToSelectSerial}"></i>`;
     var _serialNumbers = (recordObject.serial_numbers !== undefined) ? recordObject.serial_numbers : '';
     var hiddenSerialNumbers = `<input type="hidden" name='serial_numbers[${currentRowId}]' class='form-control' value='${_serialNumbers}'>`;
@@ -310,7 +316,13 @@ function addRowToInvoiceItemsTable(recordObject, loadedFromUpdateOperation = fal
     var color = '<input type="text" name="color[' + currentRowId + ']" class="form-control batch-group" value="' + _color + '">';
 
     var _size = (recordObject.size !== undefined) ? recordObject.size : '';
-    var size = '<input type="text" name="size[' + currentRowId + ']" class="form-control batch-group" value="' + _size + '">';
+    // Size display - show as text if size exists and is not empty, otherwise show input field
+    var size = '';
+    if (_size && _size.trim() !== '') {
+        size = `<span class="text-muted">${_size}</span>`;
+    } else {
+        size = '<input type="text" name="size[' + currentRowId + ']" class="form-control batch-group" value="' + _size + '">';
+    }
 
     var inputQuantity = '<input type="number" readonly name="input_quantity[' + currentRowId + ']" class="form-control text-center" value="' + recordObject.input_quantity + '">';
     var quantity = '<input type="number" id="qty" name="quantity[' + currentRowId + ']" class="form-control text-center" value="' + recordObject.quantity + '">';
@@ -356,7 +368,7 @@ function addRowToInvoiceItemsTable(recordObject, loadedFromUpdateOperation = fal
     var newRow = $('<tr id="' + currentRowId + '" class="highlight">');
     newRow.append('<td>' + inputDeleteButton + '</td>');
     newRow.append('<td>' + hiddenWarehouseId + hiddenItemId + inputItemName + '</td>');
-    newRow.append('<td>' + recordObject.sku + '</td>');
+    newRow.append('<td>' + skuDisplay + '</td>');
     newRow.append(`<td class="${(!itemSettings.enable_serial_tracking) ? 'd-none' : ''}">` + serialTracking + hiddenSerialNumbers + '</td>');
     newRow.append(`<td class="${(!itemSettings.enable_batch_tracking) ? 'd-none' : ''}">` + inputBatchNumber + '</td>');
     newRow.append(`<td class="${(!itemSettings.enable_mfg_date) ? 'd-none' : ''}">` + mfgDate + '</td>');
@@ -919,8 +931,8 @@ itemSearchInputBoxId.autocomplete({
         // Add header after the menu is opened
         var header = $("<li class='ui-autocomplete-category' style='padding: 5px; border-bottom: 1px solid #ddd; background-color: #f8f9fa;'>" +
             "<div style='display: flex; font-weight: bold;'>" +
-            "<span style='flex: 3;'>Name</span>" +
-            "<span style='flex: 1;'>Brand</span>" +
+            "<span style='flex: 4;'>Name</span>" +
+            "<span style='flex: 1;'>SKU</span>" +
             "<span style='flex: 1; text-align: right;'>Sales Price</span>" +
             "<span style='flex: 1; text-align: right;'>Purchase Price</span>" +
             "<span style='flex: 1; text-align: right;'>Stock</span>" +
@@ -931,8 +943,8 @@ itemSearchInputBoxId.autocomplete({
     return $("<li>")
         .attr("style", "padding: 5px; border-bottom: 1px solid #eee;")
         .append(`<div style="display: flex; align-items: center;">
-                        <span style="flex: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name || 'N/A'}</span>
-                        <span style="flex: 1; text-align: left;">${item.brand_name}</span>
+                        <span style="flex: 4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name || 'N/A'}</span>
+                        <span style="flex: 1; text-align: left;">${item.sku || '--'}</span>
                         <span style="flex: 1; text-align: right;">${_parseFix(item.sale_price) || 'N/A'}</span>
                         <span style="flex: 1; text-align: right;">${_parseFix(item.purchase_price) || 'N/A'}</span>
                         <span style="flex: 1; text-align: right; color: ${_parseQuantity(item.current_stock) > 0 ? '#000000' : '#dc3545'};">${_parseQuantity(item.current_stock) || 'N/A'}</span>
@@ -1025,7 +1037,7 @@ function updateOperation(stringData) {
             mrp: (data.tracking_type == 'batch' && data.batch.item_batch_master.mrp !== null) ? data.batch.item_batch_master.mrp : data.mrp,
             model_no: (data.tracking_type == 'batch' && data.batch.item_batch_master.model_no !== null) ? data.batch.item_batch_master.model_no : '',
             color: (data.tracking_type == 'batch' && data.batch.item_batch_master.color !== null) ? data.batch.item_batch_master.color : '',
-            size: (data.tracking_type == 'batch' && data.batch.item_batch_master.size !== null) ? data.batch.item_batch_master.size : '',
+            size: (data.tracking_type == 'batch' && data.batch.item_batch_master.size !== null) ? data.batch.item_batch_master.size : (data.item.size || ''), // Include item size if not from batch
         };
         addRowToInvoiceItemsTable(dataObject, true);
     });

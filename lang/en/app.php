@@ -308,6 +308,8 @@ return [
     'increase'                          => 'Increase',
     'decrease'                          => 'Decrease',
     'receive' => 'Receive',
+    'changes'                           => 'changes',
+    'initial'                           => 'Initial',
 
 
 

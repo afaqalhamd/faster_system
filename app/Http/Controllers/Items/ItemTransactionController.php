@@ -12,6 +12,7 @@ use App\Traits\FormatNumber;
 use App\Traits\FormatsDateInputs;
 use App\Models\Items\Item;
 use App\Models\Items\ItemTransaction;
+use App\Models\Items\ItemGeneralQuantity;
 use App\Models\StockAdjustment;
 use App\Models\StockTransfer;
 use App\Services\StockImpact;
@@ -40,7 +41,12 @@ class ItemTransactionController extends Controller
         $item->avg_purchase_price = $avgPrices[$id]['purchase']['average_purchase_price'] ?? 0;
         $item->avg_sale_price = $avgPrices[$id]['sale']['average_sale_price'] ?? 0;
 
-        return view('items.transaction.list', compact('item'));
+        // Fetch warehouse-specific inventory data
+        $warehouseInventories = ItemGeneralQuantity::with('warehouse')
+            ->where('item_id', $id)
+            ->get();
+
+        return view('items.transaction.list', compact('item', 'warehouseInventories'));
     }
 
     public function datatableList(Request $request){

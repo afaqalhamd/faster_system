@@ -24,7 +24,7 @@ use App\Http\Requests\SaleRequest;
 use App\Services\AccountTransactionService;
 use App\Services\ItemTransactionService;
 use App\Models\Items\ItemSerial;
-use App\Models\Items\ItemBatchTransaction;
+use AppModelsItems\ItemBatchTransaction;
 use Carbon\Carbon;
 use App\Services\CacheService;
 use App\Services\ItemService;
@@ -708,7 +708,7 @@ class SaleController extends Controller
         ]);
     }
 
-    catch (Exception $e) {
+    catch (\Exception $e) {
         DB::rollback();
 
         return response()->json([
@@ -1073,6 +1073,124 @@ class SaleController extends Controller
 
 
     /**
+     * Get sales analytics data for charts
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function analytics(Request $request): JsonResponse
+    {
+        try {
+            // Get date range from request or default to last 30 days
+            $fromDate = $request->from_date ? $this->toSystemDateFormat($request->from_date) : now()->subDays(30)->format('Y-m-d');
+            $toDate = $request->to_date ? $this->toSystemDateFormat($request->to_date) : now()->format('Y-m-d');
+
+            // Apply same filters as the main list
+            $query = Sale::query()
+                ->when($request->party_id, function ($query) use ($request) {
+                    return $query->where('party_id', $request->party_id);
+                })
+                ->when($request->user_id, function ($query) use ($request) {
+                    return $query->where('created_by', $request->user_id);
+                })
+                ->when(!auth()->user()->can('sale.invoice.can.view.other.users.sale.invoices'), function ($query) {
+                    return $query->where('created_by', auth()->user()->id);
+                })
+                ->whereBetween('sale_date', [$fromDate, $toDate]);
+
+            // Get sales data for bar chart (daily sales)
+            $salesData = $this->getSalesChartData($query, $fromDate, $toDate);
+
+            // Get status distribution for pie chart
+            $statusData = $this->getStatusChartData($query);
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'sales_data' => $salesData,
+                    'status_data' => $statusData
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get payment status chart data
+     */
+    private function getSalesChartData($query, $fromDate, $toDate)
+    {
+        // Clone query for payment analysis
+        $paymentQuery = clone $query;
+
+        // Get payment statistics
+        $paymentStats = $paymentQuery
+            ->selectRaw('
+                SUM(grand_total) as total_amount,
+                SUM(paid_amount) as paid_amount,
+                COUNT(*) as total_count,
+                SUM(CASE WHEN paid_amount >= grand_total THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN paid_amount < grand_total THEN 1 ELSE 0 END) as unpaid_count
+            ')
+            ->first();
+
+        $totalAmount = (float) $paymentStats->total_amount;
+        $paidAmount = (float) $paymentStats->paid_amount;
+        $unpaidAmount = $totalAmount - $paidAmount;
+
+        return [
+            'payment_amounts' => [
+                'labels' => [__('sale.paid'), __('sale.unpaid')],
+                'data' => [$paidAmount, $unpaidAmount],
+                'total_amount' => $totalAmount
+            ],
+            'payment_counts' => [
+                'labels' => [__('sale.paid_invoices'), __('sale.unpaid_invoices')],
+                'data' => [(int) $paymentStats->paid_count, (int) $paymentStats->unpaid_count],
+                'total_count' => (int) $paymentStats->total_count
+            ]
+        ];
+    }
+
+    /**
+     * Get status distribution chart data
+     */
+    private function getStatusChartData($query)
+    {
+        // Clone query for status data
+        $statusQuery = clone $query;
+
+        // Get status distribution
+        $statusCounts = $statusQuery
+            ->selectRaw('sales_status, COUNT(*) as count')
+            ->groupBy('sales_status')
+            ->get();
+
+        $labels = [];
+        $values = [];
+
+        // Get status options for proper labeling
+        $statusOptions = $this->generalDataService->getSaleStatus();
+        $statusMap = collect($statusOptions)->keyBy('id');
+
+        foreach ($statusCounts as $status) {
+            $statusInfo = $statusMap->get($status->sales_status);
+            $labels[] = $statusInfo ? $statusInfo['name'] : $status->sales_status;
+            $values[] = (int) $status->count;
+        }
+
+        return [
+            'labels' => $labels,
+            'values' => $values
+        ];
+    }
+
+    /**
      * Datatable list for sales
      * */
      public function datatableList(Request $request)
@@ -1139,6 +1257,17 @@ class SaleController extends Controller
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
             })
+            ->addColumn('payment_status', function ($row) {
+                $balance = $row->grand_total - $row->paid_amount;
+
+                if ($balance == 0) {
+                    return '<span class="badge bg-success"><i class="bx bx-check-circle me-1"></i>' . __('payment.paid') . '</span>';
+                } elseif ($row->paid_amount == 0) {
+                    return '<span class="badge bg-danger"><i class="bx bx-x-circle me-1"></i>' . __('payment.unpaid') . '</span>';
+                } else {
+                    return '<span class="badge bg-warning"><i class="bx bx-time-five me-1"></i>' . __('payment.partially_paid') . '</span>';
+                }
+            })
             ->addColumn('sales_status', function ($row) {
                 return $row->sales_status;
             })
@@ -1201,7 +1330,7 @@ class SaleController extends Controller
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'payment_status'])
             ->make(true);
     }
 
@@ -1948,7 +2077,7 @@ class SaleController extends Controller
         if ($user && $user->carrier_id) {
             // Carrier users can only see sales assigned to their carrier
             $query->where('carrier_id', $user->carrier_id)
-                  ->whereIn('sales_status', ['Delivery', 'POD', 'Completed']);
+                  ->whereIn(column: 'sales_status', values: ['Delivery', 'POD', 'Completed', 'Returned','Cancelled']);
         }
         return $query;
     }

@@ -15,10 +15,10 @@ return [
     'note'                                      => 'ملاحظة الدفع',
     'history'                                   => 'سجل الدفع',
     'status'                                    => 'حالة الدفع',
-    'please_select_payment_type'                => 'الرجاء تحديد نوع الدفع',
-    'payment_should_not_be_greater_than_grand_total'   => 'يجب ألا يتجاوز المبلغ المدفوع الإجمالي الكلي',
-
+    'payment_status'                            => 'حالة الدفع',
     'paid'                                      => 'مدفوع',
+    'unpaid'                                    => 'غير مدفوع',
+    'partially_paid'                            => 'مدفوع جزئياً',
     'balance'                                   => 'الرصيد',
     'date'                                      => 'تاريخ الدفع',
     'received'                                  => 'تم استلام الدفعة',

@@ -23,14 +23,17 @@
 							  <h4 class="card-title">{{ $item->name }}</h4>
 							  <div class="d-flex gap-3 py-3">
 								  <div>{{ __('item.stock_quantity') }}</div>
-								  <div class="text-default"><i class='bx bxs-building align-middle'></i> {{ $formatNumber->formatQuantity($item->current_stock) }}</div>
+								  <div class="text-default"><i class='bx bxs-building align-middle'></i> {{ $formatNumber->formatQuantity($item->current_stock) }} </div>
+                                  <div class="text-default"> {{ $item->baseUnit->name }}</div>
 							  </div>
-							  <div class="mb-3"> 
+							  <div class="mb-3">
 							  	<span>{{ __('app.price') }} : </span>
-								<span class="price h4">{{ $formatNumber->formatWithPrecision($item->sale_price, comma:true) }}</span> 
-								<span class="text-muted">/{{ $item->baseUnit->name }}</span> 
+								<span class="price h4">{{ $formatNumber->formatWithPrecision($item->sale_price, comma:true) }}</span>
+
 							</div>
 							  <dl class="row">
+                                <dt class="col-sm-3">{{ __('item.sku') }}#</dt>
+								<dd class="col-sm-9">{{ $item->sku }}</dd>
 								<dt class="col-sm-3">{{ __('item.code') }}#</dt>
 								<dd class="col-sm-9">{{ $item->item_code }}</dd>
 
@@ -42,13 +45,36 @@
 
 								<dt class="col-sm-3">{{ __('app.description') }}</dt>
 								<dd class="col-sm-9">{{ $item->description }}</dd>
-							  
+
 							  </dl>
 							</div>
 						  </div>
 						</div>
 				  </div>
 
+                  <!-- Warehouse Inventory Cards -->
+                  @if(isset($warehouseInventories) && $warehouseInventories->count() > 0)
+                  <div class="card">
+                    <div class="card-header">
+                      <h5 class="mb-0">{{ __('warehouse.warehouse_stock') }}</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        @foreach($warehouseInventories as $warehouseInventory)
+                        <div class="col-md-4 mb-3">
+                          <div class="card border-primary border-2">
+                            <div class="card-body text-center">
+                              <h6 class="card-title">{{ $warehouseInventory->warehouse->name }}</h6>
+                              <h3 class="text-primary">{{ $formatNumber->formatQuantity($warehouseInventory->quantity) }}</h3>
+                              <p class="text-muted mb-0">{{ $item->baseUnit->name }}</p>
+                            </div>
+                          </div>
+                        </div>
+                        @endforeach
+                      </div>
+                    </div>
+                  </div>
+                  @endif
 
                     <div class="card">
 
@@ -57,11 +83,11 @@
 					    <div>
 					    	<h5 class="mb-0 text-uppercase">{{ __('app.transactions') }}</h5>
 					    </div>
-					    
-					   
+
+
 					</div>
 					<div class="card-body">
-						
+
 						<div class="table-responsive">
                         <form class="row g-3 needs-validation" id="datatableForm" action="{{ route('item.delete') }}" enctype="multipart/form-data">
                             {{-- CSRF Protection --}}

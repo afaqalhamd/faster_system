@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -92,6 +92,129 @@ $(function() {
                 {data: 'party_name', name: 'party_name'},
                 {data: 'grand_total', name: 'grand_total', className: 'text-end'},
                 {data: 'balance', name: 'balance', className: 'text-end'},
+                {
+                    data: 'payment_status',
+                    name: 'payment_status',
+                    orderable: false,
+                    className: 'text-center',
+                    searchable: false
+                },
+                {
+                    data: 'inventory_status',
+                    name: 'inventory_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // If data already contains HTML, return it as is
+                        if (typeof data === 'string' && data.includes('<div class="badge')) {
+                            return data;
+                        }
+
+                        // Create the badge HTML based on inventory status
+                        const statusMap = {
+                            'added': { class: 'bg-light-success text-success', text: 'Inventory Added' },
+                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'ready_for_addition': { class: 'bg-light-primary text-primary', text: 'Ready for Addition' },
+                            'Added': { class: 'bg-light-success text-success', text: 'Inventory Added' },
+                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
+                            'Ready for Addition': { class: 'bg-light-primary text-primary', text: 'Ready for Addition' }
+                        };
+
+                        // Check if we have a translation for this status
+                        let displayText = data;
+                        let statusClass = 'bg-light-secondary text-secondary'; // default
+                        let statusIcon = ''; // default no icon
+
+                        if (data === 'added') {
+                            displayText = 'Inventory Added';
+                            statusClass = 'bg-light-success text-success';
+                        } else if (data === 'pending') {
+                            displayText = 'Pending';
+                            statusClass = 'bg-light-warning text-warning';
+                        } else if (data === 'ready_for_addition') {
+                            displayText = 'Ready for Addition';
+                            statusClass = 'bg-light-primary text-primary';
+                        } else if (data === 'added_received') {
+                            // Check the post_receipt_action to determine the correct text
+                            const postReceiptAction = full.post_receipt_action ? full.post_receipt_action.toString().trim() : '';
+
+                            if (postReceiptAction === 'Cancelled') {
+                                displayText = 'Post-Receipt Cancelled';
+                                statusClass = 'bg-light-danger text-danger'; // Red for cancellation
+                                statusIcon = 'bx-x-circle';
+                            } else if (postReceiptAction === 'Returned') {
+                                displayText = 'Post-Receipt Return';
+                                statusClass = 'bg-light-warning text-warning'; // Orange for return
+                                statusIcon = 'bx-undo';
+                            } else {
+                                // Fallback - check purchase_status as backup
+                                const purchaseStatus = full.purchase_status ? full.purchase_status.toString().trim() : '';
+                                if (purchaseStatus === 'Cancelled') {
+                                    displayText = 'Post-Receipt Cancelled';
+                                    statusClass = 'bg-light-danger text-danger'; // Red for cancellation
+                                    statusIcon = 'bx-x-circle';
+                                } else if (purchaseStatus === 'Returned') {
+                                    displayText = 'Post-Receipt Return';
+                                    statusClass = 'bg-light-warning text-warning'; // Orange for return
+                                    statusIcon = 'bx-undo';
+                                } else {
+                                    // Final fallback - use a generic text
+                                    displayText = 'Post-Receipt Action';
+                                    statusClass = 'bg-light-secondary text-secondary';
+                                    statusIcon = 'bx-help-circle';
+                                }
+                            }
+                        }
+
+                        const statusInfo = statusMap[data] || { class: statusClass, text: displayText };
+
+                        // Create the badge with icon if available
+                        const iconHtml = statusIcon ? `<i class="bx ${statusIcon} me-1"></i>` : '';
+                        return `<div class="badge ${statusInfo.class} p-2 px-3">${iconHtml}${statusInfo.text}</div>`;
+                    }
+                },
+                {
+                    data: 'purchase_status',
+                    name: 'purchase_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // If data already contains HTML, return it as is
+                        if (typeof data === 'string' && data.includes('<div class="badge')) {
+                            return data;
+                        }
+
+                        // Create the badge HTML based on getPurchaseStatus() method
+                        const statusMap = {
+                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending', icon: 'bx-time-five' },
+                            'Processing': { class: 'bg-light-primary text-primary', text: 'Processing', icon: 'bx-loader-circle bx-spin' },
+                            'Completed': { class: 'bg-light-success text-success', text: 'Completed', icon: 'bx-check-circle' },
+                            'Shipped': { class: 'bg-light-info text-info', text: 'Shipped', icon: 'bx-package' },
+                            'ROG': { class: 'bg-light-success text-success', text: 'ROG', icon: 'bx-receipt' },
+                            'Cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled', icon: 'bx-x-circle' },
+                            'Returned': { class: 'bg-light-warning text-warning', text: 'Returned', icon: 'bx-undo' },
+                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending', icon: 'bx-time-five' },
+                            'processing': { class: 'bg-light-primary text-primary', text: 'Processing', icon: 'bx-loader-circle bx-spin' },
+                            'completed': { class: 'bg-light-success text-success', text: 'Completed', icon: 'bx-check-circle' },
+                            'shipped': { class: 'bg-light-info text-info', text: 'Shipped', icon: 'bx-package' },
+                            'rog': { class: 'bg-light-success text-success', text: 'ROG', icon: 'bx-receipt' },
+                            'cancelled': { class: 'bg-light-danger text-danger', text: 'Cancelled', icon: 'bx-x-circle' },
+                            'returned': { class: 'bg-light-warning text-warning', text: 'Returned', icon: 'bx-undo' }
+                        };
+
+                        // Try to get status info from the map
+                        let statusInfo = statusMap[data];
+
+                        // If not found, use default fallback
+                        if (!statusInfo) {
+                            statusInfo = { class: 'bg-light-secondary text-secondary', text: data, icon: '' };
+                        }
+
+                        // Create the badge with icon if available
+                        const iconHtml = statusInfo.icon ? `<i class="bx ${statusInfo.icon} me-1"></i>` : '';
+                        return `<div class="badge ${statusInfo.class} p-2 px-3">${iconHtml}${statusInfo.text}</div>`;
+                    }
+                },
 
                 {data: 'username', name: 'username'},
                 {data: 'created_at', name: 'created_at'},

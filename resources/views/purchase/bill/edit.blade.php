@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', __('purchase.bill'))
 
+@section('css')
+<link href="{{ asset('custom/css/purchase-status-icons.css') }}" rel="stylesheet">
+@endsection
+
         @section('content')
         <!--start page wrapper -->
         <div class="page-wrapper">
@@ -78,6 +82,42 @@
                                             <div class="col-md-4">
                                                 <x-label for="reference_no" name="{{ __('supplier.supplier_invoice_number') }}" />
                                                 <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value="{{ $purchase->reference_no }}"/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <x-label for="purchase_status" name="{{ __('Purchase Status') }}" />
+                                                <div class="d-flex gap-2">
+                                                    <div class="position-relative flex-grow-1">
+                                                        <select class="form-select purchase-status-select" name="purchase_status" id="purchase_status" data-purchase-id="{{ $purchase->id }}">
+                                                            @php
+                                                                $generalDataService = new \App\Services\GeneralDataService();
+                                                                $statusOptions = $generalDataService->getPurchaseStatus();
+                                                            @endphp
+                                                            @foreach($statusOptions as $status)
+                                                                <option value="{{ $status['id'] }}"
+                                                                        data-icon="{{ $status['icon'] }}"
+                                                                        data-color="{{ $status['color'] }}"
+                                                                        {{ $purchase->purchase_status == $status['id'] ? 'selected' : '' }}>
+                                                                    {{ $status['name'] }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    @if(isset($purchase) && $purchase->id)
+                                                    <button type="button" class="btn btn-outline-info view-purchase-status-history" data-purchase-id="{{ $purchase->id }}" title="{{ __('View Status History') }}">
+                                                        <i class="bx bx-history"></i>
+                                                    </button>
+                                                    @endif
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="bx bx-info-circle"></i>
+                                                    {{ __('ROG, Cancelled, and Returned statuses require proof images and notes') }}<br>
+                                                    <i class="bx bx-package"></i>
+                                                    {{ __('purchase.rog_required_for_inventory') }}
+                                                    @if(isset($purchase) && $purchase->purchase_status === 'ROG')
+                                                        <br><i class="bx bx-lock"></i>
+                                                        {{ __('purchase.no_backward_after_rog') }}
+                                                    @endif
+                                                </small>
                                             </div>
                                             @if(app('company')['tax_type'] == 'gst')
                                             <div class="col-md-4">
@@ -282,6 +322,169 @@
                                             </table>
                                         </div>
                                     </div>
+
+                                    {{-- Status Change History Section --}}
+                                    @if($purchase->purchaseStatusHistories->count() > 0)
+                                    <div class="card-header px-4 py-4">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h4 class="mb-0 fw-bold">{{ __('purchase.status_change_history') }}</h4>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-light text-muted me-3" style="font-size: 13px; padding: 6px 12px;">{{ $purchase->purchaseStatusHistories->count() }} {{ __('app.changes') }}</span>
+                                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#statusHistoryCollapse">
+                                                    <i class="bx bx-chevron-down" style="font-size: 18px;"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="collapse show" id="statusHistoryCollapse">
+                                        <div class="card-body p-5 row g-3">
+                                            <div class="col-md-12">
+                                            @foreach($purchase->purchaseStatusHistories->sortByDesc('changed_at') as $history)
+                                                @php
+                                                    $statusConfig = [
+                                                        'Pending' => ['icon' => 'bx-time-five', 'color' => 'warning'],
+                                                        'Processing' => ['icon' => 'bx-loader-circle', 'color' => 'primary'],
+                                                        'Ordered' => ['icon' => 'bx-check-circle', 'color' => 'info'],
+                                                        'Shipped' => ['icon' => 'bx-package', 'color' => 'info'],
+                                                        'ROG' => ['icon' => 'bx-receipt', 'color' => 'success'],
+                                                        'Cancelled' => ['icon' => 'bx-x-circle', 'color' => 'danger'],
+                                                        'Returned' => ['icon' => 'bx-undo', 'color' => 'warning']
+                                                    ];
+                                                    $currentStatus = $statusConfig[$history->new_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary'];
+                                                    $previousStatus = $history->previous_status ? ($statusConfig[$history->previous_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary']) : null;
+                                                @endphp
+
+                                                <div class="d-flex align-items-start mb-4 pb-4 {{ !$loop->last ? 'border-bottom' : '' }} position-relative">
+                                                    <div class="me-4 position-relative">
+                                                        <div class="bg-{{ $currentStatus['color'] }} text-white rounded-circle d-flex align-items-center justify-content-center timeline-status-circle" style="width: 40px; height: 40px; font-size: 16px; position: relative; z-index: 2;">
+                                                            <i class="bx {{ $currentStatus['icon'] }}"></i>
+                                                        </div>
+                                                        @if(!$loop->last)
+                                                            @php
+                                                                $connectorColor = match($currentStatus['color']) {
+                                                                    'warning' => '#ffc107',
+                                                                    'primary' => '#0d6efd',
+                                                                    'success' => '#198754',
+                                                                    'info' => '#0dcaf0',
+                                                                    'danger' => '#dc3545',
+                                                                    default => '#6c757d'
+                                                                };
+                                                            @endphp
+                                                            <div class="timeline-connector" style="position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 3px; height: 50px; background: linear-gradient(180deg, {{ $connectorColor }} 0%, #e9ecef 100%); z-index: 1;"></div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <div>
+                                                                @if($history->previous_status)
+                                                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                                                        <span class="badge bg-{{ $previousStatus['color'] }} text-white" style="font-size: 13px; padding: 6px 12px;">
+                                                                            <i class="bx {{ $previousStatus['icon'] }} me-2" style="font-size: 14px;"></i>{{ __('purchase.' . strtolower($history->previous_status)) }}
+                                                                        </span>
+                                                                        <i class="bx bx-right-arrow-alt text-muted" style="font-size: 16px;"></i>
+                                                                        <span class="badge bg-{{ $currentStatus['color'] }} text-white" style="font-size: 13px; padding: 6px 12px;">
+                                                                            <i class="bx {{ $currentStatus['icon'] }} me-2" style="font-size: 14px;"></i>{{ __('purchase.' . strtolower($history->new_status)) }}
+                                                                        </span>
+                                                                    </div>
+                                                                @else
+                                                                    <span class="badge bg-{{ $currentStatus['color'] }} text-white" style="font-size: 13px; padding: 6px 12px;">
+                                                                        <i class="bx {{ $currentStatus['icon'] }} me-2" style="font-size: 14px;"></i>{{ __('purchase.' . strtolower($history->new_status)) }} <small>({{ __('app.initial') }})</small>
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <div class="text-primary fw-semibold" style="font-size: 14px;">{{ $history->changed_at->format('M d, H:i') }}</div>
+                                                                <small class="text-muted d-block" style="font-size: 12px;">{{ $history->changed_at->diffForHumans() }}</small>
+                                                            </div>
+                                                        </div>
+
+                                                        @if($history->notes)
+                                                            <div class="bg-light rounded p-3 mb-3">
+                                                                <div style="font-size: 14px;"><i class="bx bx-note text-primary me-2" style="font-size: 16px;"></i><strong>{{ __('purchase.notes') }}:</strong> {{ $history->notes }}</div>
+                                                            </div>
+                                                        @endif
+
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div class="text-muted" style="font-size: 14px;">
+                                                                <i class="bx bx-user text-danger me-2" style="font-size: 16px;"></i>
+                                                                @if($history->changedBy)
+                                                                    {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
+                                                                @elseif($history->changed_by)
+                                                                    @php
+                                                                        $user = \App\Models\User::find($history->changed_by);
+                                                                        $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                    @endphp
+                                                                    {{ $userName }}
+                                                                @else
+                                                                    System Auto
+                                                                @endif
+                                                            </div>
+
+                                                            @if($history->proof_image)
+                                                                <button type="button" class="btn btn-outline-primary" style="font-size: 14px; padding: 8px 16px;" data-bs-toggle="modal" data-bs-target="#proofImageModal{{ $history->id }}">
+                                                                    <i class="bx bx-image me-2" style="font-size: 16px;"></i>{{ __('purchase.view_proof') }}
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                {{-- Enhanced Proof Image Modal --}}
+                                                @if($history->proof_image)
+                                                <div class="modal fade" id="proofImageModal{{ $history->id }}" tabindex="-1">
+                                                    <div class="modal-dialog modal-xl">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title fw-bold">{{ __('purchase.' . strtolower($history->new_status)) }} {{ __('purchase.proof_image') }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body text-center p-4">
+                                                                <img src="{{ asset('storage/' . $history->proof_image) }}"
+                                                                     alt="{{ $history->new_status }} Proof"
+                                                                     class="img-fluid rounded shadow" style="max-height: 500px;">
+
+                                                                @if($history->notes)
+                                                                    <div class="mt-4 p-4 bg-light rounded">
+                                                                        <h6 class="fw-bold">{{ __('purchase.notes') }}:</h6>
+                                                                        <p class="mb-0 fs-6">{{ $history->notes }}</p>
+                                                                    </div>
+                                                                @endif
+
+                                                                <div class="mt-4 text-muted">
+                                                                    <div class="fs-6">
+                                                                        <strong>{{ __('purchase.changed_by') }}:</strong>
+                                                                        @if($history->changedBy)
+                                                                            {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
+                                                                        @elseif($history->changed_by)
+                                                                            @php
+                                                                                $user = \App\Models\User::find($history->changed_by);
+                                                                                $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                            @endphp
+                                                                            {{ $userName }}
+                                                                        @else
+                                                                            System Auto
+                                                                        @endif
+                                                                    </div>
+                                                                    <div class="fs-6 mt-1">{{ $history->changed_at->format('M d, Y H:i') }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <a href="{{ asset('storage/' . $history->proof_image) }}" download class="btn btn-primary">
+                                                                    <i class="bx bx-download me-2"></i>{{ __('app.download') }}
+                                                                </a>
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @endif
+                                            @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+
                                     <div class="card-header px-4 py-3">
                                         <h5 class="mb-0">{{ __('payment.payment') }}</h5>
                                     </div>
@@ -355,6 +558,8 @@
 <script src="{{ versionedAsset('custom/js/modals/payment-type/payment-type.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/purchase/purchase-bill.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>

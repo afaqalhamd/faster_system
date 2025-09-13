@@ -22,6 +22,17 @@ return [
     'convert_to_return'             => 'Convert to Return',
     'reference_no'                  => 'Reference',
 
+    // Sales Analytics
+    'sales_analytics'               => 'Sales Analytics',
+    'paid'                          => 'Paid',
+    'unpaid'                        => 'Unpaid',
+    'paid_invoices'                 => 'Paid Invoices',
+    'unpaid_invoices'               => 'Unpaid Invoices',
+    'payment_summary'               => 'Payment Summary',
+    'daily_sales'                   => 'Daily Sales',
+    'monthly_target'                => 'Monthly Target',
+    'status_distribution'           => 'Status Distribution',
+
     'convert_to_invoice'            => 'Convert to Invoice',
     'item_sale'                     => 'Item Sale',
     'sale_item_today'               => 'Sales Within 24',

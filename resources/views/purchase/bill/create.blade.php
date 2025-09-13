@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', __('purchase.bill'))
 
+@section('css')
+<link href="{{ asset('custom/css/purchase-status-icons.css') }}" rel="stylesheet">
+@endsection
+
         @section('content')
         <!--start page wrapper -->
         <div class="page-wrapper">
@@ -63,6 +67,26 @@
                                             <div class="col-md-4">
                                                 <x-label for="reference_no" name="{{ __('supplier.supplier_invoice_number') }}" />
                                                 <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value=""/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <x-label for="purchase_status" name="{{ __('Purchase Status') }}" />
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <div class="position-relative flex-grow-1">
+                                                        <select class="form-select purchase-status-select" name="purchase_status" id="purchase_status" data-purchase-id="new">
+                                                            @php
+                                                                $generalDataService = new \App\Services\GeneralDataService();
+                                                                $statuses = $generalDataService->getPurchaseStatus();
+                                                            @endphp
+                                                            @foreach($statuses as $status)
+                                                                <option value="{{ $status['id'] }}"
+                                                                        data-color="{{ $status['color'] }}"
+                                                                        {{ $status['id'] === 'Pending' ? 'selected' : '' }}>
+                                                                    {{ $status['name'] }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             </div>
                                             @if(app('company')['tax_type'] == 'gst')
                                             <div class="col-md-4">
@@ -271,6 +295,8 @@
 
 @section('js')
 <script src="{{ versionedAsset('custom/js/purchase/purchase-bill.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/payment-type/payment-type.js') }}"></script>

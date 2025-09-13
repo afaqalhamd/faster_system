@@ -299,6 +299,7 @@ class SaleController extends Controller
             $sku = trim($row[0]);
             $quantity = trim($row[1]);
 
+
             // Find item by SKU
             $itemDetails = Item::where('sku', $sku)->first();
             if (!$itemDetails) {

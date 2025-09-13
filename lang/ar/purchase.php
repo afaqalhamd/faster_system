@@ -80,4 +80,29 @@ return [
 'purchased_items_history'                        => 'سجل العناصر المشتراة',
 'purchased_items'                                => 'العناصر المشتراة',
 'purchase_return'                             => 'إرجاع الشراء',
+
+// Purchase Status Translations - ترجمات حالات الشراء
+'pending'                    => 'معلق',
+'processing'                 => 'قيد المعالجة',
+'ordered'                    => 'مطلوب',
+'shipped'                    => 'مُرسل',
+'rog'                        => 'استلام البضائع',
+'cancelled'                  => 'ملغي',
+'returned'                   => 'مُرجع',
+
+// Inventory Status Messages - رسائل حالة المخزون
+'inventory_pending'          => 'المخزون معلق',
+'inventory_added'            => 'تم إضافة المخزون',
+'inventory_removed'          => 'تم إزالة المخزون',
+'post_receipt_return'        => 'إرجاع بعد الاستلام',
+'post_receipt_cancel'        => 'إلغاء بعد الاستلام',
+'rog_required_for_inventory' => 'سيتم إضافة المخزون فقط عند الوصول لحالة استلام البضائع',
+'no_backward_after_rog'      => 'لا يمكن العودة للحالات السابقة بعد تأكيد استلام البضائع',
+
+// Status Change History - سجل تغيير الحالة
+'status_change_history'      => 'سجل تغيير الحالة',
+'proof_image'                => 'صورة الإثبات',
+'view_proof'                 => 'عرض الإثبات',
+'changed_by'                 => 'تم التغيير بواسطة',
+'notes'                 => 'ملاحظات'
 ];

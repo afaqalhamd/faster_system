@@ -1,0 +1,141 @@
+/* Purchase Status Icons Enhancement Styles - Compact Version */
+
+/* Status badges with improved styling */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.badge.status-badge {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.badge.status-badge i {
+    font-size: 12px;
+}
+
+/* Enhanced Status select */
+.purchase-status-select {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.purchase-status-select:focus {
+    box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+    border-color: #80bdff;
+}
+
+.status-icon-display {
+    position: absolute;
+    right: 35px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+/* Purchase Status specific colors - simplified */
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-processing {
+    background: #cce5ff;
+    color: #0056b3;
+    border: 1px solid #66b3ff;
+}
+
+.status-completed {
+    background: #d1edcc;
+    color: #155724;
+    border: 1px solid #6dd46f;
+}
+
+.status-shipped {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #74c0fc;
+}
+
+.status-rog {
+    background: #e2e3e5;
+    color: #495057;
+    border: 1px solid #adb5bd;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1aeb5;
+}
+
+.status-returned {
+    background: #e2e3e5;
+    color: #495057;
+    border: 1px solid #adb5bd;
+}
+
+/* Inventory Status specific colors */
+.status-added {
+    background: #d1edcc;
+    color: #155724;
+    border: 1px solid #6dd46f;
+}
+
+.status-ready-for-addition {
+    background: #cce5ff;
+    color: #0056b3;
+    border: 1px solid #66b3ff;
+}
+
+.status-added-received {
+    background: #e2e3e5;
+    color: #495057;
+    border: 1px solid #adb5bd;
+}
+
+/* Hover effects - simplified */
+.badge.status-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+/* DataTable status column styling */
+#datatable .status-column {
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* Simple animations */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.bx-spin {
+    animation: spin 2s linear infinite;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .badge.status-badge {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
+    .badge.status-badge i {
+        font-size: 11px;
+    }
+}

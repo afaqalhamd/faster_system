@@ -788,8 +788,8 @@ class SaleOrderController extends Controller
     private function applyDeliveryUserFilter($query)
     {
         if ($this->isDeliveryUser()) {
-            // Delivery users can only see delivery status orders
-            $query->where('order_status', 'Delivery');
+            // Delivery users can see all orders except Pending and Processing
+            $query->whereNotIn('order_status', ['Pending', 'Processing']);
         }
         return $query;
     }

@@ -13,6 +13,8 @@ use App\Http\Requests\ItemRequest;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+
 use App\Models\User;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -180,6 +182,7 @@ class ItemController extends Controller
                 'image_url' => $request->image_url,
                 'cust_num' => $request->cust_num,
                 'cust_num_t' => $request->cust_num_t,
+                'size' => $request->size,
                 'cargo_fee' => $request->cargo_fee,
 
                 'base_unit_id' => $request->base_unit_id,
@@ -962,18 +965,50 @@ class ItemController extends Controller
         /**
          * Party Wise Wholesale & Retail Price listing in Sales
          * */
+        $partyId = request('party_id');
         $showWholesalePrice = Party::select('is_wholesale_customer')
-            ->find(request('party_id'))
+            ->find($partyId)
             ?->is_wholesale_customer ?? false;
+
+        // Debug wholesale price logic
+        Log::info('Wholesale Price Check', [
+            'party_id' => $partyId,
+            'showWholesalePrice' => $showWholesalePrice
+        ]);
 
         $itemMaster = Item::with('tax', 'brand')
             ->where(function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%{$search}%")
-                      ->orWhere('item_code', 'LIKE', "%{$search}%");
+                      ->orWhere('item_code', 'LIKE', "%{$search}%")
+                      ->orWhere('sku', 'LIKE', "%{$search}%");
             })
             ->limit(10)
             ->get();
+
+        // Debug: Log the raw item data
+        foreach ($itemMaster as $item) {
+            Log::info('Raw Item Data', [
+                'id' => $item->id,
+                'name' => $item->name,
+                'sku' => $item->sku,
+                'sale_price_raw' => $item->sale_price,
+                'sale_price_type' => gettype($item->sale_price),
+                'is_sale_price_with_tax' => $item->is_sale_price_with_tax,
+                'tax_id' => $item->tax_id,
+                'tax_exists' => $item->tax ? 'YES' : 'NO',
+                'tax_rate' => $item->tax ? $item->tax->rate : null
+            ]);
+        }
+
         $response = $this->returnRequiredFormatData($itemMaster, $showWholesalePrice);
+
+        // Debug: Log the final response
+        Log::info('Final API Response', [
+            'search_term' => $search,
+            'items_count' => count($response),
+            'first_item_sale_price' => $response[0]['sale_price'] ?? 'N/A'
+        ]);
+
         return json_encode($response);
     }
 
@@ -1006,7 +1041,8 @@ class ItemController extends Controller
         ])
             ->where(function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('item_code', 'LIKE', "%{$search}%");
+                    ->orWhere('item_code', 'LIKE', "%{$search}%")
+                    ->orWhere('sku', 'LIKE', "%{$search}%");
             })
             ->when($categoryId, function ($query) use ($categoryId) {
                 return $query->where('item_category_id', $categoryId);
@@ -1051,7 +1087,8 @@ class ItemController extends Controller
                 'description' => $item->description ?? '',
                 'brand_name' => $item->brand->name ?? '--',
                 'item_code' => $item->item_code ?? '',
-                'sku' => $item->item_code ?? '',
+                'sku' => $item->sku ?? '', // Use actual SKU field instead of item_code
+                'size' => $item->size ?? '', // Add size field
                 'is_service' => $item->is_service,
                 'selected_unit_id' => $item->base_unit_id,//Select Unit
                 'base_unit_id' => $item->base_unit_id,
@@ -1063,7 +1100,7 @@ class ItemController extends Controller
                 'sale_price_discount'       => $item->sale_price_discount,
                 'sale_price_discount_type'  => $item->sale_price_discount_type,*/
                 'purchase_price' => ($isPermiteToViewPurchasePrice) ?
-                    (($item->is_purchase_price_with_tax == 1) ?
+                    (($item->is_purchase_price_with_tax == 1 && $item->tax) ?
                         calculatePrice($item->purchase_price, $item->tax->rate, true) :
                         $item->purchase_price) : 0,
                 'is_purchase_price_with_tax' => $item->is_purchase_price_with_tax,
@@ -1098,12 +1135,50 @@ class ItemController extends Controller
             }
 
             if ($showWholesalePrice) {
-                $itemsArray['sale_price'] = ($item->is_wholesale_price_with_tax == 1) ? calculatePrice($item->wholesale_price, $item->tax->rate, true) : $item->wholesale_price;
+                $wholesalePrice = ($item->is_wholesale_price_with_tax == 1 && $item->tax) ?
+                    calculatePrice($item->wholesale_price, $item->tax->rate, true) :
+                    $item->wholesale_price;
+                $itemsArray['sale_price'] = (float) $wholesalePrice;
                 $itemsArray['is_sale_price_with_tax'] = $item->is_wholesale_price_with_tax;
                 $itemsArray['sale_price_discount'] = 0;
                 $itemsArray['sale_price_discount_type'] = 0;
             } else {
-                $itemsArray['sale_price'] = ($item->is_sale_price_with_tax == 1) ? calculatePrice($item->sale_price, $item->tax->rate, true) : $item->sale_price;
+                // Debug logging for sale price calculation
+                Log::info('Sale Price Debug', [
+                    'item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'raw_sale_price' => $item->sale_price,
+                    'raw_sale_price_type' => gettype($item->sale_price),
+                    'is_sale_price_with_tax' => $item->is_sale_price_with_tax,
+                    'has_tax' => $item->tax ? true : false,
+                    'tax_rate' => $item->tax ? $item->tax->rate : null,
+                    'condition_result' => ($item->is_sale_price_with_tax == 1 && $item->tax) ? 'WILL_CALCULATE' : 'USE_RAW'
+                ]);
+
+                if ($item->is_sale_price_with_tax == 1 && $item->tax) {
+                    $calculatedPrice = calculatePrice($item->sale_price, $item->tax->rate, true);
+                    Log::info('Tax Calculation Applied', [
+                        'item_id' => $item->id,
+                        'input_price' => $item->sale_price,
+                        'tax_rate' => $item->tax->rate,
+                        'calculated_result' => $calculatedPrice
+                    ]);
+                } else {
+                    $calculatedPrice = $item->sale_price;
+                    Log::info('Using Raw Price', [
+                        'item_id' => $item->id,
+                        'raw_price' => $item->sale_price,
+                        'final_price' => $calculatedPrice
+                    ]);
+                }
+
+                Log::info('Sale Price Final Result', [
+                    'item_id' => $item->id,
+                    'calculated_price' => $calculatedPrice,
+                    'type' => gettype($calculatedPrice)
+                ]);
+
+                $itemsArray['sale_price'] = (float) $calculatedPrice;
                 $itemsArray['is_sale_price_with_tax'] = $item->is_sale_price_with_tax;
                 //Show Discount Allowed in company then only show sale_price_discount else 0
                 $itemsArray['sale_price_discount'] = (app('company')['show_discount']) ? $item->sale_price_discount : 0;

@@ -16,6 +16,7 @@ use App\Models\PaymentTransaction;
 use App\Models\Purchase\PurchaseOrder;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
+use App\Models\PurchaseStatusHistory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Purchase extends Model
@@ -49,6 +50,21 @@ class Purchase extends Model
         'carrier_id',
         'shipping_charge',
         'is_shipping_charge_distributed',
+        'purchase_status',
+        'inventory_status',
+        'inventory_added_at',
+        'post_receipt_action',
+        'post_receipt_action_at',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'inventory_added_at' => 'datetime',
+        'post_receipt_action_at' => 'datetime',
     ];
 
     /**
@@ -157,5 +173,13 @@ class Purchase extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_id');
+    }
+
+    /**
+     * Get the purchase status histories for the purchase.
+     */
+    public function purchaseStatusHistories(): HasMany
+    {
+        return $this->hasMany(PurchaseStatusHistory::class, 'purchase_id');
     }
 }

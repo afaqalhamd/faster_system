@@ -137,6 +137,53 @@ class GeneralDataService{
         ];
      }
 
+     function getPurchaseStatus() : array{
+        return [
+                [
+                    'id'    =>  'Pending',
+                    'name'    =>  __('purchase.pending'),
+                    'color'    =>  'warning',
+                    'icon'    =>  'bx-time-five',
+                ],
+                [
+                    'id'    =>  'Processing',
+                    'name'    =>  __('purchase.processing'),
+                    'color'    =>  'primary',
+                    'icon'    =>  'bx-loader-circle bx-spin',
+                ],
+                [
+                    'id'    =>  'Ordered',
+                    'name'    =>  __('purchase.ordered'),
+                    'color'    =>  'info',
+                    'icon'    =>  'bx-check-circle',
+                ],
+                [
+                    'id'    =>  'Shipped',
+                    'name'    =>  __('purchase.shipped'),
+                    'color'    =>  'info',
+                    'icon'    =>  'bx-package',
+                ],
+                [
+                    'id'    =>  'ROG',
+                    'name'    =>  __('purchase.rog'),
+                    'color'    =>  'success',
+                    'icon'    =>  'bx-receipt',
+                ],
+                [
+                    'id'    =>  'Cancelled',
+                    'name'    =>  __('purchase.cancelled'),
+                    'color'    =>  'danger',
+                    'icon'    =>  'bx-x-circle',
+                ],
+                [
+                    'id'    =>  'Returned',
+                    'name'    =>  __('purchase.returned'),
+                    'color'    =>  'warning',
+                    'icon'    =>  'bx-undo',
+                ],
+        ];
+     }
+
      function getPurchaseOrderStatus() : array{
         //Using Same Status as Sale Order
         return $this->getSaleOrderStatus();

@@ -92,8 +92,8 @@ function initItemAutocomplete(inputSelector, options = {}) {
         open: function() {
             const header = $(`<li class='ui-autocomplete-category' style='padding:5px; border-bottom:1px solid #ddd; background:#f8f9fa;'>
                 <div style='display: flex; font-weight: bold;'>
-                    <span style='flex:3;'>Name</span>
-                    <span style='flex:1;'>Brand</span>
+                    <span style='flex:4;'>Name</span>
+                    <span style='flex:1;'>SKU</span>
                     <span style='flex:1;text-align:right;'>Sales Price</span>
                     <span style='flex:1;text-align:right;'>Purchase Price</span>
                     <span style='flex:1;text-align:right;'>Stock</span>
@@ -128,9 +128,11 @@ function initItemAutocomplete(inputSelector, options = {}) {
         return $("<li>")
             .attr("style", "padding:5px; border-bottom:1px solid #eee;")
             .append(`<div style='display: flex; align-items: center;'>
-                <span style='flex:3;'>${item.name || 'N/A'}</span>
-                <span style='flex:1;'>${item.brand_name || '--'}</span>
-                <span style='flex:1; text-align:right;'>${_parseFix(item.sale_price)}</span>
+                <span style='flex:4;'>${item.name || 'N/A'}</span>
+                <span style='flex:1;'>${item.sku || '--'}</span>
+                <span style='flex:1; text-align:right;'>
+                    ${item.sale_price ? _parseFix(item.sale_price) : '0.00'}
+                </span>
                 <span style='flex:1; text-align:right;'>${_parseFix(item.purchase_price)}</span>
                 <span style='flex:1; text-align:right; color:${_parseQuantity(item.current_stock) > 0 ? '#000' : '#dc3545'};'>${_parseQuantity(item.current_stock)}</span>
             </div>`)

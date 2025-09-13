@@ -75,4 +75,29 @@ return [
     'purchased_items'                        => 'Purchased Items',
     'purchase_return'                        => 'Purchase Return',
 
+    // Purchase Status Translations
+    'pending'                    => 'Pending',
+    'processing'                 => 'Processing',
+    'ordered'                    => 'Ordered',
+    'shipped'                    => 'Shipped',
+    'rog'                        => 'Receipt of Goods',
+    'cancelled'                  => 'Cancelled',
+    'returned'                   => 'Returned',
+
+    // Inventory Status Messages
+    'inventory_pending'          => 'Inventory Pending',
+    'inventory_added'            => 'Inventory Added',
+    'inventory_removed'          => 'Inventory Removed',
+    'post_receipt_return'        => 'Returned After Receipt',
+    'post_receipt_cancel'        => 'Cancelled After Receipt',
+    'rog_required_for_inventory' => 'Inventory will only be added when ROG (Receipt of Goods) status is reached',
+    'no_backward_after_rog'      => 'Cannot go back to previous statuses after ROG has been confirmed',
+
+    // Status Change History
+    'status_change_history'      => 'Status Change History',
+    'proof_image'                => 'Proof Image',
+    'view_proof'                 => 'View Proof',
+    'changed_by'                 => 'Changed by',
+    'notes'                       => 'Notes',
+
 ];

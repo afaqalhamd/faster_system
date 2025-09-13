@@ -31,6 +31,8 @@ use App\Services\ItemService;
 use App\Enums\ItemTransactionUniqueCode;
 use App\Services\Communication\Email\PurchaseBillEmailNotificationService;
 use App\Services\Communication\Sms\PurchaseBillSmsNotificationService;
+use App\Services\PurchaseStatusService;
+use Illuminate\Support\Facades\Log;
 
 use Mpdf\Mpdf;
 
@@ -58,13 +60,19 @@ class PurchaseController extends Controller
 
     public $purchaseBillSmsNotificationService;
 
+    private $purchaseStatusService;
+
+    private $generalDataService;
+
     public function __construct(PaymentTypeService                   $paymentTypeService,
                                 PaymentTransactionService            $paymentTransactionService,
                                 AccountTransactionService            $accountTransactionService,
                                 ItemTransactionService               $itemTransactionService,
                                 ItemService                          $itemService,
                                 PurchaseBillEmailNotificationService $purchaseBillEmailNotificationService,
-                                PurchaseBillSmsNotificationService   $purchaseBillSmsNotificationService
+                                PurchaseBillSmsNotificationService   $purchaseBillSmsNotificationService,
+                                PurchaseStatusService                $purchaseStatusService,
+                                GeneralDataService                   $generalDataService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -75,6 +83,8 @@ class PurchaseController extends Controller
         $this->itemService = $itemService;
         $this->purchaseBillEmailNotificationService = $purchaseBillEmailNotificationService;
         $this->purchaseBillSmsNotificationService = $purchaseBillSmsNotificationService;
+        $this->purchaseStatusService = $purchaseStatusService;
+        $this->generalDataService = $generalDataService;
         $this->previousHistoryOfItems = [];
     }
 
@@ -219,7 +229,9 @@ class PurchaseController extends Controller
                 'tax',
                 'batch.itemBatchMaster',
                 'itemSerialTransaction.itemSerialMaster'
-            ]])->findOrFail($id);
+            ],
+            'purchaseStatusHistories' => ['changedBy']
+        ])->findOrFail($id);
 
         $purchase->operation = 'update';
 
@@ -386,10 +398,17 @@ class PurchaseController extends Controller
             $validatedData = $request->validated();
 
             if ($request->operation == 'save' || $request->operation == 'convert') {
+                // Initialize with pending status - inventory will only be added when ROG status is reached
+                $validatedData['purchase_status'] = $validatedData['purchase_status'] ?? 'Pending';
+                $validatedData['inventory_status'] = 'pending';
+
                 // Create a new purchase record using Eloquent and save it
                 $newPurchase = Purchase::create($validatedData);
 
                 $request->request->add(['purchase_id' => $newPurchase->id]);
+
+                // Initialize empty previous history for new purchases
+                $this->previousHistoryOfItems = [];
             } else {
                 $fillableColumns = [
                     'party_id' => $validatedData['party_id'],
@@ -508,12 +527,14 @@ class PurchaseController extends Controller
 
 
             /**
-             * UPDATE HISTORY DATA
+             * UPDATE HISTORY DATA - Only for update operations, not for new purchases
              * LIKE: ITEM SERIAL NUMBER QUNATITY, BATCH NUMBER QUANTITY, GENERAL DATA QUANTITY
              * */
-            $previousItemStockUpdate = $this->itemTransactionService->updatePreviousHistoryOfItems($request->modelName, $this->previousHistoryOfItems);
-            if (!$previousItemStockUpdate) {
-                throw new \Exception("Failed to update Previous Item Stock!");
+            if ($request->operation == 'update') {
+                $previousItemStockUpdate = $this->itemTransactionService->updatePreviousHistoryOfItems($request->modelName, $this->previousHistoryOfItems);
+                if (!$previousItemStockUpdate) {
+                    throw new \Exception("Failed to update Previous Item Stock!");
+                }
             }
 
 
@@ -660,6 +681,14 @@ class PurchaseController extends Controller
     {
         $itemsCount = $request->row_count;
 
+        // Use appropriate unique_code based on inventory status:
+        // - If inventory is added (ROG status or post-receipt actions), use PURCHASE (added)
+        // - If inventory is pending, use PURCHASE_ORDER (not added yet)
+        $isInventoryAdded = in_array($request->modelName->inventory_status, ['added', 'added_received']);
+        $uniqueCode = $isInventoryAdded ?
+            ItemTransactionUniqueCode::PURCHASE->value :
+            ItemTransactionUniqueCode::PURCHASE_ORDER->value;
+
         for ($i = 0; $i < $itemsCount; $i++) {
             /**
              * If array record not exist then continue forloop
@@ -719,6 +748,7 @@ class PurchaseController extends Controller
 
 
                 'total' => $request->total[$i],
+                'unique_code' => $uniqueCode, // Use appropriate code based on inventory status
 
             ]);
 
@@ -757,7 +787,8 @@ class PurchaseController extends Controller
                             'serial_code' => $serialNumber,
                         ];
 
-                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::PURCHASE->value);
+                        // Use appropriate unique_code based on inventory status
+                        $serialTransaction = $this->itemTransactionService->recordItemSerials($transaction->id, $serialArray, $request->item_id[$i], $request->warehouse_id[$i], $uniqueCode);
 
                         if (!$serialTransaction) {
                             throw new \Exception(__('item.failed_to_save_serials'));
@@ -781,7 +812,8 @@ class PurchaseController extends Controller
                         'quantity' => $itemQuantity,
                     ];
 
-                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], ItemTransactionUniqueCode::PURCHASE->value);
+                    // Use appropriate unique_code based on inventory status
+                    $batchTransaction = $this->itemTransactionService->recordItemBatches($transaction->id, $batchArray, $request->item_id[$i], $request->warehouse_id[$i], $uniqueCode);
 
                     if (!$batchTransaction) {
                         throw new \Exception(__('item.failed_to_save_batch_records'));
@@ -888,6 +920,33 @@ class PurchaseController extends Controller
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
             })
+            ->addColumn('payment_status', function ($row) {
+                $balance = $row->grand_total - $row->paid_amount;
+
+                if ($balance == 0) {
+                    return '<span class="badge bg-success"><i class="bx bx-check-circle me-1"></i>' . __('payment.paid') . '</span>';
+                } elseif ($row->paid_amount == 0) {
+                    return '<span class="badge bg-danger"><i class="bx bx-x-circle me-1"></i>' . __('payment.unpaid') . '</span>';
+                } else {
+                    return '<span class="badge bg-warning"><i class="bx bx-time-five me-1"></i>' . __('payment.partially_paid') . '</span>';
+                }
+            })
+            ->addColumn('purchase_status', function ($row) {
+                return $row->purchase_status;
+            })
+            ->addColumn('inventory_status', function ($row) {
+                return $row->inventory_status;
+            })
+            ->addColumn('post_receipt_action', function ($row) {
+                return $row->post_receipt_action;
+            })
+            ->addColumn('color', function ($row) {
+                $purchaseStatuses = $this->generalDataService->getPurchaseStatus();
+
+                // Find the status matching the given id
+                return collect($purchaseStatuses)->firstWhere('id', $row->purchase_status)['color'] ?? 'secondary';
+
+            })
             ->addColumn('status', function ($row) {
                 if ($row->purchaseOrder) {
                     return [
@@ -977,13 +1036,16 @@ class PurchaseController extends Controller
                                     <a class="dropdown-item notify-through-sms" data-model="purchase/bill" data-id="' . $id . '" role="button"></i><i class="bx bx-envelope"></i> ' . __('app.send_sms') . '</a>
                                 </li>
                                 <li>
+                                    <a class="dropdown-item status-history" data-model="purchaseStatusHistoryModal" data-id="' . $id . '" role="button"><i class="bx bx-book"></i> ' . __('app.status_history') . '</a>
+                                </li>
+                                <li>
                                     <button type="button" class="dropdown-item text-danger deleteRequest" data-delete-id=' . $id . '><i class="bx bx-trash"></i> ' . __('app.delete') . '</button>
                                 </li>
                             </ul>
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'payment_status'])
             ->make(true);
     }
 
@@ -1222,6 +1284,138 @@ class PurchaseController extends Controller
                 'message' => $e->getMessage(),
             ], 409);
         }
+    }
+
+    /**
+     * Update purchase status with enhanced logic
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function updatePurchaseStatus(Request $request, int $id): JsonResponse
+    {
+        try {
+            $purchase = Purchase::findOrFail($id);
+
+            // Validate required fields for specific statuses
+            $statusesRequiringProof = $this->purchaseStatusService->getStatusesRequiringProof();
+
+            if (in_array($request->purchase_status, $statusesRequiringProof)) {
+                $request->validate([
+                    'purchase_status' => 'required|string',
+                    'notes' => 'required|string|max:1000',
+                    'proof_image' => 'nullable|image|max:2048', // 2MB max
+                ]);
+            } else {
+                $request->validate([
+                    'purchase_status' => 'required|string',
+                    'notes' => 'nullable|string|max:1000',
+                ]);
+            }
+
+            // Update status using the service
+            $result = $this->purchaseStatusService->updatePurchaseStatus($purchase, $request->purchase_status, [
+                'notes' => $request->notes,
+                'proof_image' => $request->file('proof_image'),
+            ]);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['message']
+                ], 400);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'],
+                'purchase_status' => $request->purchase_status,
+                'inventory_updated' => $result['inventory_updated'] ?? false
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
+
+    /**
+     * Get purchase status history
+     *
+     * @param string|int $id
+     * @return JsonResponse
+     */
+    public function getPurchaseStatusHistory($id): JsonResponse
+    {
+        try {
+            $purchaseId = (int) $id;
+            $purchase = Purchase::findOrFail($purchaseId);
+
+            $history = $this->purchaseStatusService->getStatusHistory($purchase);
+
+            return response()->json([
+                'status' => true,
+                'data' => $history,
+                'message' => 'Status history retrieved successfully'
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Purchase not found'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving purchase status history', [
+                'purchase_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred while retrieving status history'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get purchase status options with metadata
+     *
+     * @return JsonResponse
+     */
+    public function getPurchaseStatusOptions(): JsonResponse
+    {
+        $generalDataService = new GeneralDataService();
+        $statusOptions = $generalDataService->getPurchaseStatus();
+
+        // Add additional metadata for frontend use
+        $statusesRequiringProof = $this->purchaseStatusService->getStatusesRequiringProof();
+
+        // Enhance each status with additional information
+        $enhancedOptions = array_map(function($status) use ($statusesRequiringProof) {
+            return [
+                'id' => $status['id'],
+                'name' => $status['name'],
+                'color' => $status['color'],
+                'requires_proof' => in_array($status['id'], $statusesRequiringProof),
+                'triggers_inventory_addition' => $status['id'] === 'ROG',
+                'removes_inventory' => in_array($status['id'], ['Cancelled', 'Returned'])
+            ];
+        }, $statusOptions);
+
+        return response()->json([
+            'status' => true,
+            'data' => $enhancedOptions,
+            'statuses_requiring_proof' => $statusesRequiringProof
+        ]);
     }
 
 }

@@ -1368,6 +1368,21 @@ Route::middleware('auth')->group(function () {
          * Load Purchased Items
          */
         Route::get('/purchased-items/{partyId}/{itemId?}', [PurchaseController::class, 'getPurchasedItemsData']);
+
+        // Manual inventory addition after receipt completion
+        Route::post('/manual-inventory-addition/{id}', [PurchaseController::class, 'manualInventoryAddition'])
+            ->middleware('can:purchase.bill.manual.inventory.addition')
+            ->name('purchase.bill.manual.inventory.addition');
+
+        // Purchase status management
+        Route::post('/update-purchase-status/{id}', [PurchaseController::class, 'updatePurchaseStatus'])
+            ->middleware('can:purchase.bill.edit')
+            ->name('purchase.bill.update.purchase.status');
+        Route::get('/get-purchase-status-options', [PurchaseController::class, 'getPurchaseStatusOptions'])
+            ->name('purchase.bill.get.purchase.status.options');
+        Route::get('/get-purchase-status-history/{id}', [PurchaseController::class, 'getPurchaseStatusHistory'])
+            ->middleware('can:purchase.bill.view')
+            ->name('purchase.bill.get.purchase.status.history');
     });
 
     /**
@@ -1578,6 +1593,9 @@ Route::middleware('auth')->group(function () {
                     ->middleware('can:sale.invoice.view')
                     ->name('sale.invoice.pdf');
         Route::get('/datatable-list', [SaleController::class, 'datatableList'])->name('sale.invoice.datatable.list'); //Datatable List
+        Route::get('/analytics', [SaleController::class, 'analytics'])
+                ->middleware('can:dashboard.can.view.sale.analytics')
+                ->name('sale.invoice.analytics'); //Analytics for charts
         Route::post('/store', [SaleController::class, 'store'])->name('sale.invoice.store');//Save operation
         Route::post('/delete/', [SaleController::class, 'delete'])->middleware('can:sale.invoice.delete')->name('sale.invoice.delete');//delete operation
 
@@ -1804,6 +1822,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/sale-order/{id}', [SaleOrderController::class, 'getStatusHistory'])->middleware('can:sale.order.view');
         Route::get('/purchase-order/{id}', [PurchaseOrderController::class, 'getStatusHistory'])->middleware('can:purchase.order.view');
+        Route::get('/purchase-bill/{id}', [PurchaseController::class, 'getPurchaseStatusHistory'])->middleware('can:purchase.bill.view');
         Route::get('/quotation/{id}', [QuotationController::class, 'getStatusHistory'])->middleware('can:sale.quotation.view');
 
     });

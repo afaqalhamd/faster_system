@@ -65,6 +65,7 @@ class Item extends Model implements HasMedia
         'image_url',
         'cust_num',
         'cust_num_t',
+        'size',
         'cargo_fee',
          'is_damaged',
 

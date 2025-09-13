@@ -15,6 +15,7 @@
                                             'sale.list',
                                         ]"/>
 
+
                     <div class="card">
 
                     <div class="card-header px-4 py-3 d-flex justify-content-between">
@@ -77,6 +78,7 @@
                                         <th>{{ __('supplier.supplier') }}</th>
                                         <th>{{ __('app.total') }}</th>
                                         <th>{{ __('payment.balance') }}</th>
+                                        <th>{{ __('payment.payment_status') }}</th>
                                         <th>{{ __('Inventory Status') }}</th>
                                         <th>{{ __('Sales Status') }}</th>
                                         <th>{{ __('carrier.carrier') }}</th>
@@ -111,4 +113,6 @@
 <script src="{{ versionedAsset('custom/js/modals/payment/invoice-payment.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>
+
+
 @endsection

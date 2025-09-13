@@ -3,6 +3,7 @@
 
 @section('css')
 <link href="{{ asset('assets/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
+<link href="{{ asset('custom/css/purchase-status-icons.css') }}" rel="stylesheet">
 @endsection
         @section('content')
 
@@ -76,6 +77,9 @@
                                             <th>{{ __('supplier.supplier') }}</th>
                                             <th>{{ __('app.total') }}</th>
                                             <th>{{ __('payment.balance') }}</th>
+                                            <th>{{ __('payment.payment_status') }}</th>
+                                            <th>{{ __('Inventory Status') }}</th>
+                                            <th>{{ __('Purchase Status') }}</th>
                                             <th>{{ __('app.created_by') }}</th>
                                             <th>{{ __('app.created_at') }}</th>
                                             <th>{{ __('app.action') }}</th>
@@ -103,6 +107,7 @@
 <script src="{{ versionedAsset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/purchase/purchase-bill-list.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/payment/invoice-payment.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>

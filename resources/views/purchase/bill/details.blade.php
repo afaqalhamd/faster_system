@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', __('purchase.print'))
 
+@section('css')
+<link href="{{ asset('custom/css/purchase-status-icons.css') }}" rel="stylesheet">
+@endsection
+
 		@section('content')
 		<!--start page wrapper -->
 		<div class="page-wrapper">
@@ -39,6 +43,22 @@
                                 </div>
                                 <hr/>
                             </div>
+
+                        {{-- Purchase Status Management Section --}}
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Purchase Status Management</h5>
+                                <div>
+                                    <span class="current-status status-badge badge bg-{{ $purchase->purchase_status === 'Pending' ? 'warning' : ($purchase->purchase_status === 'Completed' ? 'success' : 'primary') }}">
+                                        {{ $purchase->purchase_status }}
+                                    </span>
+                                    <span class="current-status status-badge badge bg-{{ $purchase->inventory_status === 'added' ? 'success' : ($purchase->inventory_status === 'pending' ? 'warning' : 'primary') }} ms-2">
+                                        {{ ucfirst(str_replace('_', ' ', $purchase->inventory_status)) }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+
                         <div id="printForm">
                             <div class="invoice overflow-auto">
                                 <div class="min-width-600">
@@ -270,4 +290,52 @@
 @section('js')
         <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
         <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>
+        <script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
+        <script src="{{ versionedAsset('custom/js/purchase-status-manager.js') }}"></script>
+        <script>
+            function manualInventoryAddition(purchaseId) {
+                if (!confirm('Are you sure you want to manually add inventory for this purchase?')) {
+                    return;
+                }
+
+                $.ajax({
+                    url: `${baseURL}/purchase/bill/${purchaseId}/manual-inventory-addition`,
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('An error occurred: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                    }
+                });
+            }
+
+            function viewPurchaseStatusHistory(purchaseId) {
+                // Load status history modal
+                $.ajax({
+                    url: `${baseURL}/purchase/bill/${purchaseId}/status-history`,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            // Display history in modal
+                            $('#statusHistoryModal .modal-body').html(response.html);
+                            $('#statusHistoryModal').modal('show');
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('An error occurred while loading status history.');
+                    }
+                });
+            }
+        </script>
 @endsection

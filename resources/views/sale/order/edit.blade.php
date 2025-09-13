@@ -135,7 +135,7 @@
                                                 <x-label for="search_item" name="{{ __('item.enter_item_name') }}" />
                                                 <div class="input-group">
                                                     <span class="input-group-text" id="basic-addon1"><i class="fadeIn animated bx bx-barcode-reader text-primary"></i></span>
-                                                    <input type="text" id="search_item" value="" class="form-control" required placeholder="Scan Barcode/Search Items">
+                                                    <input type="text" id="search_item" value="" class="form-control" required placeholder="Scan Barcode/Search Items by Name or SKU">
                                                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#itemModal"><i class="bx bx-plus-circle me-0"></i></button>
                                                 </div>
                                             </div>
