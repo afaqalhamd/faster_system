@@ -142,7 +142,7 @@ class SalesStatusService
                     'post_delivery_action_at' => now()
                 ]);
 
-                
+
                 // Note: Any return/cancellation of delivered items should be handled as a separate
                 // return transaction or credit note, not by restoring the original sale inventory
             } else {
@@ -374,7 +374,8 @@ class SalesStatusService
             'Pending' => ['Processing', 'Completed', 'Delivery', 'POD', 'Cancelled'],
             'Processing' => ['Completed', 'Delivery', 'POD', 'Cancelled'],
             'Completed' => ['Delivery', 'POD', 'Cancelled', 'Returned'],
-            'Delivery' => ['POD', 'Cancelled', 'Returned'],
+            'Delivery' => ['POD', 'Delivery Payment', 'Cancelled', 'Returned'], // Added Delivery Payment
+            'Delivery Payment' => ['POD', 'Cancelled', 'Returned'], // New status for payment at delivery
             'POD' => ['Completed', 'Delivery', 'Cancelled', 'Returned'],
             'Cancelled' => [], // Cannot change from cancelled
             'Returned' => [], // Cannot change from returned

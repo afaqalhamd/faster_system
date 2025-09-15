@@ -26,6 +26,19 @@
                                     <a href="{{ route('sale.invoice.edit', ['id' => $sale->id]) }}" class="btn btn-outline-primary"><i class="bx bx-edit"></i>{{ __('app.edit') }}</a>
                                     @endcan
 
+                                    {{-- Check if user is delivery user and sale status is 'Delivery' --}}
+                                    @php
+                                        $user = auth()->user();
+                                        $isDeliveryUser = $user && $user->role && strtolower($user->role->name) === 'delivery';
+                                        $showDeliveryPayment = $isDeliveryUser && $sale->sales_status === 'Delivery';
+                                    @endphp
+
+                                    @if($showDeliveryPayment)
+                                        <a href="{{ route('delivery.payment', ['sale_id' => $sale->id]) }}" class="btn btn-outline-info">
+                                            <i class="bx bx-credit-card"></i>{{ __('sale.delivery_payment') }}
+                                        </a>
+                                    @endif
+
                                     <a class="btn btn-outline-dark px-4 notify-through-email" data-model="sale/invoice" data-id="{{$sale->id}}" role="button">
                                     </i><i class="bx bx-envelope"></i>{{ __('app.email') }}</a>
 
@@ -153,7 +166,7 @@
                                                             {{ $transaction->batch ? $formatDate->toUserDateFormat($transaction->batch->itemBatchMaster->exp_date) : '' }}
                                                         </td>
                                                         <td class="{{ !app('company')['enable_model'] ? 'd-none':'' }}">
-                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no : ''}}
+                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no :'' }}
                                                         </td>
 
                                                         <td class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">

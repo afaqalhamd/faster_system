@@ -48,6 +48,10 @@ class PurchaseOrder extends Model
         'currency_id',
         'exchange_rate',
         'order_status',
+        'inventory_status',
+        'inventory_added_at',
+        'post_receipt_action',
+        'post_receipt_action_at',
     ];
 
     /**
@@ -168,6 +172,16 @@ class PurchaseOrder extends Model
     public function statusHistory(): MorphMany
     {
         return $this->morphMany(StatusHistory::class, 'statusable');
+    }
+
+    /**
+     * Define the relationship between Purchase Order Status History & Purchase Order table.
+     *
+     * @return HasMany
+     */
+    public function purchaseOrderStatusHistories(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderStatusHistory::class, 'purchase_order_id');
     }
 
     public function currency(): BelongsTo

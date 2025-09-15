@@ -447,7 +447,7 @@ class ItemController extends Controller
                     ->where('status', 1)
                     ->where(function($q) use ($query) {
                         $q->where('name', 'like', "%{$query}%")
-                          ->orWhere('item_code', 'like', "%{$query}%")
+                          ->orWhere('sku', 'like', "%{$query}%")
                           ->orWhere('description', 'like', "%{$query}%");
                     })
                     ->paginate($perPage);
@@ -551,7 +551,7 @@ class ItemController extends Controller
             'data' => $item
         ]);
     }
-    
+
 
 }
 

@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12,13,14];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -75,6 +75,24 @@ $(function() {
                 {data: 'party_name', name: 'party_name'},
                 {data: 'grand_total', name: 'grand_total', className: 'text-end'},
                 {data: 'balance', name: 'balance', className: 'text-end'},
+                {
+                    data: 'payment_status',
+                    name: 'payment_status',
+                    orderable: false,
+                    className: 'text-center',
+                    searchable: false
+                },
+
+                {
+                    data: 'inventory_status',
+                    name: 'inventory_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // The data comes as HTML from the backend, so we just return it
+                        return data;
+                    }
+                },
                 {
                     data: null,
                     name: 'order_status',
@@ -172,16 +190,6 @@ $(function() {
                                     <i class="fadeIn animated bx ${statusInfo.icon}"></i>
                                     <span>${statusInfo.text}</span>
                                 </div>`;
-                    }
-                },
-                {
-                    data: 'inventory_status',
-                    name: 'inventory_status',
-                    orderable: false,
-                    className: 'text-center',
-                    render: function(data, type, full, meta) {
-                        // The data comes as HTML from the backend, so we just return it
-                        return data;
                     }
                 },
                 {data: 'carrier_name', name: 'carrier_name', orderable: false, className: 'text-center'},

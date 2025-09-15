@@ -1195,7 +1195,7 @@ class SaleController extends Controller
      * */
      public function datatableList(Request $request)
     {
-        $data = Sale::with('user', 'party')
+        $data = Sale::with('user', 'party', 'carrier')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
             })
@@ -1231,6 +1231,9 @@ class SaleController extends Controller
                             })
                             ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
                                 $userQuery->where('username', 'like', "%{$searchTerm}%");
+                            })
+                            ->orWhereHas('carrier', function ($carrierQuery) use ($searchTerm) {
+                                $carrierQuery->where('name', 'like', "%{$searchTerm}%");
                             });
                     });
                 }
@@ -1277,6 +1280,9 @@ class SaleController extends Controller
             ->addColumn('post_delivery_action', function ($row) {
                 return $row->post_delivery_action;
             })
+            ->addColumn('carrier_name', function ($row) {
+                return $row->carrier ? $row->carrier->name : 'N/A';
+            })
             ->addColumn('color', function ($row) {
                 $saleStatuses = $this->generalDataService->getSaleStatus();
 
@@ -1292,11 +1298,24 @@ class SaleController extends Controller
                 $printUrl = route('sale.invoice.print', ['invoiceFormat' => 'normal', 'id' => $id]);
                 $pdfUrl = route('sale.invoice.pdf', ['invoiceFormat' => 'normal', 'id' => $id]);
 
+                // Check if user is delivery user and sale status is 'Delivery'
+                $isDeliveryUser = $this->isDeliveryUser();
+                $showDeliveryPayment = $isDeliveryUser && $row->sales_status === 'Delivery';
+
                 $actionBtn = '<div class="dropdown ms-auto">
                             <a class="dropdown-toggle dropdown-toggle-nocaret" href="#" data-bs-toggle="dropdown"><i class="bx bx-dots-vertical-rounded font-22 text-option"></i>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li>
+                            <ul class="dropdown-menu">';
+
+                // Add delivery payment button for delivery users when sale status is 'Delivery'
+                if ($showDeliveryPayment) {
+                    $deliveryPaymentUrl = route('delivery.payment', ['sale_id' => $id]);
+                    $actionBtn .= '<li>
+                                    <a class="dropdown-item" href="' . $deliveryPaymentUrl . '"><i class="bx bx-credit-card"></i> ' . __('sale.delivery_payment') . '</a>
+                                </li>';
+                }
+
+                $actionBtn .= '<li>
                                     <a class="dropdown-item" href="' . $editUrl . '"><i class="bx bx-edit"></i> ' . __('app.edit') . '</a>
                                 </li>
                                 <li>
@@ -1309,10 +1328,10 @@ class SaleController extends Controller
                                     <a target="_blank" class="dropdown-item" href="' . $pdfUrl . '"><i class="bx bxs-file-pdf"></i> ' . __('app.pdf') . '</a>
                                 </li>
                                  <li>
-                                    <a class="dropdown-item make-payment" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-money"></i> ' . __('payment.receive_payment') . '</a>
+                                    <a class="dropdown-item make-payment" data-invoice-id="' . $id . '" role="button"><i class="bx bx-money"></i> ' . __('payment.receive_payment') . '</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item payment-history" data-invoice-id="' . $id . '" role="button"></i><i class="bx bx-table"></i> ' . __('payment.history') . '</a>
+                                    <a class="dropdown-item payment-history" data-invoice-id="' . $id . '" role="button"><i class="bx bx-table"></i> ' . __('payment.history') . '</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item notify-through-email" data-model="sale/invoice" data-id="' . $id . '" role="button"><i class="bx bx-envelope"></i> ' . __('app.send_email') . '</a>
@@ -2071,6 +2090,129 @@ class SaleController extends Controller
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
+    /**
+     * Record payment at delivery
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function recordDeliveryPayment(Request $request, int $id): JsonResponse
+    {
+        try {
+            $sale = Sale::findOrFail($id);
+
+            // Validate request
+            $request->validate([
+                'amount' => 'required|numeric|min:0',
+                'payment_type_id' => 'required|exists:payment_types,id',
+                'note' => 'nullable|string|max:500',
+            ]);
+
+            // Check if user has permission to record delivery payment
+            if (!$this->isDeliveryUser() && !auth()->user()->can('sale.invoice.edit')) {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('auth.unauthorized')
+                ], 403);
+            }
+
+            // Record the payment
+            $paymentData = [
+                'transaction_date' => now()->format('Y-m-d'),
+                'amount' => $request->amount,
+                'payment_type_id' => $request->payment_type_id,
+                'note' => $request->note ?? '',
+                'payment_from_unique_code' => \App\Enums\General::INVOICE->value,
+            ];
+
+            $payment = $this->paymentTransactionService->recordPayment($sale, $paymentData);
+
+            if (!$payment) {
+                throw new \Exception(__('payment.failed_to_record_payment_transactions'));
+            }
+
+            // Update total paid amount in the sale model
+            $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+
+            // If payment completes the sale, check inventory deduction
+            $this->checkAndProcessInventoryDeduction($sale);
+
+            // Update sale status to "Delivery Payment" if it's currently "Delivery"
+            if ($sale->sales_status === 'Delivery') {
+                $sale->update(['sales_status' => 'Delivery Payment']);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => __('payment.payment_recorded_successfully'),
+                'payment' => $payment,
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
+
+    /**
+     * Get delivery payment details for a sale
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function getDeliveryPaymentDetails(int $id): JsonResponse
+    {
+        try {
+            $sale = Sale::with(['paymentTransaction.paymentType'])->findOrFail($id);
+
+            // Check if user has permission to view delivery payment details
+            if (!$this->isDeliveryUser() && !auth()->user()->can('sale.invoice.view')) {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('auth.unauthorized')
+                ], 403);
+            }
+
+            $balance = $sale->grand_total - $sale->paid_amount;
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'sale_id' => $sale->id,
+                    'sale_code' => $sale->sale_code,
+                    'customer_name' => $sale->party->first_name . ' ' . $sale->party->last_name,
+                    'grand_total' => $this->formatWithPrecision($sale->grand_total),
+                    'paid_amount' => $this->formatWithPrecision($sale->paid_amount),
+                    'balance' => $this->formatWithPrecision($balance),
+                    'payments' => $sale->paymentTransaction->map(function ($payment) {
+                        return [
+                            'id' => $payment->id,
+                            'amount' => $this->formatWithPrecision($payment->amount),
+                            'payment_type' => $payment->paymentType->name,
+                            'transaction_date' => $payment->formatted_transaction_date,
+                            'note' => $payment->note,
+                        ];
+                    }),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
+
     private function applyCarrierFilter($query)
     {
         $user = auth()->user();

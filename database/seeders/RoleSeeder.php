@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Role;
+use Spatie\Permission\Models\Role as SpatieRole;
 use App\Models\User;
 
 class RoleSeeder extends Seeder
@@ -14,28 +14,24 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::create([
-                                    'id' => 1,
-                                    'name' => 'Admin',
-                                    'status' => 1,
-                                ]);
+        // Create Admin role
+        $adminRole = SpatieRole::firstOrCreate([
+            'name' => 'Admin',
+        ], [
+            'guard_name' => 'web',
+        ]);
+
+        // Create Delivery role
+        $deliveryRole = SpatieRole::firstOrCreate([
+            'name' => 'Delivery',
+        ], [
+            'guard_name' => 'web',
+        ]);
 
         $user = User::find(1);
-        $user->role_id = 1;
-        $user->save();
-
-        // Create a new user record using Eloquent and save it
-        $user = User::find(1);
-
-        //This will add entry in model_has_roles entry
-        $role = Role::find(1);
-        
-        $user->assignRole($role);
-
-        $permissions = $role->permissions;
-
-        $user->givePermissionTo($permissions);//Table: model_has_permissions
-
-
+        if ($user) {
+            // Assign Admin role to user
+            $user->assignRole($adminRole);
+        }
     }
 }

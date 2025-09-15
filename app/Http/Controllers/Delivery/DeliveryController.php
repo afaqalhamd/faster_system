@@ -61,6 +61,17 @@ class DeliveryController extends Controller
     }
 
     /**
+     * Redirect to delivery payment page
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function deliveryPayment(int $id)
+    {
+        return redirect()->route('delivery.payment', ['sale_id' => $id]);
+    }
+
+    /**
      * Datatable for pending deliveries
      */
     public function pendingDeliveriesDatatable(Request $request)
@@ -237,14 +248,14 @@ class DeliveryController extends Controller
     {
         try {
             $sale = Sale::findOrFail($id);
-            
+
             // Update status to completed
             $sale->sales_status = 'Completed';
             $sale->save();
-            
+
             // Record status history
             $this->statusHistoryService->RecordStatusHistory($sale);
-            
+
             return response()->json([
                 'status' => true,
                 'message' => __('delivery.status_updated_successfully')

@@ -176,12 +176,12 @@
                         </li>
                     @endcan
 
-                    {{-- @can('purchase.return.view')
+                    @can('purchase.return.view')
                         <li class="{{ request()->is('purchase/return/*') ? 'mm-active' : '' }}">
                             <a href="{{ route('purchase.return.list') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('purchase.return.return') }}</a>
                         </li>
-                    @endcan --}}
+                    @endcan
                 </ul>
             </li>
         @endcanany

@@ -26,7 +26,7 @@
                             @endcan
                             @can('purchase.order.create')
                             <!-- Button pushed to the right side -->
-{{--                            <x-anchor-tag href="{{ route('purchase.order.create') }}" text="{{ __('purchase.order.create') }}" class="btn btn-primary px-5" />--}}
+                           <x-anchor-tag href="{{ route('purchase.order.create') }}" text="{{ __('purchase.order.create') }}" class="btn btn-primary px-5" />
                             @endcan
 
                         </div>
@@ -79,7 +79,8 @@
                                             <th>{{ __('supplier.supplier') }}</th>
                                             <th>{{ __('app.total') }}</th>
                                             <th>{{ __('payment.balance') }}</th>
-                                            <th>{{ __('app.status') }}</th>
+                                            <th>{{ __('purchase.stock_status') }}</th>
+                                            <th>{{ __('purchase.purchase_status') }}</th>
                                             <th>{{ __('app.created_by') }}</th>
                                             <th>{{ __('app.created_at') }}</th>
                                             <th>{{ __('app.action') }}</th>
@@ -105,6 +106,26 @@
 <script src="{{ versionedAsset('assets/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ versionedAsset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
+<script>
+    // Pass translations to the purchase status icons library
+    window.purchaseStatusIcons.setTranslations({
+        'purchase.pending': "{{ __('purchase.pending') }}",
+        'purchase.processing': "{{ __('purchase.processing') }}",
+        'purchase.completed': "{{ __('purchase.completed') }}",
+        'purchase.shipped': "{{ __('purchase.shipped') }}",
+        'purchase.rog': "{{ __('purchase.rog') }}",
+        'purchase.cancelled': "{{ __('purchase.cancelled') }}",
+        'purchase.returned': "{{ __('purchase.returned') }}",
+        'purchase.inventory_pending': "{{ __('purchase.inventory_pending') }}",
+        'purchase.inventory_added': "{{ __('purchase.inventory_added') }}",
+        'purchase.inventory_removed': "{{ __('purchase.inventory_removed') }}",
+        'purchase.post_receipt_return': "{{ __('purchase.post_receipt_return') }}",
+        'purchase.post_receipt_cancel': "{{ __('purchase.post_receipt_cancel') }}",
+        'purchase.inventory_ready_for_addition': "{{ __('purchase.inventory_ready_for_addition') }}",
+        'purchase.inventory_post_receipt_action': "{{ __('purchase.inventory_post_receipt_action') }}"
+    });
+</script>
 <script src="{{ versionedAsset('custom/js/purchase/purchase-order-list.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>

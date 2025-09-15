@@ -14,15 +14,16 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-
-        User::create([
-                                    'id' => 1,
-                                    'username' => 'Administrator',
-                                    'first_name' => 'Super',
-                                    'last_name' => 'Admin',
-                                    'email' => 'ad.fasterexpress@gmail.com',
-                                    'password' => Hash::make('fasterexp25'),
-                                    'status' => 1,
-                                ]);
+        // Use firstOrCreate to avoid duplicate entry errors
+        User::firstOrCreate([
+            'id' => 1
+        ], [
+            'username' => 'Administrator',
+            'first_name' => 'Super',
+            'last_name' => 'Admin',
+            'email' => 'ad.fasterexpress@gmail.com',
+            'password' => Hash::make('fasterexp25'),
+            'status' => 1,
+        ]);
     }
 }

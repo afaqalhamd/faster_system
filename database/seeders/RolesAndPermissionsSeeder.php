@@ -836,6 +836,10 @@ class RolesAndPermissionsSeeder extends Seeder
                                         'name' => 'delivery.view',
                                         'displayName' => 'View',
                                     ],
+                                    [
+                                        'name' => 'delivery.payment.record',
+                                        'displayName' => 'Record Delivery Payment',
+                                    ],
 
                                 ],
             ],
@@ -880,12 +884,21 @@ class RolesAndPermissionsSeeder extends Seeder
 
             foreach ($record['permissionName'] as $permission) {
 
-                Permission::create([
-                                    'name' => $permission['name'],
-                                    'display_name' => $permission['displayName'],
-                                    'permission_group_id' => $group->id,
-                                    'status' => 1,
-                                ]);
+                // Check if permission already exists with the same name and guard
+                $existingPermission = Permission::where('name', $permission['name'])
+                    ->where('guard_name', 'web')
+                    ->first();
+
+                if (!$existingPermission) {
+                    // Only create if it doesn't exist
+                    Permission::create([
+                        'name' => $permission['name'],
+                        'display_name' => $permission['displayName'],
+                        'permission_group_id' => $group->id,
+                        'status' => 1,
+                        'guard_name' => 'web'
+                    ]);
+                }
 
             }
 
@@ -894,13 +907,17 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Create Delivery role
         $deliveryRole = Role::firstOrCreate(['name' => 'Delivery']);
-        
+
         // Assign delivery permission to delivery role
         $deliveryPermission = Permission::where('name', 'delivery.view')->first();
         if ($deliveryPermission) {
             $deliveryRole->givePermissionTo($deliveryPermission);
         }
 
-
+        // Assign delivery payment permission to delivery role
+        $deliveryPaymentPermission = Permission::where('name', 'delivery.payment.record')->first();
+        if ($deliveryPaymentPermission) {
+            $deliveryRole->givePermissionTo($deliveryPaymentPermission);
+        }
     }
 }

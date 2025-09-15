@@ -22,7 +22,8 @@ return [
     'paid_amount'               => 'Paid Amount',
     'balance'                   => 'Balance',
     'date'                      => 'Payment Date',
-    'received'                  => 'Received Payment',
+    'received'                  => 'Payment Received',
+    'record_payment'            => 'Record Payment',
     'payment_type'              => 'Payment Type',
 
     'add_payment_type'          => 'Add Payment Type',

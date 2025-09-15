@@ -38,7 +38,7 @@ $(document).ready(function() {
     // Handle delivery status update
     $(document).on('click', '.update-delivery-status', function() {
         var id = $(this).data('id');
-        
+
         Swal.fire({
             title: lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?',
             text: lang === 'ar' ? 'هل تريد تحديث حالة التوصيل إلى مكتمل؟' : 'Do you want to update the delivery status to completed?',
@@ -82,6 +82,13 @@ $(document).ready(function() {
                 });
             }
         });
+    });
+
+    // Handle delivery payment recording
+    $(document).on('click', '.record-delivery-payment', function() {
+        var id = $(this).data('id');
+        // Redirect to delivery payment page
+        window.location.href = baseUrl + '/delivery/payment?sale_id=' + id;
     });
 
     // Initialize datepickers

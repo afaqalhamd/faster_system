@@ -117,6 +117,12 @@ class GeneralDataService{
                     'icon'    =>  'bx-package',
                 ],
                 [
+                    'id'    =>  'Delivery Payment', // New status for payment at delivery
+                    'name'    =>  __('sale.delivery_payment'),
+                    'color'    =>  'info',
+                    'icon'    =>  'bx-credit-card',
+                ],
+                [
                     'id'    =>  'POD',
                     'name'    =>  __('sale.pod'),
                     'color'    =>  'success',
@@ -185,8 +191,8 @@ class GeneralDataService{
      }
 
      function getPurchaseOrderStatus() : array{
-        //Using Same Status as Sale Order
-        return $this->getSaleOrderStatus();
+        //Using Purchase Status for Purchase Orders
+        return $this->getPurchaseStatus();
      }
 
      function getQuotationStatus() : array{

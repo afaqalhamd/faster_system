@@ -33,6 +33,8 @@ return [
     'purchase_without_tax'          => 'Purchase Without Tax',
     'purchase_return_without_tax'   => 'Purchase Return Without Tax',
     'purchase_bills'                => 'Purchase Bills',
+    'stock_status'                 => 'Stock Status',
+    'purchase_status'               => 'Purchase Status',
 
     'return' => [
                     'return'         => 'Purchase Return/Dr.Note',
@@ -79,7 +81,7 @@ return [
     'pending'                    => 'Pending',
     'processing'                 => 'Processing',
     'ordered'                    => 'Ordered',
-    'shipped'                    => 'Shipped',
+    'shipped'                    => 'Shipping',
     'rog'                        => 'Receipt of Goods',
     'cancelled'                  => 'Cancelled',
     'returned'                   => 'Returned',
@@ -90,6 +92,9 @@ return [
     'inventory_removed'          => 'Inventory Removed',
     'post_receipt_return'        => 'Returned After Receipt',
     'post_receipt_cancel'        => 'Cancelled After Receipt',
+    'inventory_ready_for_addition' => 'Ready for Addition',
+    'inventory_post_receipt_action' => 'Post-Receipt Action',
+
     'rog_required_for_inventory' => 'Inventory will only be added when ROG (Receipt of Goods) status is reached',
     'no_backward_after_rog'      => 'Cannot go back to previous statuses after ROG has been confirmed',
 

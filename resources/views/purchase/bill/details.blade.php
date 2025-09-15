@@ -53,7 +53,7 @@
                                         {{ $purchase->purchase_status }}
                                     </span>
                                     <span class="current-status status-badge badge bg-{{ $purchase->inventory_status === 'added' ? 'success' : ($purchase->inventory_status === 'pending' ? 'warning' : 'primary') }} ms-2">
-                                        {{ ucfirst(str_replace('_', ' ', $purchase->inventory_status)) }}
+                                        {{ __(sprintf('purchase.inventory_%s', str_replace(' ', '_', strtolower(str_replace('_', ' ', $purchase->inventory_status))))) }}
                                     </span>
                                 </div>
                             </div>
@@ -169,7 +169,7 @@
                                                             {{ $transaction->batch ? $formatDate->toUserDateFormat($transaction->batch->itemBatchMaster->exp_date) : '' }}
                                                         </td>
                                                         <td class="{{ !app('company')['enable_model'] ? 'd-none':'' }}">
-                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no : ''}}
+                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no :'' }}
                                                         </td>
                                                         <td class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">
                                                             {{ $transaction->batch ? $transaction->batch->itemBatchMaster->color :'' }}

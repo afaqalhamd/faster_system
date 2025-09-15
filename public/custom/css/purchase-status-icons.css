@@ -43,6 +43,12 @@
     transition: all 0.2s ease;
 }
 
+/* RTL support for status icon display */
+[dir="rtl"] .status-icon-display {
+    right: auto;
+    left: 35px;
+}
+
 /* Purchase Status specific colors - simplified */
 .status-pending {
     background: #fff3cd;

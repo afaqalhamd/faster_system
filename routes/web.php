@@ -1310,7 +1310,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/sms/get-content/{id}', [PurchaseOrderController::class, 'getSMSContent'])
                 ->middleware('can:purchase.order.create');
 
-
+        /**
+         * Status Management
+         * */
+        Route::post('/update-status/{id}', [PurchaseOrderController::class, 'updateStatus'])
+            ->middleware('can:purchase.order.edit')
+            ->name('purchase.order.update.status');
+        Route::get('/get-status-history/{id}', [PurchaseOrderController::class, 'getStatusHistoryData'])
+            ->middleware('can:purchase.order.view')
+            ->name('purchase.order.get.status.history');
 
     });
 
@@ -1613,6 +1621,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/get-sales-status-history/{id}', [SaleController::class, 'getSalesStatusHistory'])
             ->middleware('can:sale.invoice.view')
             ->name('sale.invoice.get.sales.status.history');
+
+        // Delivery payment routes
+        Route::post('/delivery-payment/{id}', [SaleController::class, 'recordDeliveryPayment'])
+            ->middleware('can:sale.invoice.edit')
+            ->name('sale.invoice.delivery.payment');
+        Route::get('/delivery-payment-details/{id}', [SaleController::class, 'getDeliveryPaymentDetails'])
+            ->middleware('can:sale.invoice.view')
+            ->name('sale.invoice.delivery.payment.details');
 
         /**
          * Email
@@ -2042,6 +2058,10 @@ Route::group(['prefix' => 'delivery', 'middleware' => 'auth'], function () {
         ->name('delivery.users');
     Route::post('/update-status/{id}', [App\Http\Controllers\Delivery\DeliveryController::class, 'updateDeliveryStatus'])
         ->name('delivery.update-status');
+    // Delivery payment page
+    Route::get('/payment', function () {
+        return view('delivery.payment');
+    })->name('delivery.payment');
 });
 
 require __DIR__.'/auth.php';

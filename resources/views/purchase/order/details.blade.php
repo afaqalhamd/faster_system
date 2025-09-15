@@ -83,6 +83,9 @@
                                                 <div class="date">{{ __('app.due_date') }}: {{ $formatDate->toUserDateFormat($order->due_date)  }}</div>
                                                 @endif
                                                 <div class="text-gray-light fw-bold">{{ __('app.status') }}: {{ $order->order_status  }}</div>
+                                                @if(isset($order->inventory_status))
+                                                    <div class="text-gray-light fw-bold">{{ __('purchase.stock_status') }}: {{ __(sprintf('purchase.inventory_%s', str_replace(' ', '_', strtolower(str_replace('_', ' ', $order->inventory_status))))) }}</div>
+                                                @endif
                                             </div>
                                         </div>
                                         @php
@@ -152,7 +155,7 @@
                                                             {{ $transaction->batch ? $formatDate->toUserDateFormat($transaction->batch->itemBatchMaster->exp_date) : '' }}
                                                         </td>
                                                         <td class="{{ !app('company')['enable_model'] ? 'd-none':'' }}">
-                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no : ''}}
+                                                            {{ $transaction->batch ? $transaction->batch->itemBatchMaster->model_no :'' }}
                                                         </td>
 
                                                         <td class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">

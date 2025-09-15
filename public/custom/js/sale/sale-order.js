@@ -379,11 +379,10 @@ function addRowToInvoiceItemsTable(recordObject, loadedFromUpdateOperation = fal
     newRow.append(`<td class="${(!itemSettings.enable_size) ? 'd-none' : ''}">` + size + '</td>');
 
     newRow.append('<td id="t_id" class="d-none">' + recordObject.t_id + '</td>');
-    newRow.append('<td class="d-none">' + unitSelectionBox + '</td>');
     newRow.append('<td class="d-none2">' + inputUnitPrice + hiddenTotalUnitPrice + '</td>');
-
-    newRow.append('<td>' + inputQuantity + '</td>');
     newRow.append('<td>' + quantity + '</td>');
+    newRow.append('<td>' + inputQuantity + '</td>');
+    newRow.append('<td class="d-none">' + unitSelectionBox + '</td>');
 
     newRow.append(`<td class="${(!itemSettings.show_discount) ? 'd-none' : ''}">` + inputDiscount + hiddenDiscountType + hiddenTotalPriceAfterDiscount + inputDiscountAmount + '</td>');
     newRow.append(`<td class="${noTaxFlag() ? 'd-none' : ''}">` + taxGroup + hiddenTaxType + inputTaxAmount + '</td>');

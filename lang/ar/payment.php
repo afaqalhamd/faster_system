@@ -22,6 +22,7 @@ return [
     'balance'                                   => 'الرصيد',
     'date'                                      => 'تاريخ الدفع',
     'received'                                  => 'تم استلام الدفعة',
+    'record_payment'                            => 'تسجيل الدفع',
 
     'payment_type' => 'نوع الدفع',
 
@@ -91,7 +92,7 @@ return [
 
     'deposit_to' => 'الإيداع في',
 
-    'cheque_reopened_successously' => 'تم إعادة فتح الشيك بنجاح',
+    'cheque_reopened_successfully' => 'تم إعادة فتح الشيك بنجاح',
 
     'transfer_cheque' => 'تحويل الشيك',
 
@@ -141,7 +142,7 @@ return [
 
     'adjust_bills' => 'ضبط الفاتورة',
 
-    'adjust'                                => 'يُعدِّل',
+    'adjust'                                => 'يُعدِّل',
 
     'adjust_amount' => 'ضبط المبلغ',
 

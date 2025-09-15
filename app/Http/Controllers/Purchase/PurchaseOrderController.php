@@ -30,6 +30,7 @@ use App\Models\Purchase\Purchase;
 use App\Services\StatusHistoryService;
 use App\Services\Communication\Email\PurchaseOrderEmailNotificationService;
 use App\Services\Communication\Sms\PurchaseOrderSmsNotificationService;
+use App\Services\PurchaseOrderStatusService;
 
 use Mpdf\Mpdf;
 
@@ -57,6 +58,8 @@ class PurchaseOrderController extends Controller
 
     public $statusHistoryService;
 
+    public $purchaseOrderStatusService;
+
     public function __construct(PaymentTypeService                    $paymentTypeService,
                                 PaymentTransactionService             $paymentTransactionService,
                                 AccountTransactionService             $accountTransactionService,
@@ -64,7 +67,8 @@ class PurchaseOrderController extends Controller
                                 PurchaseOrderEmailNotificationService $purchaseOrderEmailNotificationService,
                                 PurchaseOrderSmsNotificationService   $purchaseOrderSmsNotificationService,
                                 GeneralDataService                    $generalDataService,
-                                StatusHistoryService                  $statusHistoryService
+                                StatusHistoryService                  $statusHistoryService,
+                                PurchaseOrderStatusService            $purchaseOrderStatusService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -76,6 +80,7 @@ class PurchaseOrderController extends Controller
         $this->purchaseOrderSmsNotificationService = $purchaseOrderSmsNotificationService;
         $this->generalDataService = $generalDataService;
         $this->statusHistoryService = $statusHistoryService;
+        $this->purchaseOrderStatusService = $purchaseOrderStatusService;
     }
 
     /**
@@ -131,7 +136,9 @@ class PurchaseOrderController extends Controller
                 'tax',
                 'batch.itemBatchMaster',
                 'itemSerialTransaction.itemSerialMaster'
-            ]])->findOrFail($id);
+            ],
+            'purchaseOrderStatusHistories.changedBy'
+        ])->findOrFail($id);
 
         // Add formatted dates from ItemBatchMaster model
         $order->itemTransaction->each(function ($transaction) {
@@ -169,6 +176,7 @@ class PurchaseOrderController extends Controller
             $itemData['itemSerialTransactions'] = $itemSerialTransactions;
 
             $itemData['sku'] = $transaction->item->sku;
+            $itemData['size'] = $transaction->item->size;
             return $itemData;
         })->toArray();
 
@@ -606,7 +614,7 @@ class PurchaseOrderController extends Controller
     public function datatableList(Request $request)
     {
 
-        $data = PurchaseOrder::with('user', 'party', 'purchase')
+        $data = PurchaseOrder::with('user', 'party', 'purchase', 'itemTransaction.warehouse')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
             })
@@ -671,6 +679,18 @@ class PurchaseOrderController extends Controller
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
             })
+            ->addColumn('inventory_status', function ($row) {
+                $status = $row->inventory_status ?? 'pending';
+                $badgeClass = $status === 'added' ? 'bg-success' : 'bg-warning';
+                $statusText = $status === 'added' ? __('Added') : __('Pending');
+
+                return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
+            })
+            // ->addColumn('warehouses', function ($row) {
+            //     // Get unique warehouses from item transactions
+            //     $warehouses = $row->itemTransaction->pluck('warehouse.name')->unique()->filter()->implode(', ');
+            //     return $warehouses ?: '-';
+            // })
             // ->addColumn('status', function ($row) {
             //     return [
             //         'text' => $row->purchase ? "Converted to Purchase" : "Open",
@@ -695,7 +715,10 @@ class PurchaseOrderController extends Controller
                 $purchaseOrderStatus = $this->generalDataService->getSaleOrderStatus();
 
                 // Find the status matching the given id
-                return collect($purchaseOrderStatus)->firstWhere('id', $row->order_status)['color'];
+                $status = collect($purchaseOrderStatus)->firstWhere('id', $row->order_status);
+
+                // Return the color if status exists, otherwise return a default color
+                return $status ? $status['color'] : 'secondary';
 
             })
             ->addColumn('action', function ($row) {
@@ -755,7 +778,7 @@ class PurchaseOrderController extends Controller
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'inventory_status'])
             ->make(true);
     }
 
@@ -923,6 +946,73 @@ class PurchaseOrderController extends Controller
             'data' => $data,
         ]);
 
+    }
+
+    /**
+     * Update purchase order status
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function updateStatus(Request $request, int $id): JsonResponse
+    {
+        try {
+            $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+            $result = $this->purchaseOrderStatusService->updatePurchaseOrderStatus(
+                $purchaseOrder,
+                $request->input('order_status'),
+                [
+                    'notes' => $request->input('notes'),
+                    'proof_image' => $request->file('proof_image')
+                ]
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'status' => true,
+                    'message' => $result['message'],
+                    'inventory_updated' => $result['inventory_updated'] ?? false
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['message']
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get purchase order status history
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function getStatusHistoryData(int $id): JsonResponse
+    {
+        try {
+            $purchaseOrder = PurchaseOrder::with('purchaseOrderStatusHistories.changedBy')->findOrFail($id);
+
+            $data = $this->purchaseOrderStatusService->getStatusHistory($purchaseOrder);
+
+            return response()->json([
+                'status' => true,
+                'message' => '',
+                'data' => $data,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
 }

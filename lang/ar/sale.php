@@ -125,6 +125,7 @@ return [
 'processing'                    => 'قيد المعالجة',
 'completed'                     => 'مكتمل',
 'delivery'                      => 'التسليم',
+'delivery_payment'              => 'دفع عند التسليم',
 'pod'                           => 'إثبات التسليم (POD)',
 'cancelled'                     => 'ملغي',
 'returned'                      => 'مُرجع',
@@ -140,5 +141,7 @@ return [
 'view_full_size'                => 'عرض بالحجم الكامل',
 'download'                      => 'تحميل',
 'close'                         => 'إغلاق',
+'sale_details'                  => 'تفاصيل البيع',
+'grand_total'                   => 'الإجمالي',
 
 ];

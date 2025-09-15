@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9,10];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -74,14 +74,48 @@ $(function() {
                 {data: 'grand_total', name: 'grand_total', className: 'text-end'},
                 {data: 'balance', name: 'balance', className: 'text-end'},
                 {
+                    data: 'inventory_status',
+                    name: 'inventory_status',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, full, meta) {
+                        // The data comes as HTML from the backend, so we just return it
+                        // But we need to update the text to use translations
+                        if (typeof data === 'string' && data.includes('<span class="badge')) {
+                            // Extract the status text from the badge
+                            let statusText = '';
+                            let badgeClass = '';
+
+                            if (data.includes('bg-success')) {
+                                statusText = window.purchaseStatusIcons.translations['purchase.inventory_added'] || 'Added';
+                                badgeClass = 'bg-success';
+                            } else {
+                                statusText = window.purchaseStatusIcons.translations['purchase.inventory_pending'] || 'Pending';
+                                badgeClass = 'bg-warning';
+                            }
+
+                            return `<span class="badge ${badgeClass}">${statusText}</span>`;
+                        }
+
+                        // Fallback for any other format
+                        return data;
+                    }
+                },
+                {
                     data: null,
                     name: 'order_status',
                     orderable: false,
                     className: 'text-center',
                     render: function(data, type, full, meta) {
+                        // Use the purchaseStatusIcons utility to create a proper status badge
+                        if (window.purchaseStatusIcons && data.order_status) {
+                            return window.purchaseStatusIcons.createStatusBadge(data.order_status);
+                        }
 
-                        return `<div class="badge text-${data.color} bg-light-${data.color} p-2 text-uppercase px-3">${data.order_status}</div>`;
-
+                        // Fallback to simple badge if icons are not available
+                        const status = data.order_status || 'Unknown';
+                        const color = data.color || 'secondary';
+                        return `<div class="badge bg-light-${color} text-${color} p-2 text-uppercase px-3">${status}</div>`;
                     }
                 },
                 {data: 'username', name: 'username'},

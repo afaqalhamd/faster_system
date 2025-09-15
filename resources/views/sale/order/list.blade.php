@@ -81,8 +81,9 @@
                                             <th>{{ __('customer.customer') }}</th>
                                             <th>{{ __('app.total') }}</th>
                                             <th>{{ __('payment.balance') }}</th>
+                                            <th>{{ __('payment.payment_status') }}</th>
+                                            <th>{{ __('purchase.stock_status') }}</th>
                                             <th>{{ __('app.status') }}</th>
-                                            <th>{{ __('Inventory Status') }}</th>
                                             <th>{{ __('carrier.carrier') }}</th>
                                             <th>{{ __('app.created_by') }}</th>
                                             <th>{{ __('app.created_at') }}</th>

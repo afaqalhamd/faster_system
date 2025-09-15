@@ -559,6 +559,25 @@
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/purchase/purchase-bill.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/purchase/purchase-status-icons.js') }}"></script>
+<script>
+    // Pass translations to the purchase status icons library
+    window.purchaseStatusIcons.setTranslations({
+        'purchase.pending': "{{ __('purchase.pending') }}",
+        'purchase.processing': "{{ __('purchase.processing') }}",
+        'purchase.completed': "{{ __('purchase.completed') }}",
+        'purchase.shipped': "{{ __('purchase.shipped') }}",
+        'purchase.rog': "{{ __('purchase.rog') }}",
+        'purchase.cancelled': "{{ __('purchase.cancelled') }}",
+        'purchase.returned': "{{ __('purchase.returned') }}"
+    });
+
+    // Re-initialize status icons after document is ready to ensure RTL handling
+    $(document).ready(function() {
+        setTimeout(function() {
+            window.purchaseStatusIcons.initializeStatusSelects();
+        }, 100);
+    });
+</script>
 <script src="{{ versionedAsset('custom/js/purchase-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>

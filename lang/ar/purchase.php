@@ -82,13 +82,13 @@ return [
 'purchase_return'                             => 'إرجاع الشراء',
 
 // Purchase Status Translations - ترجمات حالات الشراء
-'pending'                    => 'معلق',
+'pending'                    => 'قيد الانتظار',
 'processing'                 => 'قيد المعالجة',
-'ordered'                    => 'مطلوب',
-'shipped'                    => 'مُرسل',
+'ordered'                    => 'طلب',
+'shipped'                    => 'قيد الشحن',
 'rog'                        => 'استلام البضائع',
 'cancelled'                  => 'ملغي',
-'returned'                   => 'مُرجع',
+'returned'                   => 'أرجاع',
 
 // Inventory Status Messages - رسائل حالة المخزون
 'inventory_pending'          => 'المخزون معلق',
@@ -96,6 +96,8 @@ return [
 'inventory_removed'          => 'تم إزالة المخزون',
 'post_receipt_return'        => 'إرجاع بعد الاستلام',
 'post_receipt_cancel'        => 'إلغاء بعد الاستلام',
+'inventory_ready_for_addition' => 'جاهز للإضافة',
+'inventory_post_receipt_action' => 'إجراء ما بعد الاستلام',
 'rog_required_for_inventory' => 'سيتم إضافة المخزون فقط عند الوصول لحالة استلام البضائع',
 'no_backward_after_rog'      => 'لا يمكن العودة للحالات السابقة بعد تأكيد استلام البضائع',
 
@@ -104,5 +106,9 @@ return [
 'proof_image'                => 'صورة الإثبات',
 'view_proof'                 => 'عرض الإثبات',
 'changed_by'                 => 'تم التغيير بواسطة',
-'notes'                 => 'ملاحظات'
+'notes'                 => 'ملاحظات',
+    'stock_status'                 => 'حالة المخزون',
+        'purchase_status'               => 'حالة الشراء ',
+
+
 ];
