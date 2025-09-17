@@ -80,6 +80,7 @@
                                             <th>{{ __('payment.payment_status') }}</th>
                                             <th>{{ __('purchase.stock_status') }}</th>
                                             <th>{{ __('purchase.purchase_status') }}</th>
+                                            <th>{{ __('carrier.carrier') }}</th>
                                             <th>{{ __('app.created_by') }}</th>
                                             {{-- <th>{{ __('app.created_at') }}</th> --}}
                                             <th>{{ __('app.action') }}</th>

@@ -18,6 +18,7 @@ use App\Models\Purchase\Purchase;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
 use App\Models\StatusHistory;
+use App\Models\Carrier;
 
 class PurchaseOrder extends Model
 {
@@ -52,6 +53,7 @@ class PurchaseOrder extends Model
         'inventory_added_at',
         'post_receipt_action',
         'post_receipt_action_at',
+        'carrier_id',
     ];
 
     /**
@@ -189,4 +191,13 @@ class PurchaseOrder extends Model
         return $this->belongsTo(Currency::class, 'currency_id');
     }
 
+    /**
+     * Define the relationship between Purchase Order and Carrier.
+     *
+     * @return BelongsTo
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(Carrier::class, 'carrier_id');
+    }
 }

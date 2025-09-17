@@ -12,7 +12,7 @@ $(function() {
         //Delete previous data
         tableId.DataTable().destroy();
 
-        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12];//Index Starts from 0
+        var exportColumns = [2,3,4,5,6,7,8,9,10,11,12,13];//Index Starts from 0
 
         var table = tableId.DataTable({
             processing: true,
@@ -194,7 +194,7 @@ $(function() {
                         return `<div class="badge bg-light-secondary text-secondary p-2 px-3">${status}</div>`;
                     }
                 },
-
+                {data: 'carrier_name', name: 'carrier_name', orderable: false, className: 'text-center'},
                 {data: 'username', name: 'username'},
                 {data: 'action', name: 'action', orderable: false, searchable: false},
             ],

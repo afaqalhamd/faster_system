@@ -1,5 +1,3 @@
-
-
 /**
  * Sale Order Status Management JavaScript Module
  * Handles status updates with image upload and notes for POD, Cancelled, and Returned statuses
@@ -62,6 +60,23 @@ class SaleOrderStatusManager {
         const selectedStatus = selectElement.value;
         const orderId = $('#sale_order_id').val();
 
+        // Check if user is trying to select POD status
+        if (selectedStatus === 'POD') {
+            // Validate payment before allowing POD status
+            if (!this.validatePaymentForPOD()) {
+                // Show error message and reset to previous status
+                iziToast.error({
+                    title: 'Error',
+                    message: 'Cannot select POD status. Please ensure the sale order is fully paid before changing to POD status.',
+                    position: 'topRight'
+                });
+                // Reset the select to the current status
+                const currentStatus = $('#current_order_status').val() || 'Pending';
+                $(selectElement).val(currentStatus);
+                return;
+            }
+        }
+
         if (this.statusesRequiringProof.includes(selectedStatus)) {
             this.showStatusUpdateModal(orderId, selectedStatus);
         } else {
@@ -70,9 +85,36 @@ class SaleOrderStatusManager {
     }
 
     /**
+     * Validate if the sale order is fully paid before allowing POD status
+     */
+    validatePaymentForPOD() {
+        // Get grand total and paid amount from the form
+        const grandTotal = parseFloat($('.grand_total').val()) || 0;
+        const paidAmount = parseFloat($('.paid_amount').val()) || 0;
+
+        // Allow a small tolerance for floating point comparison
+        const tolerance = 0.01;
+
+        // Check if paid amount is equal to or greater than grand total (within tolerance)
+        return (paidAmount + tolerance) >= grandTotal;
+    }
+
+    /**
      * Show modal for status update with proof requirements
      */
     showStatusUpdateModal(orderId, status) {
+        // Additional validation for POD status
+        if (status === 'POD' && !this.validatePaymentForPOD()) {
+            iziToast.error({
+                title: 'Error',
+                message: 'Cannot select POD status. Please ensure the sale order is fully paid before changing to POD status.',
+                position: 'topRight'
+            });
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.sale-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            return;
+        }
+
         const modal = `
             <div class="modal fade" id="statusUpdateModal" tabindex="-1">
                 <div class="modal-dialog">
@@ -172,10 +214,6 @@ class SaleOrderStatusManager {
             }
         });
     }
-
-
-
-
 
     /**
      * Helper function to calculate time since

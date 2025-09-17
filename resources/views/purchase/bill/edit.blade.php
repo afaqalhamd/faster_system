@@ -108,6 +108,8 @@
                                                     </button>
                                                     @endif
                                                 </div>
+                                                <!-- Hidden input for current purchase status -->
+                                                <input type="hidden" id="current_purchase_status" value="{{ $purchase->purchase_status }}">
                                                 <small class="text-muted">
                                                     <i class="bx bx-info-circle"></i>
                                                     {{ __('ROG, Cancelled, and Returned statuses require proof images and notes') }}<br>

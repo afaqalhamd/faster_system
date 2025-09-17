@@ -312,6 +312,7 @@ class PurchaseOrderController extends Controller
                     'currency_id' => $validatedData['currency_id'],
                     'exchange_rate' => $validatedData['exchange_rate'],
                     'order_status' => $validatedData['order_status'],
+                    'carrier_id' => $validatedData['carrier_id'],
                 ];
 
                 $newPurchaseOrder = PurchaseOrder::findOrFail($validatedData['purchase_order_id']);
@@ -614,7 +615,7 @@ class PurchaseOrderController extends Controller
     public function datatableList(Request $request)
     {
 
-        $data = PurchaseOrder::with('user', 'party', 'purchase', 'itemTransaction.warehouse')
+        $data = PurchaseOrder::with('user', 'party', 'purchase', 'itemTransaction.warehouse', 'carrier')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
             })
@@ -685,6 +686,12 @@ class PurchaseOrderController extends Controller
                 $statusText = $status === 'added' ? __('Added') : __('Pending');
 
                 return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
+            })
+            ->addColumn('order_status', function ($row) {
+                return $row->order_status;
+            })
+            ->addColumn('carrier_name', function ($row) {
+                return $row->carrier ? $row->carrier->name : 'N/A';
             })
             // ->addColumn('warehouses', function ($row) {
             //     // Get unique warehouses from item transactions

@@ -77,6 +77,11 @@
                                                 <x-dropdown-general optionNaming="purchaseOrderStatus" selected="" dropdownName='order_status'/>
                                             </div>
 
+                                            <div class="col-md-4">
+                                                <x-label for="carrier_id" name="{{ __('carrier.shipping_carrier') }}" />
+                                                <x-dropdown-carrier selected="" dropdownName='carrier_id'/>
+                                            </div>
+
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
                                                 <x-label for="invoice_currency_id" name="{{ __('currency.exchange_rate') }}" />

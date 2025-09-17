@@ -423,6 +423,7 @@ class PurchaseController extends Controller
                     'state_id' => $validatedData['state_id'],
                     'currency_id' => $validatedData['currency_id'],
                     'exchange_rate' => $validatedData['exchange_rate'],
+                    'carrier_id' => $validatedData['carrier_id'],
                     'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'],
                     'shipping_charge' => $validatedData['shipping_charge'] ?? 0.0,
                 ];
@@ -837,7 +838,7 @@ class PurchaseController extends Controller
     public function datatableList(Request $request)
     {
 
-        $data = Purchase::with('user', 'party')
+        $data = Purchase::with('user', 'party', 'carrier')
             ->when($request->party_id, function ($query) use ($request) {
                 return $query->where('party_id', $request->party_id);
             })
@@ -852,6 +853,10 @@ class PurchaseController extends Controller
             })
             ->when(!auth()->user()->can('purchase.bill.can.view.other.users.purchase.bills'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
+            })
+            // Apply carrier filtering for delivery users
+            ->when($this->isCarrierUser(), function ($query) {
+                return $this->applyCarrierFilter($query);
             });
 
         return DataTables::of($data)
@@ -933,6 +938,9 @@ class PurchaseController extends Controller
             })
             ->addColumn('purchase_status', function ($row) {
                 return $row->purchase_status;
+            })
+            ->addColumn('carrier_name', function ($row) {
+                return $row->carrier ? $row->carrier->name : 'N/A';
             })
             ->addColumn('inventory_status', function ($row) {
                 return $row->inventory_status;
@@ -1416,6 +1424,56 @@ class PurchaseController extends Controller
             'data' => $enhancedOptions,
             'statuses_requiring_proof' => $statusesRequiringProof
         ]);
+    }
+
+    /**
+     * Helper method to check if current user is a delivery user
+     * @return bool
+     */
+    private function isDeliveryUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply delivery user filtering to query
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyDeliveryUserFilter($query)
+    {
+        if ($this->isDeliveryUser()) {
+            // Delivery users can only see purchases with 'Delivery' status
+            $query->whereNotIn('purchase_status', ['Pending', 'Processing']);
+        }
+        return $query;
+    }
+
+    /**
+     * Helper method to check if current user is associated with a carrier
+     * @return bool
+     */
+    private function isCarrierUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->carrier_id && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply carrier filtering to query for delivery users
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyCarrierFilter($query)
+    {
+        $user = auth()->user();
+        if ($user && $user->carrier_id) {
+            // Carrier users can only see purchases assigned to their carrier
+            $query->where('carrier_id', $user->carrier_id)
+                  ->whereIn('purchase_status', ['Shipped', 'ROG', 'Returned', 'Cancelled']);
+        }
+        return $query;
     }
 
 }

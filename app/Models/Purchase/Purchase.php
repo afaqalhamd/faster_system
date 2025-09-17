@@ -17,6 +17,7 @@ use App\Models\Purchase\PurchaseOrder;
 use App\Models\Accounts\AccountTransaction;
 use App\Models\Currency;
 use App\Models\PurchaseStatusHistory;
+use App\Models\Carrier;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Purchase extends Model
@@ -181,5 +182,15 @@ class Purchase extends Model
     public function purchaseStatusHistories(): HasMany
     {
         return $this->hasMany(PurchaseStatusHistory::class, 'purchase_id');
+    }
+
+    /**
+     * Define the relationship between Purchase and Carrier.
+     *
+     * @return BelongsTo
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 }

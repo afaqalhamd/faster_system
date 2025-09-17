@@ -100,6 +100,8 @@
                                                                 </option>
                                                             @endforeach
                                                         </select>
+                                                        <!-- Hidden input to store current status for JavaScript validation -->
+                                                        <input type="hidden" id="current_order_status" value="{{ $order->order_status }}">
                                                     </div>
                                                     @if(isset($order) && $order->id)
                                                     <button type="button" class="btn btn-outline-info view-status-history" data-order-id="{{ $order->id }}" title="{{ __('View Status History') }}">
@@ -228,7 +230,7 @@
                                                       <tr>
                                                          <td><span class="fw-bold">{{ __('app.grand_total') }}</span></td>
                                                          <td>
-                                                            <x-input type="text" additionalClasses="text-end grand_total" readonly=true name="grand_total" :required="true" placeholder="Round-Off" value="0"/>
+                                                            <x-input type="text" additionalClasses="text-end grand_total" readonly=true name="grand_total" :required="true" placeholder="Grand Total" value="{{ $formatNumber->formatWithPrecision($order->grand_total) }}"/>
                                                         </td>
                                                       </tr>
                                                       @if(app('company')['is_enable_secondary_currency'])

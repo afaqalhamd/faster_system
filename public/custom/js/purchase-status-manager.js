@@ -49,16 +49,72 @@ class PurchaseStatusManager {
 
         // For existing purchases (edit form)
         if (purchaseId && purchaseId !== 'new' && this.statusesRequiringProof.includes(selectedStatus)) {
+            // Check if user is trying to select ROG status
+            if (selectedStatus === 'ROG') {
+                // Validate payment before allowing ROG status
+                if (!this.validatePaymentForROG()) {
+                    // Show error message and reset to previous status
+                    iziToast.error({
+                        title: 'Error',
+                        message: 'Cannot select ROG status. Please ensure the purchase is fully paid before changing to ROG status.',
+                        position: 'topRight'
+                    });
+                    // Reset the select to the current status
+                    const currentStatus = $('#current_purchase_status').val() || 'Pending';
+                    $(selectElement).val(currentStatus);
+                    return;
+                }
+            }
             this.showStatusUpdateModal(purchaseId, selectedStatus);
         } else if (purchaseId && purchaseId !== 'new') {
+            // Check if user is trying to select ROG status even for non-proof statuses (shouldn't happen but just in case)
+            if (selectedStatus === 'ROG') {
+                if (!this.validatePaymentForROG()) {
+                    iziToast.error({
+                        title: 'Error',
+                        message: 'Cannot select ROG status. Please ensure the purchase is fully paid before changing to ROG status.',
+                        position: 'topRight'
+                    });
+                    const currentStatus = $('#current_purchase_status').val() || 'Pending';
+                    $(selectElement).val(currentStatus);
+                    return;
+                }
+            }
             this.updateStatusDirectly(purchaseId, selectedStatus);
         }
+    }
+
+    /**
+     * Validate if the purchase is fully paid before allowing ROG status
+     */
+    validatePaymentForROG() {
+        // Get grand total and paid amount from the form
+        const grandTotal = parseFloat($('.grand_total').val()) || 0;
+        const paidAmount = parseFloat($('.paid_amount').val()) || 0;
+
+        // Allow a small tolerance for floating point comparison
+        const tolerance = 0.01;
+
+        // Check if paid amount is equal to or greater than grand total (within tolerance)
+        return (paidAmount + tolerance) >= grandTotal;
     }
 
     /**
      * Show modal for status update with proof requirements
      */
     showStatusUpdateModal(purchaseId, status) {
+        // Additional validation for ROG status
+        if (status === 'ROG' && !this.validatePaymentForROG()) {
+            iziToast.error({
+                title: 'Error',
+                message: 'Cannot select ROG status. Please ensure the purchase is fully paid before changing to ROG status.',
+                position: 'topRight'
+            });
+            const currentStatus = $('#current_purchase_status').val() || 'Pending';
+            $(`.purchase-status-select[data-purchase-id="${purchaseId}"]`).val(currentStatus);
+            return;
+        }
+
         const modal = `
             <div class="modal fade" id="statusUpdateModal" tabindex="-1">
                 <div class="modal-dialog">
@@ -363,20 +419,35 @@ class PurchaseStatusManager {
      * Show alert message
      */
     showAlert(type, message) {
-        const alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
+        // Map Bootstrap alert types to iziToast types
+        const iziToastType = type === 'danger' ? 'error' : type;
 
-        $('.alert').remove(); // Remove existing alerts
-        $('.page-content').prepend(alert);
+        // Configure iziToast based on type
+        const config = {
+            title: type === 'success' ? 'Success' : type === 'danger' || type === 'error' ? 'Error' : 'Info',
+            message: message,
+            position: 'topRight',
+            timeout: 5000,
+            close: true,
+            pauseOnHover: true
+        };
 
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            $('.alert').fadeOut();
-        }, 5000);
+        // Show the appropriate iziToast notification
+        switch(iziToastType) {
+            case 'success':
+                iziToast.success(config);
+                break;
+            case 'error':
+                iziToast.error(config);
+                break;
+            case 'warning':
+                iziToast.warning(config);
+                break;
+            case 'info':
+            default:
+                iziToast.info(config);
+                break;
+        }
     }
 }
 

@@ -49,6 +49,7 @@ class PurchaseOrderRequest extends FormRequest
             'currency_id'          => ['nullable', 'integer', 'min:1'],
             'exchange_rate'        => ['nullable', 'numeric', 'min:0'],
             'order_status'         => ['required', 'string','max:50'],
+            'carrier_id'           => ['nullable', 'integer', Rule::exists('carriers', 'id')],
         ];
 
         if ($this->isMethod('PUT')) {
