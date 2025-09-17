@@ -100,11 +100,17 @@ $(function() {
                     className: 'text-center',
                     render: function(data, type, full, meta) {
                         // If data already contains HTML, return it as is
-                        if (data.order_status && data.order_status.includes('<div class="badge')) {
-                            return data.order_status;
+                        if (typeof data === 'string' && data.includes('<div class="badge')) {
+                            return data;
                         }
 
-                        // Status mapping with icons and colors
+                        // Use the saleOrderStatusIcons library to create the badge
+                        if (window.saleOrderStatusIcons && typeof window.saleOrderStatusIcons.createStatusBadge === 'function') {
+                            const statusText = data.order_status || 'No Status';
+                            return window.saleOrderStatusIcons.createStatusBadge(statusText);
+                        }
+
+                        // Fallback to original implementation if saleOrderStatusIcons is not available
                         const statusMap = {
                             'Pending': {
                                 class: 'bg-light-warning text-warning',
@@ -136,12 +142,6 @@ $(function() {
                                 text: 'Cancelled',
                                 icon: 'bx-x-circle'
                             },
-                            'No Status': {
-                                class: 'bg-light-secondary text-secondary',
-                                text: 'No Status',
-                                icon: 'bx-help-circle'
-                            },
-                            // Handle lowercase variants
                             'pending': {
                                 class: 'bg-light-warning text-warning',
                                 text: 'Pending',

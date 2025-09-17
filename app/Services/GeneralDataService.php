@@ -66,7 +66,7 @@ class GeneralDataService{
                 [
                     'id'    =>  'POD',
                     'name'    =>  'POD',
-                    'color'    =>  'primary',
+                    'color'    =>  'success',
                     'icon'    =>  'bx-receipt',
                 ],
                 [
@@ -116,12 +116,12 @@ class GeneralDataService{
                     'color'    =>  'info',
                     'icon'    =>  'bx-package',
                 ],
-                [
-                    'id'    =>  'Delivery Payment', // New status for payment at delivery
-                    'name'    =>  __('sale.delivery_payment'),
-                    'color'    =>  'info',
-                    'icon'    =>  'bx-credit-card',
-                ],
+                // [
+                //     'id'    =>  'Delivery Payment', // New status for payment at delivery
+                //     'name'    =>  __('sale.delivery_payment'),
+                //     'color'    =>  'info',
+                //     'icon'    =>  'bx-credit-card',
+                // ],
                 [
                     'id'    =>  'POD',
                     'name'    =>  __('sale.pod'),

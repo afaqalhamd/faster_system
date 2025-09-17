@@ -16,8 +16,6 @@ return [
 'print' => 'طباعة بيع',
 'reference_no'                  => 'المرجع',
 
-
-
 'convert_to_sale' => 'تحويل للبيع',
 'already_converted' => 'أمر البيع تحويل بالفعل إلى فاتورة البيع',
 
@@ -132,16 +130,30 @@ return [
 'inventory_already_deducted'    => 'تم خصم المخزون بالفعل',
 'inventory_deducted_successfully' => 'تم خصم المخزون بنجاح',
 'post_delivery_cancelled'       => 'ملغي بعد التسليم',
+'inventory_will_be_automatically_deducted' => 'سيتم خصم المخزون تلقائيًا عند إكمال الدفع',
+'deducted_on'                   => 'تم الخصم في',
+'manual_inventory_deduction'    => 'خصم المخزون يدويًا',
+'no_status'                     => 'لا توجد حالة',
+'reserved'                      => 'محجوز',
 
 // Status History
 'status_change_history'         => 'سجل تغيير الحالات',
-'notes'                         => 'الملاحظات',
-'proof_image'                   => 'صورة الإثبات',
+'changes_count'                 => ':count تغييرات',
+'view_proof'                    => 'عرض الإثبات',
+'proof_image_title'             => ':status صورة الإثبات',
+'proof_image_alt'               => ':status إثبات',
+'notes'                         => 'الملاحظة',
 'changed_by'                    => 'تم التغيير بواسطة',
 'view_full_size'                => 'عرض بالحجم الكامل',
 'download'                      => 'تحميل',
 'close'                         => 'إغلاق',
 'sale_details'                  => 'تفاصيل البيع',
 'grand_total'                   => 'الإجمالي',
+'initial'                       => '(أولي)',
+'system_auto'                   => 'النظام التلقائي',
+'unknown_user'                  => 'مستخدم غير معروف',
+'no_status_history_available'   => 'لا يوجد سجل حالات متاح حتى الآن.',
+'status_changes_will_be_recorded' => 'سيتم تسجيل تغييرات الحالة هنا.',
+'pod_payment_error' => 'لا يمكن تحديد حالة "إثبات التسليم" (أثبات التسليم). يرجى التأكد من أن عملية البيع مدفوعة بالكامل قبل تغيير الحالة.',
 
 ];

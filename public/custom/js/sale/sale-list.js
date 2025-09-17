@@ -129,68 +129,73 @@ $(function() {
                             return data;
                         }
 
-                        // Otherwise, create the badge HTML based on inventory status
-                        const statusMap = {
-                            'deducted': { class: 'bg-light-success text-success', text: 'Inventory Deducted' },
-                            'pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
-                            'ready_for_deduction': { class: 'bg-light-primary text-primary', text: 'Ready for Deduction' },
-                            'Deducted': { class: 'bg-light-success text-success', text: 'Inventory Deducted' },
-                            'Pending': { class: 'bg-light-warning text-warning', text: 'Pending' },
-                            'Ready for Deduction': { class: 'bg-light-primary text-primary', text: 'Ready for Deduction' }
-                            // Removed 'deducted_delivered' entry as it's handled dynamically below
-                        };
-
                         // Check if we have a translation for this status
                         let displayText = data;
                         let statusClass = 'bg-light-secondary text-secondary'; // default
                         let statusIcon = ''; // default no icon
 
                         if (data === 'deducted') {
-                            displayText = 'Inventory Deducted';
+                            displayText = window.translations?.inventory_deducted || 'Inventory Deducted';
                             statusClass = 'bg-light-success text-success';
                         } else if (data === 'pending') {
-                            displayText = 'Pending';
+                            displayText = window.translations?.pending || 'Pending';
                             statusClass = 'bg-light-warning text-warning';
                         } else if (data === 'ready_for_deduction') {
-                            displayText = 'Ready for Deduction';
+                            displayText = window.translations?.ready_for_deduction || 'Ready for Deduction';
                             statusClass = 'bg-light-primary text-primary';
                         } else if (data === 'deducted_delivered') {
                             // Check the post_delivery_action to determine the correct text
                             const postDeliveryAction = full.post_delivery_action ? full.post_delivery_action.toString().trim() : '';
 
                             if (postDeliveryAction === 'Cancelled') {
-                                displayText = 'Post-Delivery Cancelled';
+                                displayText = window.translations?.post_delivery_cancelled || 'Post-Delivery Cancelled';
                                 statusClass = 'bg-light-danger text-danger'; // Red for cancellation
                                 statusIcon = 'bx-x-circle';
                             } else if (postDeliveryAction === 'Returned') {
-                                displayText = 'Post-Delivery Return';
+                                displayText = window.translations?.post_delivery_return || 'Post-Delivery Return';
                                 statusClass = 'bg-light-warning text-warning'; // Orange for return
                                 statusIcon = 'bx-undo';
                             } else {
                                 // Fallback - check sales_status as backup
                                 const salesStatus = full.sales_status ? full.sales_status.toString().trim() : '';
                                 if (salesStatus === 'Cancelled') {
-                                    displayText = 'Post-Delivery Cancelled';
+                                    displayText = window.translations?.post_delivery_cancelled || 'Post-Delivery Cancelled';
                                     statusClass = 'bg-light-danger text-danger'; // Red for cancellation
                                     statusIcon = 'bx-x-circle';
                                 } else if (salesStatus === 'Returned') {
-                                    displayText = 'Post-Delivery Return';
+                                    displayText = window.translations?.post_delivery_return || 'Post-Delivery Return';
                                     statusClass = 'bg-light-warning text-warning'; // Orange for return
                                     statusIcon = 'bx-undo';
                                 } else {
                                     // Final fallback - use a generic text
-                                    displayText = 'Post-Delivery Action';
+                                    displayText = window.translations?.post_delivery_action || 'Post-Delivery Action';
                                     statusClass = 'bg-light-secondary text-secondary';
                                     statusIcon = 'bx-help-circle';
                                 }
                             }
+                        } else {
+                            // For other statuses, try to find translations
+                            switch(data) {
+                                case 'Deducted':
+                                    displayText = window.translations?.inventory_deducted || 'Inventory Deducted';
+                                    statusClass = 'bg-light-success text-success';
+                                    break;
+                                case 'Pending':
+                                    displayText = window.translations?.pending || 'Pending';
+                                    statusClass = 'bg-light-warning text-warning';
+                                    break;
+                                case 'Ready for Deduction':
+                                    displayText = window.translations?.ready_for_deduction || 'Ready for Deduction';
+                                    statusClass = 'bg-light-primary text-primary';
+                                    break;
+                                default:
+                                    displayText = data;
+                            }
                         }
-
-                        const statusInfo = statusMap[data] || { class: statusClass, text: displayText };
 
                         // Create the badge with icon if available
                         const iconHtml = statusIcon ? `<i class="bx ${statusIcon} me-1"></i>` : '';
-                        return `<div class="badge ${statusInfo.class} p-2 px-3">${iconHtml}${statusInfo.text}</div>`;
+                        return `<div class="badge ${statusClass} p-2 px-3">${iconHtml}${displayText}</div>`;
                     }
                 },
 
@@ -205,7 +210,12 @@ $(function() {
                             return data;
                         }
 
-                        // Otherwise, create the badge HTML based on getSaleStatus() method
+                        // Use the saleStatusIcons library to create the badge
+                        if (window.saleStatusIcons && typeof window.saleStatusIcons.createStatusBadge === 'function') {
+                            return window.saleStatusIcons.createStatusBadge(data);
+                        }
+
+                        // Fallback to original implementation if saleStatusIcons is not available
                         const statusMap = {
                             'Pending': { class: 'bg-light-warning text-warning', text: 'Pending', icon: 'bx-time-five' },
                             'Processing': { class: 'bg-light-primary text-primary', text: 'Processing', icon: 'bx-loader-circle bx-spin' },

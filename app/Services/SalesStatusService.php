@@ -374,8 +374,7 @@ class SalesStatusService
             'Pending' => ['Processing', 'Completed', 'Delivery', 'POD', 'Cancelled'],
             'Processing' => ['Completed', 'Delivery', 'POD', 'Cancelled'],
             'Completed' => ['Delivery', 'POD', 'Cancelled', 'Returned'],
-            'Delivery' => ['POD', 'Delivery Payment', 'Cancelled', 'Returned'], // Added Delivery Payment
-            'Delivery Payment' => ['POD', 'Cancelled', 'Returned'], // New status for payment at delivery
+            'Delivery' => ['POD',  'Cancelled', 'Returned'], // Added Delivery Payment
             'POD' => ['Completed', 'Delivery', 'Cancelled', 'Returned'],
             'Cancelled' => [], // Cannot change from cancelled
             'Returned' => [], // Cannot change from returned

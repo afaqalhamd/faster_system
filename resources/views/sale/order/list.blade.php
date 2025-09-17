@@ -115,4 +115,16 @@
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/status-history/status-history.js') }}"></script>
+<script>
+    // Pass translations to the sale order status icons library
+    window.saleOrderStatusIcons.setTranslations({
+        'sale.pending': "{{ __('sale.pending') }}",
+        'sale.processing': "{{ __('sale.processing') }}",
+        'sale.completed': "{{ __('sale.completed') }}",
+        'sale.delivery': "{{ __('sale.delivery') }}",
+        'sale.pod': "{{ __('sale.pod') }}",
+        'sale.cancelled': "{{ __('sale.cancelled') }}",
+        'sale.no_status': "{{ __('sale.no_status') }}"
+    });
+</script>
 @endsection

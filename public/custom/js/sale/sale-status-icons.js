@@ -9,39 +9,64 @@ class SaleStatusIcons {
             'Pending': {
                 icon: 'bx-time-five',
                 color: 'warning',
+                translationKey: 'sale.pending',
                 description: 'Waiting for processing'
             },
             'Processing': {
                 icon: 'bx-loader-circle bx-spin',
                 color: 'primary',
+                translationKey: 'sale.processing',
                 description: 'Order is being processed'
             },
             'Completed': {
                 icon: 'bx-check-circle',
                 color: 'success',
+                translationKey: 'sale.completed',
                 description: 'Order completed successfully'
             },
             'Delivery': {
                 icon: 'bx-package',
                 color: 'info',
+                translationKey: 'sale.delivery',
                 description: 'Out for delivery'
             },
             'POD': {
                 icon: 'bx-receipt',
-                color: 'primary',
+                color: 'success',
+                translationKey: 'sale.pod',
                 description: 'Proof of Delivery required'
             },
             'Cancelled': {
                 icon: 'bx-x-circle',
                 color: 'danger',
+                translationKey: 'sale.cancelled',
                 description: 'Order cancelled'
             },
             'Returned': {
                 icon: 'bx-undo',
                 color: 'secondary',
+                translationKey: 'sale.returned',
                 description: 'Order returned'
             }
         };
+
+        // Store translations - will be populated from the server
+        this.translations = {};
+    }
+
+    /**
+     * Set translations for the status texts
+     * This method should be called from the Blade template with translated texts
+     */
+    setTranslations(translations) {
+        this.translations = translations;
+    }
+
+    /**
+     * Check if the document is in RTL mode
+     */
+    isRTL() {
+        return document.documentElement.dir === 'rtl';
     }
 
     /**
@@ -53,8 +78,18 @@ class SaleStatusIcons {
         return this.statusConfig[normalizedStatus] || this.statusConfig[status] || {
             icon: 'bx-help-circle',
             color: 'secondary',
+            translationKey: 'sale.unknown',
             description: 'Unknown status'
         };
+    }
+
+    /**
+     * Get translated status text
+     */
+    getTranslatedStatus(status) {
+        const config = this.getStatusConfig(status);
+        // If we have translations loaded, use them; otherwise fallback to the status name
+        return this.translations[config.translationKey] || this.translations[status] || status;
     }
 
     /**
@@ -62,6 +97,7 @@ class SaleStatusIcons {
      */
     createStatusBadge(status, options = {}) {
         const config = this.getStatusConfig(status);
+        const translatedStatus = this.getTranslatedStatus(status);
         const size = options.size || 'normal'; // small, normal, large
         const showText = options.showText !== false; // default true
         const customClass = options.customClass || '';
@@ -84,16 +120,26 @@ class SaleStatusIcons {
             badgeClass += ` ${customClass}`;
         }
 
+        // Handle RTL direction for icon positioning
+        const isRTL = this.isRTL();
         const iconHtml = `<i class="${iconClass}" title="${config.description}"></i>`;
-        const textHtml = showText ? `<span class="ms-1">${status}</span>` : '';
+        const textHtml = showText ? `<span class="${isRTL ? 'me-1' : 'ms-1'}">${translatedStatus}</span>` : '';
 
         if (showText) {
-            return `<div class="${badgeClass} d-flex align-items-center text-uppercase">
-                        ${iconHtml}
-                        ${textHtml}
-                    </div>`;
+            // For RTL, we need to reverse the order of icon and text
+            if (isRTL) {
+                return `<div class="${badgeClass} d-flex align-items-center text-uppercase">
+                            ${textHtml}
+                            ${iconHtml}
+                        </div>`;
+            } else {
+                return `<div class="${badgeClass} d-flex align-items-center text-uppercase">
+                            ${iconHtml}
+                            ${textHtml}
+                        </div>`;
+            }
         } else {
-            return `<div class="${badgeClass} d-flex align-items-center justify-content-center" title="${status} - ${config.description}">
+            return `<div class="${badgeClass} d-flex align-items-center justify-content-center" title="${translatedStatus} - ${config.description}">
                         ${iconHtml}
                     </div>`;
         }
@@ -154,6 +200,7 @@ class SaleStatusIcons {
         if (!selectedValue) return;
 
         const config = this.getStatusConfig(selectedValue);
+        const translatedStatus = this.getTranslatedStatus(selectedValue);
 
         // Find or create icon container
         let $iconContainer = $select.siblings('.status-icon-display');
@@ -162,7 +209,16 @@ class SaleStatusIcons {
             $select.after($iconContainer);
         }
 
+        // Handle RTL for margin
+        if (this.isRTL()) {
+            $iconContainer.removeClass('ms-2').addClass('me-2');
+        } else {
+            $iconContainer.removeClass('me-2').addClass('ms-2');
+        }
+
+        // Update the title with translated status
         $iconContainer.html(this.createIcon(selectedValue, { size: 'font-16' }));
+        $iconContainer.attr('title', translatedStatus + ' - ' + config.description);
     }
 
     /**

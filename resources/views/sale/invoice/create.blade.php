@@ -64,7 +64,7 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <x-label for="reference_no" name="{{ __('app.reference_no') }}" />
-                                                <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value=""/>
+                                                <x-input type="text" name="reference_no" :required="false" placeholder="(Optional)" value="TB00{{ $data['count_id'] }}"/>
                                             </div>
                                             <div class="col-md-4">
                                                 <x-label for="sales_status" name="{{ __('Sales Status') }}" />

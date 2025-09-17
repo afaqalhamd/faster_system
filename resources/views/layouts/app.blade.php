@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="{{ $themeMode ?? 'light-theme' }}" lang="en" dir="{{ $appDirection ?? 'ltr' }}">
+<html class="{{ $themeMode ?? 'light-theme' }}" lang="{{ app()->getLocale() }}" dir="{{ $appDirection ?? 'ltr' }}">
 
 @include('layouts.head')
 

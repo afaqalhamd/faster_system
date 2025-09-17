@@ -6,7 +6,52 @@
 class SalesStatusManager {
     constructor() {
         this.statusesRequiringProof = ['POD', 'Cancelled', 'Returned'];
+
+        // Translations
+        this.translations = {
+            en: {
+                pod_payment_error: 'Cannot select POD status. Please ensure the sale is fully paid before changing to POD status.',
+                success: 'Success',
+                error: 'Error',
+                info: 'Info',
+                status_history: 'Sales Status History',
+                no_status_history: 'No status history available.',
+                view_proof: 'View Proof',
+                changed_by: 'Changed by',
+                initial: 'Initial',
+                no_notes: 'No notes provided',
+                unknown: 'Unknown',
+                close: 'Close'
+            },
+            ar: {
+                pod_payment_error: 'لا يمكن تحديد حالة "إثبات التسليم" (POD). يرجى التأكد من أن عملية البيع مدفوعة بالكامل قبل تغيير الحالة.',
+                success: 'نجاح',
+                error: 'خطأ',
+                info: 'معلومة',
+                status_history: 'سجل حالات المبيعات',
+                no_status_history: 'لا يوجد سجل للحالات متاح.',
+                view_proof: 'عرض الإثبات',
+                changed_by: 'تم التغيير بواسطة',
+                initial: 'أولي',
+                no_notes: 'لا توجد ملاحظات',
+                unknown: 'غير معروف',
+                close: 'إغلاق'
+            }
+        };
+
+        // Detect current language (default to English)
+        this.currentLang = document.documentElement.lang || 'en';
+
         this.initializeEventListeners();
+    }
+
+    /**
+     * Get translated message
+     */
+    getTranslation(key) {
+        return this.translations[this.currentLang] && this.translations[this.currentLang][key]
+            ? this.translations[this.currentLang][key]
+            : this.translations['en'][key] || key;
     }
 
     /**
@@ -49,16 +94,60 @@ class SalesStatusManager {
 
         // For existing sales (edit form)
         if (saleId && saleId !== 'new' && this.statusesRequiringProof.includes(selectedStatus)) {
+            // Check if user is trying to select POD status
+            if (selectedStatus === 'POD') {
+                // Validate payment before allowing POD status
+                if (!this.validatePaymentForPOD()) {
+                    // Show error message and reset to previous status
+                    this.showAlert('danger', this.getTranslation('pod_payment_error'));
+                    // Reset the select to the current status
+                    const currentStatus = $('#current_sale_status').val() || 'Pending';
+                    $(selectElement).val(currentStatus);
+                    return;
+                }
+            }
             this.showStatusUpdateModal(saleId, selectedStatus);
         } else if (saleId && saleId !== 'new') {
+            // Check if user is trying to select POD status even for non-proof statuses (shouldn't happen but just in case)
+            if (selectedStatus === 'POD') {
+                if (!this.validatePaymentForPOD()) {
+                    this.showAlert('danger', this.getTranslation('pod_payment_error'));
+                    const currentStatus = $('#current_sale_status').val() || 'Pending';
+                    $(selectElement).val(currentStatus);
+                    return;
+                }
+            }
             this.updateStatusDirectly(saleId, selectedStatus);
         }
+    }
+
+    /**
+     * Validate if the sale is fully paid before allowing POD status
+     */
+    validatePaymentForPOD() {
+        // Get grand total and paid amount from the form
+        const grandTotal = parseFloat($('.grand_total').val()) || 0;
+        const paidAmount = parseFloat($('.paid_amount').val()) || 0;
+
+        // Allow a small tolerance for floating point comparison
+        const tolerance = 0.01;
+
+        // Check if paid amount is equal to or greater than grand total (within tolerance)
+        return (paidAmount + tolerance) >= grandTotal;
     }
 
     /**
      * Show modal for status update with proof requirements
      */
     showStatusUpdateModal(saleId, status) {
+        // Additional validation for POD status
+        if (status === 'POD' && !this.validatePaymentForPOD()) {
+            this.showAlert('danger', this.getTranslation('pod_payment_error'));
+            const currentStatus = $('#current_sale_status').val() || 'Pending';
+            $(`.sales-status-select[data-sale-id="${saleId}"]`).val(currentStatus);
+            return;
+        }
+
         const modal = `
             <div class="modal fade" id="statusUpdateModal" tabindex="-1">
                 <div class="modal-dialog">
@@ -237,6 +326,9 @@ class SalesStatusManager {
         $('#sales_status option').prop('selected', false);
         $('#sales_status option[value="' + response.sales_status + '"]').prop('selected', true);
 
+        // Update the hidden current status field
+        $('#current_sale_status').val(response.sales_status);
+
         // Show success message
         this.showAlert('success', response.message +
             (response.inventory_updated ? ' Inventory has been updated.' : ''));
@@ -246,6 +338,13 @@ class SalesStatusManager {
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
+        } else {
+            // For POD status changes, we might want to refresh the page to show updated information
+            if (response.sales_status === 'POD') {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
         }
     }
 
@@ -290,7 +389,7 @@ class SalesStatusManager {
         let historyHtml = '<div class="timeline">';
 
         if (history.length === 0) {
-            historyHtml += '<p class="text-muted">No status history available.</p>';
+            historyHtml += `<p class="text-muted">${this.getTranslation('no_status_history')}</p>`;
         } else {
             history.forEach((item, index) => {
                 historyHtml += `
@@ -299,15 +398,15 @@ class SalesStatusManager {
                         <div class="timeline-content">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <strong>${item.previous_status || 'Initial'} → ${item.new_status}</strong>
-                                    <p class="mb-1">${item.notes || 'No notes provided'}</p>
+                                    <strong>${item.previous_status || this.getTranslation('initial')} → ${item.new_status}</strong>
+                                    <p class="mb-1">${item.notes || this.getTranslation('no_notes')}</p>
                                     <small class="text-muted">
-                                        Changed by ${item.changed_by?.name || 'Unknown'} on ${new Date(item.changed_at).toLocaleString()}
+                                        ${this.getTranslation('changed_by')} ${item.changed_by?.name || this.getTranslation('unknown')} on ${new Date(item.changed_at).toLocaleString()}
                                     </small>
                                 </div>
                                 ${item.proof_image ? `
                                     <a href="/storage/${item.proof_image}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="bx bx-image"></i> View Proof
+                                        <i class="bx bx-image"></i> ${this.getTranslation('view_proof')}
                                     </a>
                                 ` : ''}
                             </div>
@@ -324,14 +423,14 @@ class SalesStatusManager {
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Sales Status History</h5>
+                            <h5 class="modal-title">${this.getTranslation('status_history')}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             ${historyHtml}
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${this.getTranslation('close')}</button>
                         </div>
                     </div>
                 </div>
@@ -363,20 +462,43 @@ class SalesStatusManager {
      * Show alert message
      */
     showAlert(type, message) {
-        const alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
+        // Map Bootstrap alert types to iziToast types
+        const iziToastType = type === 'danger' ? 'error' : type;
 
-        $('.alert').remove(); // Remove existing alerts
-        $('.page-content').prepend(alert);
+        // Get translated title based on type
+        let title = this.getTranslation('info');
+        if (type === 'success') {
+            title = this.getTranslation('success');
+        } else if (type === 'danger' || type === 'error') {
+            title = this.getTranslation('error');
+        }
 
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            $('.alert').fadeOut();
-        }, 5000);
+        // Configure iziToast based on type
+        const config = {
+            title: title,
+            message: message,
+            position: 'topRight',
+            timeout: 5000,
+            close: true,
+            pauseOnHover: true
+        };
+
+        // Show the appropriate iziToast notification
+        switch(iziToastType) {
+            case 'success':
+                iziToast.success(config);
+                break;
+            case 'error':
+                iziToast.error(config);
+                break;
+            case 'warning':
+                iziToast.warning(config);
+                break;
+            case 'info':
+            default:
+                iziToast.info(config);
+                break;
+        }
     }
 }
 

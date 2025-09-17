@@ -313,15 +313,15 @@
                                                 @if($order->inventory_status === 'pending')
                                                     <div class="alert alert-warning alert-dismissible fade show" role="alert">
                                                         <i class="bx bx-clock"></i>
-                                                        <strong>{{ __('Inventory Status') }}:</strong> {{ __('Reserved but not deducted') }}
-                                                        <br><small>{{ __('Inventory will be automatically deducted when payment is completed') }}</small>
+                                                        <strong>{{ __('app.inventory_status') }}:</strong> {{ __('sale.pending') }}
+                                                        <br><small>{{ __('sale.inventory_will_be_automatically_deducted') }}</small>
                                                     </div>
                                                 @elseif($order->inventory_status === 'deducted')
                                                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                                                         <i class="bx bx-check-circle"></i>
-                                                        <strong>{{ __('Inventory Status') }}:</strong> {{ __('Deducted') }}
+                                                        <strong>{{ __('app.inventory_status') }}:</strong> {{ __('sale.inventory_deducted') }}
                                                         @if($order->inventory_deducted_at)
-                                                            <br><small>{{ __('Deducted on') }}: {{ $order->inventory_deducted_at->format('Y-m-d H:i:s') }}</small>
+                                                            <br><small>{{ __('sale.deducted_on') }}: {{ $order->inventory_deducted_at->format('Y-m-d H:i:s') }}</small>
                                                         @endif
                                                     </div>
                                                 @endif
@@ -329,7 +329,7 @@
                                                 @if($order->inventory_status === 'pending' && auth()->user()->can('sale.order.manual.inventory.deduction'))
                                                     <div class="mb-3">
                                                         <button type="button" class="btn btn-outline-primary btn-sm" id="manualInventoryDeduction" data-order-id="{{ $order->id }}">
-                                                            <i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}
+                                                            <i class="bx bx-package"></i> {{ __('sale.manual_inventory_deduction') }}
                                                         </button>
                                                     </div>
                                                 @endif
@@ -371,10 +371,10 @@
                                     {{-- Status Change History Section --}}
                                     <div class="card-header px-4 py-3">
                                         <div class="d-flex align-items-center justify-content-between">
-                                            <h5 class="mb-0">Status Change History</h5>
+                                            <h5 class="mb-0">{{ __('sale.status_change_history') }}</h5>
                                             <div class="d-flex align-items-center">
                                                 <span class="badge bg-light text-muted me-2 small" id="statusHistoryCount">
-                                                    {{ $order->saleOrderStatusHistories->count() }} changes
+                                                    {{ trans_choice('sale.changes_count', $order->saleOrderStatusHistories->count(), ['count' => $order->saleOrderStatusHistories->count()]) }}
                                                 </span>
                                                 <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#statusHistoryCollapse" aria-expanded="true" aria-controls="statusHistoryCollapse">
                                                     <i class="bx bx-chevron-up fs-6"></i>
@@ -399,6 +399,20 @@
                                                             ];
                                                             $currentStatus = $statusConfig[$history->new_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary'];
                                                             $previousStatus = $history->previous_status ? ($statusConfig[$history->previous_status] ?? ['icon' => 'bx-circle', 'color' => 'secondary']) : null;
+
+                                                            // Get translation keys for status values
+                                                            $statusTranslationMap = [
+                                                                'Pending' => 'sale.pending',
+                                                                'Processing' => 'sale.processing',
+                                                                'Completed' => 'sale.completed',
+                                                                'Delivery' => 'sale.delivery',
+                                                                'POD' => 'sale.pod',
+                                                                'Cancelled' => 'sale.cancelled',
+                                                                'Returned' => 'sale.returned'
+                                                            ];
+
+                                                            $newStatusTranslation = $statusTranslationMap[$history->new_status] ?? $history->new_status;
+                                                            $previousStatusTranslation = $history->previous_status ? ($statusTranslationMap[$history->previous_status] ?? $history->previous_status) : null;
                                                         @endphp
 
                                                         <div class="d-flex align-items-start mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }} position-relative">
@@ -426,16 +440,16 @@
                                                                         @if($history->previous_status)
                                                                             <div class="d-flex align-items-center gap-1 mb-1">
                                                                                 <span class="badge bg-{{ $previousStatus['color'] }} text-white small">
-                                                                                    <i class="bx {{ $previousStatus['icon'] }} me-1"></i>{{ $history->previous_status }}
+                                                                                    <i class="bx {{ $previousStatus['icon'] }} me-1"></i>{{ __($previousStatusTranslation) }}
                                                                                 </span>
                                                                                 <i class="bx bx-right-arrow-alt text-muted" style="font-size: 12px;"></i>
                                                                                 <span class="badge bg-{{ $currentStatus['color'] }} text-white small">
-                                                                                    <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ $history->new_status }}
+                                                                                    <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ __($newStatusTranslation) }}
                                                                                 </span>
                                                                             </div>
                                                                         @else
                                                                             <span class="badge bg-{{ $currentStatus['color'] }} text-white small">
-                                                                                <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ $history->new_status }} <small>(Initial)</small>
+                                                                                <i class="bx {{ $currentStatus['icon'] }} me-1"></i>{{ __($newStatusTranslation) }} <small>{{ __('sale.initial') }}</small>
                                                                             </span>
                                                                         @endif
                                                                     </div>
@@ -447,29 +461,30 @@
 
                                                                 @if($history->notes)
                                                                     <div class="bg-light rounded p-2 mb-2">
-                                                                        <small><i class="bx bx-note text-primary me-1"></i><strong>Notes:</strong> {{ $history->notes }}</small>
+                                                                        <small><i class="bx bx-note text-primary me-1"></i><strong>{{ __('sale.notes') }}:</strong> {{ $history->notes }}</small>
                                                                     </div>
                                                                 @endif
 
                                                                 <div class="d-flex justify-content-between align-items-center">
                                                                     <small class="text-muted">
                                                                         <i class="bx bx-user text-danger me-1"></i>
+                                                                        {{ __('sale.changed_by') }}:
                                                                         @if($history->changedBy)
                                                                             {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
                                                                         @elseif($history->changed_by)
                                                                             @php
                                                                                 $user = \App\Models\User::find($history->changed_by);
-                                                                                $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                                $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : __('sale.unknown_user');
                                                                             @endphp
                                                                             {{ $userName }}
                                                                         @else
-                                                                            System Auto
+                                                                            {{ __('sale.system_auto') }}
                                                                         @endif
                                                                     </small>
 
                                                                     @if($history->proof_image)
                                                                         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#proofImageModal{{ $history->id }}">
-                                                                            <i class="bx bx-image me-1"></i>View Proof
+                                                                            <i class="bx bx-image me-1"></i>{{ __('sale.view_proof') }}
                                                                         </button>
                                                                     @endif
                                                                 </div>
@@ -482,34 +497,34 @@
                                                             <div class="modal-dialog modal-lg">
                                                                 <div class="modal-content">
                                                                     <div class="modal-header">
-                                                                        <h6 class="modal-title">{{ $history->new_status }} Proof Image</h6>
+                                                                        <h6 class="modal-title">{{ __('sale.proof_image_title', ['status' => __($newStatusTranslation)]) }}</h6>
                                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                                     </div>
                                                                     <div class="modal-body text-center">
                                                                         <img src="{{ asset('storage/' . $history->proof_image) }}"
-                                                                             alt="{{ $history->new_status }} Proof"
+                                                                             alt="{{ __('sale.proof_image_alt', ['status' => __($newStatusTranslation)]) }}"
                                                                              class="img-fluid rounded">
 
                                                                         @if($history->notes)
                                                                             <div class="mt-3 p-3 bg-light rounded">
-                                                                                <strong>Notes:</strong>
+                                                                                <strong>{{ __('sale.notes') }}:</strong>
                                                                                 <p class="mb-0">{{ $history->notes }}</p>
                                                                             </div>
                                                                         @endif
 
                                                                         <div class="mt-3 text-muted">
                                                                             <small>
-                                                                                Changed by:
+                                                                                {{ __('sale.changed_by') }}:
                                                                                 @if($history->changedBy)
                                                                                     {{ trim($history->changedBy->first_name . ' ' . $history->changedBy->last_name) }}
                                                                                 @elseif($history->changed_by)
                                                                                     @php
                                                                                         $user = \App\Models\User::find($history->changed_by);
-                                                                                        $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown User';
+                                                                                        $userName = $user ? trim($user->first_name . ' ' . $user->last_name) : __('sale.unknown_user');
                                                                                     @endphp
                                                                                     {{ $userName }}
                                                                                 @else
-                                                                                    System Auto
+                                                                                    {{ __('sale.system_auto') }}
                                                                                 @endif
                                                                                  | {{ $history->changed_at->format('M d, Y H:i') }}
                                                                             </small>
@@ -517,9 +532,9 @@
                                                                     </div>
                                                                     <div class="modal-footer">
                                                                         <a href="{{ asset('storage/' . $history->proof_image) }}" download class="btn btn-primary btn-sm">
-                                                                            <i class="bx bx-download me-1"></i>Download
+                                                                            <i class="bx bx-download me-1"></i>{{ __('sale.download') }}
                                                                         </a>
-                                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ __('sale.close') }}</button>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -529,8 +544,8 @@
                                                 @else
                                                     <div class="text-center py-5" id="noStatusHistoryMessage">
                                                         <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>
-                                                        <p class="text-muted mt-3">No status history available yet.</p>
-                                                        <p class="text-muted small">Status changes will be recorded here.</p>
+                                                        <p class="text-muted mt-3">{{ __('sale.no_status_history_available') }}</p>
+                                                        <p class="text-muted small">{{ __('sale.status_changes_will_be_recorded') }}</p>
                                                     </div>
                                                 @endif
                                             </div>

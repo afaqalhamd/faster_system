@@ -916,7 +916,7 @@ class SaleOrderController extends Controller
             ->addColumn('inventory_status', function ($row) {
                 $status = $row->inventory_status ?? 'pending';
                 $badgeClass = $status === 'deducted' ? 'bg-success' : 'bg-warning';
-                $statusText = $status === 'deducted' ? __('Deducted') : __('Reserved');
+                $statusText = $status === 'deducted' ? __('sale.inventory_deducted') : __('sale.reserved');
 
                 return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
             })

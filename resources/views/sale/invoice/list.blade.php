@@ -115,6 +115,27 @@
 <script src="{{ versionedAsset('custom/js/modals/payment/invoice-payment.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/email/send.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sms/sms.js') }}"></script>
+<script>
+    // Pass translations to the sale status icons library
+    window.saleStatusIcons.setTranslations({
+        'sale.pending': "{{ __('sale.pending') }}",
+        'sale.processing': "{{ __('sale.processing') }}",
+        'sale.completed': "{{ __('sale.completed') }}",
+        'sale.delivery': "{{ __('sale.delivery') }}",
+        'sale.pod': "{{ __('sale.pod') }}",
+        'sale.cancelled': "{{ __('sale.cancelled') }}",
+        'sale.returned': "{{ __('sale.returned') }}"
+    });
 
+    // Pass translations for inventory status
+    window.translations = {
+        'inventory_deducted': "{{ __('sale.inventory_deducted') }}",
+        'pending': "{{ __('sale.pending') }}",
+        'ready_for_deduction': "{{ __('sale.ready_for_deduction') }}",
+        'post_delivery_cancelled': "{{ __('sale.post_delivery_cancelled') }}",
+        'post_delivery_return': "{{ __('sale.returned') }}",
+        'post_delivery_action': "{{ __('app.action') }}"
+    };
+</script>
 
 @endsection

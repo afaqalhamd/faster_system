@@ -27,7 +27,7 @@ return [
     'paid'                          => 'Paid',
     'unpaid'                        => 'Unpaid',
     'paid_invoices'                 => 'Paid Invoices',
-    'unpaid_invoices'               => 'Unpaid Invoices',
+    'unpaid_invoices'                 => 'Unpaid Invoices',
     'payment_summary'               => 'Payment Summary',
     'daily_sales'                   => 'Daily Sales',
     'monthly_target'                => 'Monthly Target',
@@ -131,14 +131,30 @@ return [
     'inventory_already_deducted'    => 'Inventory Already Deducted',
     'inventory_deducted_successfully' => 'Inventory Deducted Successfully',
     'post_delivery_cancelled'       => 'Post-Delivery Cancelled',
+    'inventory_will_be_automatically_deducted' => 'Inventory will be automatically deducted when payment is completed',
+    'deducted_on'                   => 'Deducted on',
+    'manual_inventory_deduction'    => 'Manual Inventory Deduction',
+    'no_status'                     => 'No Status',
+    'reserved'                      => 'Reserved',
 
     // Status History
     'status_change_history'         => 'Status Change History',
+    'changes_count'                 => ':count changes',
+    'view_proof'                    => 'View Proof',
+    'proof_image_title'             => ':status Proof Image',
+    'proof_image_alt'               => ':status Proof',
     'notes'                         => 'Notes',
-    'proof_image'                   => 'Proof Image',
     'changed_by'                    => 'Changed by',
     'view_full_size'                => 'View Full Size',
     'download'                      => 'Download',
     'close'                         => 'Close',
+    'initial'                       => '(Initial)',
+    'system_auto'                   => 'System Auto',
+    'unknown_user'                  => 'Unknown User',
+    'no_status_history_available'   => 'No status history available yet.',
+    'status_changes_will_be_recorded' => 'Status changes will be recorded here.',
+
+    // POD Payment Error
+    'pod_payment_error'             => 'Cannot select POD status. Please ensure the sale is fully paid before changing to POD status.',
 
 ];

@@ -7,8 +7,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class MediaHelper
 {
     /**
-     * Generate a URL for a media file that works in any environment
-     *
+
+    *
      * @param Media $media
      * @param string $conversion
      * @return string
