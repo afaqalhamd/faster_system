@@ -130,7 +130,7 @@ return [
 'inventory_already_deducted'    => 'تم خصم المخزون بالفعل',
 'inventory_deducted_successfully' => 'تم خصم المخزون بنجاح',
 'post_delivery_cancelled'       => 'ملغي بعد التسليم',
-'inventory_will_be_automatically_deducted' => 'سيتم خصم المخزون تلقائيًا عند إكمال الدفع',
+'inventory_will_be_automatically_deducted' => 'سيتم خصم المخزون تلقائيًا عند إكمال الدفع و تحويل حالة الطلب الى POD' ,
 'deducted_on'                   => 'تم الخصم في',
 'manual_inventory_deduction'    => 'خصم المخزون يدويًا',
 'no_status'                     => 'لا توجد حالة',

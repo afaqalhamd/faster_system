@@ -680,6 +680,17 @@ class PurchaseOrderController extends Controller
             ->addColumn('balance', function ($row) {
                 return $this->formatWithPrecision($row->grand_total - $row->paid_amount);
             })
+            ->addColumn('payment_status', function ($row) {
+                $balance = $row->grand_total - $row->paid_amount;
+
+                if ($balance == 0) {
+                    return '<span class="badge bg-success"><i class="bx bx-check-circle me-1"></i>' . __('payment.paid') . '</span>';
+                } elseif ($row->paid_amount == 0) {
+                    return '<span class="badge bg-danger"><i class="bx bx-x-circle me-1"></i>' . __('payment.unpaid') . '</span>';
+                } else {
+                    return '<span class="badge bg-warning"><i class="bx bx-time-five me-1"></i>' . __('payment.partially_paid') . '</span>';
+                }
+            })
             ->addColumn('inventory_status', function ($row) {
                 $status = $row->inventory_status ?? 'pending';
                 $badgeClass = $status === 'added' ? 'bg-success' : 'bg-warning';
@@ -785,7 +796,7 @@ class PurchaseOrderController extends Controller
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action', 'inventory_status'])
+            ->rawColumns(['action', 'inventory_status', 'payment_status'])
             ->make(true);
     }
 

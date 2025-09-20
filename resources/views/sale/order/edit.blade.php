@@ -86,7 +86,11 @@
                                                 <x-label for="order_status" name="{{ __('sale.order_status') }}" />
                                                 <div class="d-flex gap-2">
                                                     <div class="position-relative flex-grow-1">
-                                                        <select class="form-select sale-order-status-select" name="order_status" id="order_status" data-order-id="{{ $order->id }}">
+                                                        @php
+                                                            // Check if user can edit sale order status
+                                                            $canEditStatus = \App\Http\Controllers\Sale\SaleOrderController::canUserEditSaleOrderStatus();
+                                                        @endphp
+                                                        <select class="form-select sale-order-status-select" name="order_status" id="order_status" data-order-id="{{ $order->id }}" {{ !$canEditStatus ? 'disabled' : '' }}>
                                                             @php
                                                                 $generalDataService = new \App\Services\GeneralDataService();
                                                                 $statusOptions = $generalDataService->getSaleOrderStatus();
@@ -109,10 +113,17 @@
                                                     </button>
                                                     @endif
                                                 </div>
-                                                <small class="text-muted">
-                                                    <i class="bx bx-info-circle"></i>
-                                                    {{ __('POD, Cancelled, and Returned statuses require proof images and notes') }}
-                                                </small>
+                                                @if(!$canEditStatus)
+                                                    <small class="text-muted">
+                                                        <i class="bx bx-info-circle"></i>
+                                                        {{ __('You do not have permission to edit the order status. Only Admin, Delivery, and Operations-Department roles can edit status.') }}
+                                                    </small>
+                                                @else
+                                                    <small class="text-muted">
+                                                        <i class="bx bx-info-circle"></i>
+                                                        {{ __('POD, Cancelled, and Returned statuses require proof images and notes') }}
+                                                    </small>
+                                                @endif
                                             </div>
                                             @if(app('company')['is_enable_secondary_currency'])
                                             <div class="col-md-4">
@@ -308,7 +319,6 @@
                                         </div>
                                     </div>
                                     <div class="card-header px-4 py-3">
-                                        <h5 class="mb-0">{{ __('payment.payment') }}</h5>
 
                                         @if(isset($order->inventory_status))
                                             <div class="mt-2">
@@ -329,22 +339,25 @@
                                                 @endif
 
                                                 @if($order->inventory_status === 'pending' && auth()->user()->can('sale.order.manual.inventory.deduction'))
-                                                    <div class="mb-3">
+                                                    {{-- <div class="mb-3">
                                                         <button type="button" class="btn btn-outline-primary btn-sm" id="manualInventoryDeduction" data-order-id="{{ $order->id }}">
                                                             <i class="bx bx-package"></i> {{ __('sale.manual_inventory_deduction') }}
                                                         </button>
-                                                    </div>
+                                                    </div> --}}
                                                 @endif
                                             </div>
                                         @endif
                                     </div>
                                     <div class="card-body p-4 row g-3 ">
                                         <div class="payment-container">
+                                                                                                                                    <h5 class="mb-0">{{ __(key: 'payment.payment') }}</h5>
+
                                             <div class="row payment-type-row-0 py-3 ">
+
                                                 <div class="col-md-6">
                                                     <x-label for="amount" id="amount_lang" labelDataName="{{ __('payment.amount') }}" name="<strong>#1</strong> {{ __('payment.amount') }}" />
                                                     <div class="input-group mb-3">
-                                                        <x-input type="text" additionalClasses="cu_numeric" name="payment_amount[0]" value=""/>
+                                                        <x-input type="text" additionalClasses="cu_numeric" name="payment_amount[0]" value="0"/>
                                                         <span class="input-group-text" id="input-near-focus" role="button"><i class="fadeIn animated bx bx-dollar"></i></span>
                                                     </div>
                                                 </div>
@@ -588,6 +601,9 @@
 <script type="text/javascript">
         const itemsTableRecords = @json($itemTransactionsJson);
         const taxList = JSON.parse('{!! $taxList !!}');
+
+        // Pass user role to JavaScript
+        window.userRole = @json($userRole);
 </script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
@@ -601,414 +617,8 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
-<script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
 
-{{--<script>--}}
-{{--// Timeline Animation--}}
-{{--$(document).ready(function() {--}}
-{{--    // Animate timeline connectors on page load--}}
-{{--    setTimeout(function() {--}}
-{{--        $('.timeline-connector').addClass('animate');--}}
-{{--    }, 500);--}}
 
-{{--    // Add hover effects to timeline items--}}
-{{--    $('.timeline-status-circle').hover(--}}
-{{--        function() {--}}
-{{--            $(this).closest('.position-relative').find('.timeline-connector').css('opacity', '1');--}}
-{{--        },--}}
-{{--        function() {--}}
-{{--            $(this).closest('.position-relative').find('.timeline-connector').css('opacity', '0.6');--}}
-{{--        }--}}
-{{--    );--}}
-
-{{--    // Automatically load status history on page load--}}
-{{--    const orderId = $('.view-status-history').data('order-id');--}}
-{{--    if (orderId) {--}}
-{{--        // Show loading indicator--}}
-{{--        $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');--}}
-
-{{--        // Fetch status history via AJAX--}}
-{{--        $.ajax({--}}
-{{--            url: `/sale/order/status-history/${orderId}`,--}}
-{{--            method: 'GET',--}}
-{{--            success: function(response) {--}}
-{{--                if (response.success) {--}}
-{{--                    updateStatusHistorySection(response.data);--}}
-{{--                } else {--}}
-{{--                    $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + (response.message || 'Unknown error') + '</p></div>');--}}
-{{--                }--}}
-{{--            },--}}
-{{--            error: function(xhr) {--}}
-{{--                let errorMessage = 'An error occurred while fetching status history.';--}}
-{{--                if (xhr.responseJSON && xhr.responseJSON.message) {--}}
-{{--                    errorMessage = xhr.responseJSON.message;--}}
-{{--                }--}}
-{{--                $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + errorMessage + '</p></div>');--}}
-{{--            }--}}
-{{--        });--}}
-{{--    }--}}
-
-{{--    // Status update functionality--}}
-{{--    const proofRequiredStatuses = ['POD', 'Cancelled', 'Returned'];--}}
-
-{{--    // Show/hide proof image section based on selected status--}}
-{{--    $('#order_status').on('change', function() {--}}
-{{--        const selectedStatus = $(this).val();--}}
-{{--        if (proofRequiredStatuses.includes(selectedStatus)) {--}}
-{{--            // For statuses requiring proof, we'll show a modal--}}
-{{--            if (selectedStatus === 'POD' || selectedStatus === 'Cancelled' || selectedStatus === 'Returned') {--}}
-{{--                showStatusUpdateModal($(this).data('order-id'), selectedStatus);--}}
-{{--            }--}}
-{{--        }--}}
-{{--    });--}}
-
-{{--    // Show status update modal for proof-required statuses--}}
-{{--    function showStatusUpdateModal(orderId, status) {--}}
-{{--        const modal = `--}}
-{{--            <div class="modal fade" id="statusUpdateModal" tabindex="-1">--}}
-{{--                <div class="modal-dialog">--}}
-{{--                    <div class="modal-content">--}}
-{{--                        <div class="modal-header">--}}
-{{--                            <h5 class="modal-title">Update Status to ${status}</h5>--}}
-{{--                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>--}}
-{{--                        </div>--}}
-{{--                        <form class="status-update-form" data-order-id="${orderId}" data-status="${status}">--}}
-{{--                            <div class="modal-body">--}}
-{{--                                <div class="mb-3">--}}
-{{--                                    <label class="form-label">Notes *</label>--}}
-{{--                                    <textarea name="notes" class="form-control" rows="3" required--}}
-{{--                                        placeholder="Please provide notes for this status change..."></textarea>--}}
-{{--                                </div>--}}
-{{--                                ${status !== 'Cancelled' ? `--}}
-{{--                                <div class="mb-3">--}}
-{{--                                    <label class="form-label">Proof Image ${status === 'POD' ? '*' : ''}</label>--}}
-{{--                                    <input type="file" name="proof_image" class="form-control"--}}
-{{--                                        accept="image/*" ${status === 'POD' ? 'required' : ''}>--}}
-{{--                                    <small class="text-muted">Maximum size: 2MB. Supported formats: JPG, PNG, GIF</small>--}}
-{{--                                </div>--}}
-{{--                                ` : ''}--}}
-{{--                            </div>--}}
-{{--                            <div class="modal-footer">--}}
-{{--                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>--}}
-{{--                                <button type="submit" class="btn btn-primary">Update Status</button>--}}
-{{--                            </div>--}}
-{{--                        </form>--}}
-{{--                    </div>--}}
-{{--                </div>--}}
-{{--            </div>--}}
-{{--        `;--}}
-
-{{--        // Remove existing modal if any--}}
-{{--        $('#statusUpdateModal').remove();--}}
-
-{{--        // Add modal to body and show--}}
-{{--        $('body').append(modal);--}}
-{{--        $('#statusUpdateModal').modal('show');--}}
-{{--    }--}}
-
-{{--    // Status update form submission--}}
-{{--    // $(document).on('submit', '.status-update-form', function(e) {--}}
-{{--    //     e.preventDefault();--}}
-{{--    //     const orderId = $(this).data('sale_order_id');--}}
-{{--    //     const status = $(this).data('status');--}}
-{{--    //     const formData = new FormData();--}}
-{{--    //--}}
-{{--    //     console.log(orderId);--}}
-{{--    //--}}
-{{--    //     const csrfToken = $('meta[name="csrf-token"]').attr('content');--}}
-{{--    //     formData.append('order_id', orderId);--}}
-{{--    //     formData.append('status', status);--}}
-{{--    //     formData.append('_token', csrfToken);--}}
-{{--    //--}}
-{{--    //     // Show loading state--}}
-{{--    //     $('.status-update-form button[type="submit"]').prop('disabled', true).html(--}}
-{{--    //         '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'--}}
-{{--    //     );--}}
-{{--    //--}}
-{{--    //     $.ajax({--}}
-{{--    //         url: '/sale/order/update-status',--}}
-{{--    //         method: 'POST',--}}
-{{--    //         data: formData,--}}
-{{--    //         processData: false,--}}
-{{--    //         contentType: false,--}}
-{{--    //         headers: {--}}
-{{--    //             'X-CSRF-TOKEN': csrfToken--}}
-{{--    //         },--}}
-{{--    //         success: function(response) {--}}
-{{--    //             if (response.success) {--}}
-{{--    //                 iziToast.success({--}}
-{{--    //                     title: 'Success',--}}
-{{--    //                     message: response.message,--}}
-{{--    //                     position: 'topRight'--}}
-{{--    //                 });--}}
-{{--    //                 $('#statusUpdateModal').modal('hide');--}}
-{{--    //                 // Reload page to show updated status--}}
-{{--    //                 setTimeout(() => {--}}
-{{--    //                     location.reload();--}}
-{{--    //                 }, 1500);--}}
-{{--    //             } else {--}}
-{{--    //                 iziToast.error({--}}
-{{--    //                     title: 'Error',--}}
-{{--    //                     message: response.message,--}}
-{{--    //                     position: 'topRight'--}}
-{{--    //                 });--}}
-{{--    //             }--}}
-{{--    //         },--}}
-{{--    //         error: function(xhr) {--}}
-{{--    //             let errorMessage = 'An error occurred while updating the status.';--}}
-{{--    //             if (xhr.responseJSON && xhr.responseJSON.message) {--}}
-{{--    //                 errorMessage = xhr.responseJSON.message;--}}
-{{--    //             }--}}
-{{--    //             iziToast.error({--}}
-{{--    //                 title: 'Error',--}}
-{{--    //                 message: errorMessage,--}}
-{{--    //                 position: 'topRight'--}}
-{{--    //             });--}}
-{{--    //         },--}}
-{{--    //         complete: function() {--}}
-{{--    //             $('.status-update-form button[type="submit"]').prop('disabled', false).html('Update Status');--}}
-{{--    //         }--}}
-{{--    //     });--}}
-{{--    // });--}}
-
-{{--    // Status history button click handler (kept for backward compatibility)--}}
-{{--    $(document).on('click', '.view-status-history', function(e) {--}}
-{{--        e.preventDefault();--}}
-{{--        const orderId = $(this).data('order-id');--}}
-
-{{--        // Show loading indicator--}}
-{{--        $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');--}}
-
-{{--        // Make sure the collapse is shown--}}
-{{--        if (!$('#statusHistoryCollapse').hasClass('show')) {--}}
-{{--            $('#statusHistoryCollapse').collapse('show');--}}
-{{--            // Update the toggle button icon--}}
-{{--            $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');--}}
-{{--        }--}}
-
-{{--        // Scroll to the status history section--}}
-{{--        $('html, body').animate({--}}
-{{--            scrollTop: $('#statusHistoryCollapse').offset().top - 100--}}
-{{--        }, 500);--}}
-
-{{--        // Fetch status history via AJAX--}}
-{{--        $.ajax({--}}
-{{--            url: `/sale/order/status-history/${orderId}`,--}}
-{{--            method: 'GET',--}}
-{{--            success: function(response) {--}}
-{{--                if (response.success) {--}}
-{{--                    updateStatusHistorySection(response.data);--}}
-{{--                } else {--}}
-{{--                    $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + (response.message || 'Unknown error') + '</p></div>');--}}
-{{--                }--}}
-{{--            },--}}
-{{--            error: function(xhr) {--}}
-{{--                let errorMessage = 'An error occurred while fetching status history.';--}}
-{{--                if (xhr.responseJSON && xhr.responseJSON.message) {--}}
-{{--                    errorMessage = xhr.responseJSON.message;--}}
-{{--                }--}}
-{{--                $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + errorMessage + '</p></div>');--}}
-{{--            }--}}
-{{--        });--}}
-{{--    });--}}
-
-{{--    // Update the status history section with new data--}}
-{{--    function updateStatusHistorySection(history) {--}}
-{{--        // Update the count badge--}}
-{{--        $('#statusHistoryCount').text(history.length + ' changes');--}}
-
-{{--        let historyHtml = '';--}}
-
-{{--        if (history.length === 0) {--}}
-{{--            historyHtml = `--}}
-{{--                <div class="text-center py-5" id="noStatusHistoryMessage">--}}
-{{--                    <i class="bx bx-history text-muted" style="font-size: 3rem;"></i>--}}
-{{--                    <p class="text-muted mt-3">No status history available yet.</p>--}}
-{{--                    <p class="text-muted small">Status changes will be recorded here.</p>--}}
-{{--                </div>--}}
-{{--            `;--}}
-{{--        } else {--}}
-{{--            // Sort history by changed_at descending (newest first)--}}
-{{--            history.sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at));--}}
-
-{{--            history.forEach((item, index) => {--}}
-{{--                // Status configuration for icons and colors--}}
-{{--                const statusConfig = {--}}
-{{--                    'Pending': {'icon': 'bx-time-five', 'color': 'warning'},--}}
-{{--                    'Processing': {'icon': 'bx-loader-circle', 'color': 'primary'},--}}
-{{--                    'Completed': {'icon': 'bx-check-circle', 'color': 'success'},--}}
-{{--                    'Delivery': {'icon': 'bx-package', 'color': 'info'},--}}
-{{--                    'POD': {'icon': 'bx-receipt', 'color': 'success'},--}}
-{{--                    'Cancelled': {'icon': 'bx-x-circle', 'color': 'danger'},--}}
-{{--                    'Returned': {'icon': 'bx-undo', 'color': 'warning'}--}}
-{{--                };--}}
-
-{{--                const currentStatus = statusConfig[item.new_status] || {'icon': 'bx-circle', 'color': 'secondary'};--}}
-{{--                const previousStatus = item.previous_status ? (statusConfig[item.previous_status] || {'icon': 'bx-circle', 'color': 'secondary'}) : null;--}}
-
-{{--                // Determine connector color--}}
-{{--                let connectorColor = '#6c757d'; // default gray--}}
-{{--                if (currentStatus.color === 'warning') connectorColor = '#ffc107';--}}
-{{--                else if (currentStatus.color === 'primary') connectorColor = '#0d6efd';--}}
-{{--                else if (currentStatus.color === 'success') connectorColor = '#198754';--}}
-{{--                else if (currentStatus.color === 'info') connectorColor = '#0dcaf0';--}}
-{{--                else if (currentStatus.color === 'danger') connectorColor = '#dc3545';--}}
-
-{{--                historyHtml += `--}}
-{{--                    <div class="d-flex align-items-start mb-3 pb-3 ${index !== history.length - 1 ? 'border-bottom' : ''} position-relative">--}}
-{{--                        <div class="me-3 position-relative">--}}
-{{--                            <div class="bg-${currentStatus.color} text-white rounded-circle d-flex align-items-center justify-content-center timeline-status-circle" style="width: 28px; height: 28px; font-size: 12px; position: relative; z-index: 2;">--}}
-{{--                                <i class="bx ${currentStatus.icon}"></i>--}}
-{{--                            </div>--}}
-{{--                            ${index !== history.length - 1 ? `--}}
-{{--                                <div class="timeline-connector" style="position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 2px; height: 40px; background: linear-gradient(180deg, ${connectorColor} 0%, #e9ecef 100%); z-index: 1;"></div>--}}
-{{--                            ` : ''}--}}
-{{--                        </div>--}}
-{{--                        <div class="flex-grow-1">--}}
-{{--                            <div class="d-flex justify-content-between align-items-start mb-1">--}}
-{{--                                <div>--}}
-{{--                                    ${item.previous_status ? `--}}
-{{--                                        <div class="d-flex align-items-center gap-1 mb-1">--}}
-{{--                                            <span class="badge bg-${previousStatus.color} text-white small">--}}
-{{--                                                <i class="bx ${previousStatus.icon} me-1"></i>${item.previous_status}--}}
-{{--                                            </span>--}}
-{{--                                            <i class="bx bx-right-arrow-alt text-muted" style="font-size: 12px;"></i>--}}
-{{--                                            <span class="badge bg-${currentStatus.color} text-white small">--}}
-{{--                                                <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status}--}}
-{{--                                            </span>--}}
-{{--                                        </div>--}}
-{{--                                    ` : `--}}
-{{--                                        <span class="badge bg-${currentStatus.color} text-white small">--}}
-{{--                                            <i class="bx ${currentStatus.icon} me-1"></i>${item.new_status} <small>(Initial)</small>--}}
-{{--                                        </span>--}}
-{{--                                    `}--}}
-{{--                                </div>--}}
-{{--                                <div class="text-end">--}}
-{{--                                    <small class="text-primary fw-semibold">${new Date(item.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${new Date(item.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</small>--}}
-{{--                                    <small class="text-muted d-block">${timeSince(new Date(item.changed_at))}</small>--}}
-{{--                                </div>--}}
-{{--                            </div>--}}
-
-{{--                            ${item.notes ? `--}}
-{{--                                <div class="bg-light rounded p-2 mb-2">--}}
-{{--                                    <small><i class="bx bx-note text-primary me-1"></i><strong>Notes:</strong> ${item.notes}</small>--}}
-{{--                                </div>--}}
-{{--                            ` : ''}--}}
-
-{{--                            <div class="d-flex justify-content-between align-items-center">--}}
-{{--                                <small class="text-muted">--}}
-{{--                                    <i class="bx bx-user text-danger me-1"></i>--}}
-{{--                                    ${item.changed_by?.name || item.changed_by_name || 'Unknown User'}--}}
-{{--                                </small>--}}
-
-{{--                                ${item.proof_image ? `--}}
-{{--                                    <a href="/storage/${item.proof_image}" target="_blank" class="btn btn-sm btn-outline-primary">--}}
-{{--                                        <i class="bx bx-image me-1"></i>View Proof--}}
-{{--                                    </a>--}}
-{{--                                ` : ''}--}}
-{{--                            </div>--}}
-{{--                        </div>--}}
-{{--                    </div>--}}
-{{--                `;--}}
-{{--            });--}}
-{{--        }--}}
-
-{{--        $('#statusHistoryContent').html(historyHtml);--}}
-
-{{--        // Re-animate timeline connectors--}}
-{{--        setTimeout(function() {--}}
-{{--            $('.timeline-connector').addClass('animate');--}}
-{{--        }, 100);--}}
-{{--    }--}}
-
-{{--    // Helper function to calculate time since--}}
-{{--    function timeSince(date) {--}}
-{{--        const seconds = Math.floor((new Date() - date) / 1000);--}}
-
-{{--        let interval = seconds / 31536000;--}}
-{{--        if (interval > 1) {--}}
-{{--            return Math.floor(interval) + " years ago";--}}
-{{--        }--}}
-
-{{--        interval = seconds / 2592000;--}}
-{{--        if (interval > 1) {--}}
-{{--            return Math.floor(interval) + " months ago";--}}
-{{--        }--}}
-
-{{--        interval = seconds / 86400;--}}
-{{--        if (interval > 1) {--}}
-{{--            return Math.floor(interval) + " days ago";--}}
-{{--        }--}}
-
-{{--        interval = seconds / 3600;--}}
-{{--        if (interval > 1) {--}}
-{{--            return Math.floor(interval) + " hours ago";--}}
-{{--        }--}}
-
-{{--        interval = seconds / 60;--}}
-{{--        if (interval > 1) {--}}
-{{--            return Math.floor(interval) + " minutes ago";--}}
-{{--        }--}}
-
-{{--        return Math.floor(seconds) + " seconds ago";--}}
-{{--    }--}}
-
-{{--    // Handle collapse events for status history section--}}
-{{--    $('#statusHistoryCollapse').on('hide.bs.collapse', function () {--}}
-{{--        $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-up').addClass('bx-chevron-down');--}}
-{{--    });--}}
-
-{{--    $('#statusHistoryCollapse').on('show.bs.collapse', function () {--}}
-{{--        $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');--}}
-{{--    });--}}
-
-{{--    $('#manualInventoryDeduction').on('click', function() {--}}
-{{--        const orderId = $(this).data('order-id');--}}
-{{--        const button = $(this);--}}
-
-{{--        if (confirm('{{ __('Are you sure you want to deduct inventory for this order?') }}')) {--}}
-{{--            button.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> {{ __('Processing...') }}');--}}
-
-{{--            $.ajax({--}}
-{{--                url: `{{ route('sale.order.manual.inventory.deduction', '') }}/${orderId}`,--}}
-{{--                method: 'POST',--}}
-{{--                headers: {--}}
-{{--                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')--}}
-{{--                },--}}
-{{--                success: function(response) {--}}
-{{--                    if (response.status) {--}}
-{{--                        iziToast.success({--}}
-{{--                            title: 'Success',--}}
-{{--                            message: response.message,--}}
-{{--                            position: 'topRight'--}}
-{{--                        });--}}
-{{--                        // Reload page to show updated status--}}
-{{--                        setTimeout(() => {--}}
-{{--                            location.reload();--}}
-{{--                        }, 1000);--}}
-{{--                    } else {--}}
-{{--                        iziToast.error({--}}
-{{--                            title: 'Error',--}}
-{{--                            message: response.message,--}}
-{{--                            position: 'topRight'--}}
-{{--                        });--}}
-{{--                        button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');--}}
-{{--                    }--}}
-{{--                },--}}
-{{--                error: function(xhr) {--}}
-{{--                    const errorMessage = xhr.responseJSON?.message || '{{ __('An error occurred') }}';--}}
-{{--                    iziToast.error({--}}
-{{--                        title: 'Error',--}}
-{{--                        message: errorMessage,--}}
-{{--                        position: 'topRight'--}}
-{{--                    });--}}
-{{--                    button.prop('disabled', false).html('<i class="bx bx-package"></i> {{ __('Manual Inventory Deduction') }}');--}}
-{{--                }--}}
-{{--            });--}}
-{{--        }--}}
-{{--    });--}}
-{{--});--}}
-{{--</script>--}}
 
 <style>
 /* Compact Status History Styles */

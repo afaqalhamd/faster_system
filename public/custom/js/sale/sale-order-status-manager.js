@@ -9,6 +9,8 @@ class SaleOrderStatusManager {
         this.initializeEventListeners();
         // Initialize collapse state on page load
         this.initializeCollapseState();
+        // Hide specific statuses for Delivery users
+        this.hideDeliveryStatuses();
     }
 
     /**
@@ -54,11 +56,30 @@ class SaleOrderStatusManager {
     }
 
     /**
+     * Hide specific statuses for Delivery users
+     */
+    hideDeliveryStatuses() {
+        // Check if we're on the sale order edit page and user role is available
+        if ($('#order_status').length && typeof window.userRole !== 'undefined') {
+            // If user role is Delivery, hide Pending, Processing, and Completed options
+            if (window.userRole === 'Delivery') {
+                $('#order_status option[value="Pending"]').remove();
+                $('#order_status option[value="Processing"]').remove();
+                $('#order_status option[value="Completed"]').remove();
+            }
+        }
+    }
+
+    /**
      * Handle status change and show modal if proof is required
      */
     handleStatusChange(selectElement) {
         const selectedStatus = selectElement.value;
         const orderId = $('#sale_order_id').val();
+        const $select = $(selectElement);
+
+        // Store the previous status before changing
+        const previousStatus = $('#current_order_status').val() || 'Pending';
 
         // Check if user is trying to select POD status
         if (selectedStatus === 'POD') {
@@ -71,8 +92,7 @@ class SaleOrderStatusManager {
                     position: 'topRight'
                 });
                 // Reset the select to the current status
-                const currentStatus = $('#current_order_status').val() || 'Pending';
-                $(selectElement).val(currentStatus);
+                $select.val(previousStatus);
                 return;
             }
         }
@@ -116,7 +136,7 @@ class SaleOrderStatusManager {
         }
 
         const modal = `
-            <div class="modal fade" id="statusUpdateModal" tabindex="-1">
+            <div class="modal fade" id="statusUpdateModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -140,7 +160,7 @@ class SaleOrderStatusManager {
                                 ` : ''}
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-secondary" id="cancelStatusUpdate">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Update Status</button>
                             </div>
                         </form>
@@ -155,6 +175,14 @@ class SaleOrderStatusManager {
         // Add modal to body and show
         $('body').append(modal);
         $('#statusUpdateModal').modal('show');
+
+        // Handle cancel button click
+        $(document).off('click', '#cancelStatusUpdate').on('click', '#cancelStatusUpdate', () => {
+            // Reset the status dropdown to the previous value
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.sale-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            $('#statusUpdateModal').modal('hide');
+        });
     }
 
     /**
@@ -166,6 +194,7 @@ class SaleOrderStatusManager {
         formData.append('status', status);
         formData.append('notes', ''); // Empty notes for direct updates
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('order_id', orderId);
 
         this.submitStatusUpdateRequest(orderId, formData);
     }
@@ -174,13 +203,13 @@ class SaleOrderStatusManager {
      * Submit status update form with proof
      */
     submitStatusUpdate(form) {
-        const orderId = $(form).data('sale_order_id');
+        const orderId = $(form).data('order-id');
         const status = $(form).data('status');
         const formData = new FormData(form);
 
-
         formData.append('status', status);
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('order_id', orderId);
 
         this.submitStatusUpdateRequest(orderId, formData);
     }
@@ -188,11 +217,10 @@ class SaleOrderStatusManager {
     /**
      * Submit the actual status update request
      */
-    submitStatusUpdateRequest(orderId2, formData) {
+    submitStatusUpdateRequest(orderId, formData) {
         // Show loading state
         this.showLoading(true);
-        const orderId = $('#sale_order_id').val();
-        formData.append('order_id', orderId);
+
         $.ajax({
             url: `/sale/order/update-status`,
             method: 'POST',

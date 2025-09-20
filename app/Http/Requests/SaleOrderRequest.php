@@ -40,7 +40,7 @@ class SaleOrderRequest extends FormRequest
             'due_date'             => ['nullable', 'date_format:'.implode(',', $this->getDateFormats())],
             'prefix_code'          => ['nullable', 'string','max:250'],
             'order_code'           => ['required', 'string','max:50'],
-            'order_status'         => ['required', 'string','max:50'],
+            'order_status'         => ['nullable', 'string','max:50'], // Made nullable for both create and update
             'count_id'             => ['required', 'numeric'],
             'round_off'            => ['nullable',Rule::requiredIf( fn () => empty($this->input('round_off'))),'numeric',],
             'grand_total'          => ['required', 'numeric'],
@@ -54,8 +54,10 @@ class SaleOrderRequest extends FormRequest
             'is_shipping_charge_distributed' => ['nullable', 'boolean'],
         ];
 
+        // For update operations, we still want to validate order_status
         if ($this->isMethod('PUT')) {
-            $rulesArray['sale_order_id']          = ['required'];
+            $rulesArray['order_status'] = ['required', 'string','max:50'];
+            $rulesArray['sale_order_id'] = ['required'];
         }
 
         return $rulesArray;
@@ -82,6 +84,13 @@ class SaleOrderRequest extends FormRequest
             'shipping_charge' => $this->input('shipping_charge') ?? 0,
             'is_shipping_charge_distributed' => $this->has('is_shipping_charge_distributed') && $this->input('shipping_charge') > 0 ? 1 : 0,
         ]);
+
+        // Set default order_status to Pending for create operations if not provided
+        if (!$this->isMethod('PUT') && !$this->has('order_status')) {
+            $this->merge([
+                'order_status' => 'Pending',
+            ]);
+        }
 
         //check is invoice_currency_id is exist or not
         if($this->has('invoice_currency_id')){

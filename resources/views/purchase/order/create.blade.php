@@ -128,9 +128,10 @@
                                                             <th scope="col" class="{{ !app('company')['show_mrp'] ? 'd-none':'' }}">{{ __('item.mrp') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_color'] ? 'd-none':'' }}">{{ __('item.color') }}</th>
                                                             <th scope="col" class="{{ !app('company')['enable_size'] ? 'd-none':'' }}">{{ __('item.size') }}</th>
+                                                             <th scope="col" class="d-none">{{ __('unit.unit') }}</th>
+                                                            <th scope="col" class="d-none2">{{ __('app.price_per_unit') }}</th>
                                                             <th scope="col">{{ __('app.qty') }}</th>
-                                                            <th scope="col">{{ __('unit.unit') }}</th>
-                                                            <th scope="col">{{ __('app.price_per_unit') }}</th>
+                                                            <th scope="col">{{ __('app.real_qty') }}</th>
                                                             <th scope="col" class="{{ !app('company')['show_discount'] ? 'd-none':'' }}">{{ __('app.discount') }}</th>
                                                             <th scope="col" class="{{ (app('company')['tax_type'] == 'no-tax') ? 'd-none':'' }}">{{ __('tax.tax') }}</th>
                                                             <th scope="col">{{ __('app.total') }}</th>

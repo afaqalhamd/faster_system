@@ -1539,7 +1539,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/manual-inventory-deduction/{id}', [SaleOrderController::class, 'manualInventoryDeduction'])
             ->middleware('can:sale.order.manual.inventory.deduction')
             ->name('sale.order.manual.inventory.deduction');
-
         /**
          * Email
          * */
@@ -1611,6 +1610,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/manual-inventory-deduction/{id}', [SaleController::class, 'manualInventoryDeduction'])
             ->middleware('can:sale.invoice.manual.inventory.deduction')
             ->name('sale.invoice.manual.inventory.deduction');
+
+            //q
+              Route::get('/convert-quotation-to-sale/{id}', [SaleController::class, 'convertQuotationToSale'])
+                ->middleware('can:sale.quotation.create')
+                ->name('convert.quotation.to.sale.invoice');//View
+                       Route::post('/convert-quotation-to-sale/save', [SaleController::class, 'store'])->name('quotation.to.sale.save'); //save
+                       /*Sale Order to Sale : Start*/
+        Route::get('/convert/{id}', [SaleController::class, 'convertToSale'])
+                ->middleware('can:sale.invoice.create')
+                ->name('sale.invoice.convert');//View
+        Route::post('/convert-to/sale/save', [SaleController::class, 'store'])->name('sale-order.to.sale.save'); //save
+
 
         // Sales status management
         Route::post('/update-sales-status/{id}', [SaleController::class, 'updateSalesStatus'])
@@ -1861,6 +1872,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/details/{id}', [QuotationController::class, 'details'])
                     ->middleware('can:sale.quotation.view')
                     ->name('sale.quotation.details');
+
         Route::get('/print/{id}', [QuotationController::class, 'print'])
                     ->middleware('can:sale.quotation.view')
                     ->name('sale.quotation.print');

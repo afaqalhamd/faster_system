@@ -323,6 +323,8 @@ return [
     'receive' => 'استلام',
     'changes'                           => 'تغييرات',
     'initial'                           => 'ابتدائي',
+        'total_items' =>' عدد المنتجات :'
+
 
 
 ];

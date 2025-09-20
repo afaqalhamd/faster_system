@@ -44,8 +44,7 @@ $(function() {
                         return '<input type="checkbox" class="form-check-input row-select" name="record_ids[]" value="' + data + '">';
                       }
                 },
-
-                {
+                  {
                     data: null, // Combine sale_code and status in this column
                     name: 'sale_code',
                     orderable: false,
@@ -84,7 +83,7 @@ $(function() {
                                                               ${data.is_return_raised.codes.split(', ')[index]}
                                                               <i class="fadeIn animated bx bx-link-external bx-tada-hover"></i></a>`
                                                             ).join(', ');
-
+                            statusBadge += statusBadge ? `<br>` : '';
                             statusBadge += `<div class="badge text-danger bg-light-danger text-uppercase">
                                                 ${data.is_return_raised.status} (${returnLinks})
                                             </div>`;
@@ -99,6 +98,61 @@ $(function() {
                                 </div>`;
                     }
                 },
+
+                // {
+                //     data: null, // Combine sale_code and status in this column
+                //     name: 'sale_code',
+                //     orderable: false,
+                //     className: 'text-center',
+                //     render: function(data, type, full, meta) {
+                //         let orderCode = data.sale_code || ''; // Default if sale_code is null
+                //         let statusBadge = '';
+
+                //         // Check if status is an object and extract data
+                //         let statusText = data.status?.text || ''; // Get text from status object
+                //         let statusCode = data.status?.code || ''; // Get sale_order or quotation code
+                //         let statusUrl = data.status?.url || '';
+
+                //         if (statusText === 'Converted from Sale Order') {
+                //             statusBadge = `<div class="badge text-primary bg-light-primary p-2 text-uppercase px-3">
+                //                             ${statusText} (<a href="${statusUrl}" target="_blank" data-bs-toggle="tooltip"
+                //                                               data-bs-placement="top" title="View Sale Order Details">
+                //                                               ${statusCode} <i class="fadeIn animated bx bx-link-external bx-tada-hover"></i>
+
+                //                                           </a>)
+                //                         </div>`;
+                //         } else if (statusText === 'Converted from Quotation') {
+                //             statusBadge = `<div class="badge bg-light-success text-success p-2 text-uppercase px-3">
+                //                             ${statusText} (<a href="${statusUrl}" target="_blank" data-bs-toggle="tooltip"
+                //                                               data-bs-placement="top" title="View Quotation Details">
+                //                                               ${statusCode} <i class="fadeIn animated bx bx-link-external bx-tada-hover"></i>
+
+                //                                           </a>)
+                //                         </div>`;
+                //         }
+
+                //         if (data.is_return_raised?.status === 'Return Raised') {
+                //             let returnLinks = data.is_return_raised.urls.map((url, index) =>
+                //                 `<a href="${url}" target="_blank" data-bs-toggle="tooltip"
+                //                                               data-bs-placement="top" title="View Sale Return Details">
+                //                                               ${data.is_return_raised.codes.split(', ')[index]}
+                //                                               <i class="fadeIn animated bx bx-link-external bx-tada-hover"></i></a>`
+                //                                             ).join(', ');
+
+                //             statusBadge += `<div class="badge text-danger bg-light-danger text-uppercase">
+                //                                 ${data.is_return_raised.status} (${returnLinks})
+                //                             </div>`;
+                //         }
+
+
+
+                //         // Combine order code and status badge
+                //         return `<div>
+                //                     <strong>${orderCode}</strong><br>
+                //                     ${statusBadge}
+                //                 </div>`;
+                //     }
+                // },
                 {
                     data: 'reference_no',
                     name: 'reference_no',

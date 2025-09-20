@@ -92,7 +92,9 @@
                                             <div class="col-md-4">
                                                 <x-label for="order_status" name="{{ __('sale.order_status') }}" />
                                                 <div class="position-relative">
-                                                    <select class="form-select sale-order-status-select" name="order_status" id="order_status" data-order-id="new">
+                                                    <!-- Hidden input to send the default value -->
+                                                    <input type="hidden" name="order_status" value="Pending">
+                                                    <select class="form-select sale-order-status-select" name="order_status_display" id="order_status" data-order-id="new" disabled>
                                                         @php
                                                             $generalDataService = new \App\Services\GeneralDataService();
                                                             $statusOptions = $generalDataService->getSaleOrderStatus();

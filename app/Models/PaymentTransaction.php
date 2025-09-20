@@ -21,7 +21,7 @@ class PaymentTransaction extends Model
     use HasFactory;
 
     use FormatsDateInputs;
-    
+
     use FormatTime;
 
     /**
@@ -97,13 +97,13 @@ class PaymentTransaction extends Model
 
     /**
      * Get Payment Type
-     * @return HasOne
+     * @return BelongsTo
      * */
-    public function paymentType(): HasOne
+    public function paymentType(): BelongsTo
     {
-        return $this->hasOne(PaymentTypes::class, 'id', 'payment_type_id');
+        return $this->BelongsTo(PaymentTypes::class, 'payment_type_id');
     }
-    
+
     /**
      * Define the relationship between Item Transaction & Items table.
      *

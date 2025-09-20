@@ -27,12 +27,13 @@ use App\Services\StatusHistoryService;
 use App\Services\Communication\Email\SaleOrderEmailNotificationService;
 use App\Services\Communication\Sms\SaleOrderSmsNotificationService;
 use App\Enums\ItemTransactionUniqueCode;
-use App\Services\SaleOrderStatusService; // Added this line
+use App\Services\SaleOrderStatusService;
 
 use Mpdf\Mpdf;
 use App\Notifications\NewSaleOrderNotification;
 use App\Models\User;
 use App\Notifications\SaleOrderStatusNotification;
+use Illuminate\Support\Facades\Gate;
 
 class SaleOrderController extends Controller
 {
@@ -58,7 +59,7 @@ class SaleOrderController extends Controller
 
     public $statusHistoryService;
 
-    public $saleOrderStatusService; // Added this line
+    public $saleOrderStatusService;
 
     public function __construct(
         PaymentTypeService                $paymentTypeService,
@@ -69,7 +70,7 @@ class SaleOrderController extends Controller
         SaleOrderSmsNotificationService   $saleOrderSmsNotificationService,
         GeneralDataService                $generalDataService,
         StatusHistoryService              $statusHistoryService,
-        SaleOrderStatusService            $saleOrderStatusService // Added this parameter
+        SaleOrderStatusService            $saleOrderStatusService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -81,7 +82,44 @@ class SaleOrderController extends Controller
         $this->saleOrderSmsNotificationService = $saleOrderSmsNotificationService;
         $this->generalDataService = $generalDataService;
         $this->statusHistoryService = $statusHistoryService;
-        $this->saleOrderStatusService = $saleOrderStatusService; // Added this line
+        $this->saleOrderStatusService = $saleOrderStatusService;
+    }
+
+    /**
+     * Check if user can view other users' sale orders
+     *
+     * @return bool
+     */
+    protected function userCanViewOtherUsersOrders(): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Check if user has the specific permission using Gate facade
+        return Gate::forUser($user)->allows('sale.order.can.view.other.users.sale.orders');
+    }
+
+    /**
+     * Check if user can edit sale order status
+     *
+     * @return bool
+     */
+    public static function canUserEditSaleOrderStatus(): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Get user role name
+        $userRole = $user->role ? $user->role->name : null;
+
+        // Check if user has one of the allowed roles
+        $allowedRoles = ['Admin', 'Delivery', 'Operations-Department'];
+
+        return in_array($userRole, $allowedRoles);
     }
 
     /**
@@ -194,7 +232,10 @@ class SaleOrderController extends Controller
 
         $taxList = CacheService::get('tax')->toJson();
 
-        return view('sale.order.edit', compact('taxList', 'order', 'itemTransactionsJson', 'selectedPaymentTypesArray', 'paymentHistory'));
+        // Get user role for JavaScript functionality
+        $userRole = auth()->user()->role ? auth()->user()->role->name : null;
+
+        return view('sale.order.edit', compact('taxList', 'order', 'itemTransactionsJson', 'selectedPaymentTypesArray', 'paymentHistory', 'userRole'));
     }
 
     /**
@@ -295,8 +336,29 @@ class SaleOrderController extends Controller
             $validatedData = $request->validated();
 
             if ($request->operation == 'save') {
-                // Create a new expense record using Eloquent and save it
-                $newSaleOrder = SaleOrder::create($validatedData);
+                $fillableColumns = [
+                    'party_id' => $validatedData['party_id'],
+                    'order_date' => $validatedData['order_date'],
+                    'due_date' => $validatedData['due_date'],
+                    'prefix_code' => $validatedData['prefix_code'],
+                    'count_id' => $validatedData['count_id'],
+                    'order_code' => $validatedData['order_code'],
+                    'note' => $validatedData['note'],
+                    'round_off' => $validatedData['round_off'],
+                    'grand_total' => $validatedData['grand_total'],
+                    'state_id' => $validatedData['state_id'],
+                    'carrier_id' => $validatedData['carrier_id'] ?? null,
+                    'order_status' => $validatedData['order_status'] ?? 'Pending', // Default to Pending
+                    'currency_id' => $validatedData['currency_id'],
+                    'exchange_rate' => $validatedData['exchange_rate'],
+                    'shipping_charge' => $validatedData['shipping_charge'] ?? 0,
+                    'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'] ?? 0,
+                ];
+
+                /**
+                 * Create a new order record using Eloquent and save it
+                 * */
+                $newSaleOrder = SaleOrder::create($fillableColumns);
 
                 // Send notification to all users with appropriate permissions
                 $users = User::permission('sale.order.view')->get();
@@ -397,7 +459,7 @@ class SaleOrderController extends Controller
             //Session::regenerateToken();
 
             return response()->json([
-                'status' => false,
+                'status' => true, // Changed to true for successful operation
                 'message' => __('app.record_saved_successfully'),
                 'id' => $request->sale_order_id,
 
@@ -815,7 +877,7 @@ class SaleOrderController extends Controller
         if ($user && $user->carrier_id) {
             // Carrier users can only see orders assigned to their carrier
             $query->where('carrier_id', $user->carrier_id)
-                  ->whereIn('order_status', ['Delivery', 'Completed']);
+                  ->whereIn('order_status', ['Delivery', 'POD','Returned','Cancelled']);
         }
         return $query;
     }
@@ -844,8 +906,8 @@ class SaleOrderController extends Controller
                 $orderCodes = json_decode($request->order_codes);
                 return $query->whereIn('order_code', $orderCodes);
             })
-            ->when(!auth()->user()->can('sale.order.can.view.other.users.sale.orders'), function ($query) use ($request) {
-                return $query->where('created_by', auth()->user()->id);
+            ->when(!$this->userCanViewOtherUsersOrders(), function ($query) {
+                return $query->where('created_by', auth()->id());
             })
             // Apply delivery user filter - restrict to completed orders only
             ->when($this->isDeliveryUser(), function ($query) {

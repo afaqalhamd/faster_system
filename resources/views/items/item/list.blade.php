@@ -20,7 +20,7 @@
                     <!-- Other content on the left side -->
                     <div>
                         <h5 class="mb-0 text-uppercase">{{ __('item.list') }}</h5>
-                        <p class="text-muted mt-1">{{ __('app.total') }}: {{ \App\Models\Items\Item::count() }}</p>
+                        <p class="text-muted mt-1">{{ __('app.total_items') }} {{ \App\Models\Items\Item::count() }}</p>
                     </div>
                     <div class="d-flex gap-2">
                         @can('import.item')

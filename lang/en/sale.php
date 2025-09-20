@@ -88,9 +88,9 @@ return [
     'add'                       => 'Add Sale',
     'total'                     => 'Sale Total',
     'order_status'              => 'Order Status',
-    'sold_items'                => 'Sold Items',
-    'load_sold_items'           => 'Load Sold Items',
-    'sold_items_history'        => 'Sold Items History',
+    'sold_items'                => 'Sales Records',
+    'load_sold_items'           => 'Load Sales Records',
+    'sold_items_history'        => 'Sales Records History',
     'date'                      => 'Sale Date',
     'invoice_format'            => 'Sale Invoice Format',
 
@@ -131,7 +131,8 @@ return [
     'inventory_already_deducted'    => 'Inventory Already Deducted',
     'inventory_deducted_successfully' => 'Inventory Deducted Successfully',
     'post_delivery_cancelled'       => 'Post-Delivery Cancelled',
-    'inventory_will_be_automatically_deducted' => 'Inventory will be automatically deducted when payment is completed',
+    'inventory_will_be_automatically_deducted' => 'Inventory will be automatically deducted when payment is completed and Order Status is " POD"
+',
     'deducted_on'                   => 'Deducted on',
     'manual_inventory_deduction'    => 'Manual Inventory Deduction',
     'no_status'                     => 'No Status',

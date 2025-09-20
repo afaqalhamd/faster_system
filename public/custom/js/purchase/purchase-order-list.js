@@ -74,6 +74,13 @@ $(function() {
                 {data: 'grand_total', name: 'grand_total', className: 'text-end'},
                 {data: 'balance', name: 'balance', className: 'text-end'},
                 {
+                    data: 'payment_status',
+                    name: 'payment_status',
+                    orderable: false,
+                    className: 'text-center',
+                    searchable: false
+                },
+                {
                     data: 'inventory_status',
                     name: 'inventory_status',
                     orderable: false,

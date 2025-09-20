@@ -325,7 +325,7 @@
                                     </div>
 
                                     {{-- Status Change History Section --}}
-                                    @if($sale->salesStatusHistories->count() > 0)
+                                    @if(isset($sale->salesStatusHistories) && $sale->salesStatusHistories && $sale->salesStatusHistories->count() > 0)
                                     <div class="card-header px-4 py-3">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <h5 class="mb-0">{{ __('sale.status_change_history') }}</h5>

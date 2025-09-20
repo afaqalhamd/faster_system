@@ -276,7 +276,8 @@ class SaleController extends Controller
 
         $taxList = CacheService::get('tax')->toJson();
 
-        $paymentHistory = [];
+        // Get payment history for the converted sale order
+        $paymentHistory = $this->paymentTransactionService->getPaymentRecordsArray($sale);
 
         return view('sale.invoice.edit', compact('taxList', 'sale', 'itemTransactionsJson', 'selectedPaymentTypesArray', 'paymentHistory'));
     }
@@ -341,8 +342,14 @@ class SaleController extends Controller
 
         $itemTransactionsJson = json_encode($itemTransactions);
 
-        //Default Payment Details
-        $selectedPaymentTypesArray = json_encode($this->paymentTypeService->selectedPaymentTypesArray());
+        //Payment Details - Use existing payments if available, otherwise default payment types
+        if ($sale->paymentTransaction && $sale->paymentTransaction->isNotEmpty()) {
+            // Use existing payment data for the form
+            $selectedPaymentTypesArray = json_encode($this->paymentTransactionService->getPaymentRecordsArray($sale));
+        } else {
+            // Default payment types
+            $selectedPaymentTypesArray = json_encode($this->paymentTypeService->selectedPaymentTypesArray());
+        }
 
         $paymentHistory = $this->paymentTransactionService->getPaymentRecordsArray($sale);
 
@@ -506,16 +513,25 @@ class SaleController extends Controller
         $validatedData['inventory_deducted_at'] = null; // Not deducted yet
         $validatedData['sales_status'] = $request->sales_status ?? 'Pending'; // Initialize sales status
 
-        if ($request->operation == 'save' || $request->operation == 'convert') {
+        if ($request->operation == 'save') {
+            // Create a new sale record using Eloquent and save it
+            $newSale = Sale::create($validatedData);
+
+            $request->request->add(['sale_id' => $newSale->id]);
+        } elseif ($request->operation == 'convert') {
             // Create a new sale record using Eloquent and save it
             $newSale = Sale::create($validatedData);
 
             $request->request->add(['sale_id' => $newSale->id]);
 
             // Handle payment transfer for conversions
-            if ($request->operation == 'convert') {
-                $this->handleConversionPaymentTransfer($request, $newSale);
-            }
+            $this->handleConversionPaymentTransfer($request, $newSale);
+
+            // For conversion, payments are already transferred by handleConversionPaymentTransfer
+            // We don't need to do anything here as payments are already in place
+            Log::info('Conversion operation - payments already transferred', [
+                'sale_id' => $newSale->id
+            ]);
         } else {
             // Get the current sale to preserve inventory status if already deducted
             $currentSale = Sale::findOrFail($validatedData['sale_id']);
@@ -594,25 +610,9 @@ class SaleController extends Controller
             }//sale account
 
 
-            // Check if paymentTransactions exist
-            // $paymentTransactions = $newSale->paymentTransaction;
-            // if ($paymentTransactions->isNotEmpty()) {
-            //     foreach ($paymentTransactions as $paymentTransaction) {
-            //         $accountTransactions = $paymentTransaction->accountTransaction;
-            //         if ($accountTransactions->isNotEmpty()) {
-            //             foreach ($accountTransactions as $accountTransaction) {
-            //                 //Sale Account Update
-            //                 $accountId = $accountTransaction->account_id;
-            //                 // Do something with the individual accountTransaction
-            //                 $accountTransaction->delete(); // Or any other operation
-
-            //                 $this->accountTransactionService->calculateAccounts($accountId);
-            //             }
-            //         }
-            //     }
-            // }
-
-            // $newSale->paymentTransaction()->delete();
+            // Check if paymentTransactions exist and delete them
+            // We'll recreate them from the form data
+            $newSale->paymentTransaction()->delete();
         }
 
         $request->request->add(['modelName' => $newSale]);
@@ -625,23 +625,10 @@ class SaleController extends Controller
             throw new \Exception($SaleItemsArray['message']);
         }
 
-        // Check if payments were already transferred during conversion
-        $skipPaymentProcessing = false;
-        if ($request->operation == 'convert') {
-            $existingPayments = $newSale->refresh()->paymentTransaction;
-            if ($existingPayments->isNotEmpty()) {
-                $skipPaymentProcessing = true;
-                Log::info('Skipping payment processing - payments already transferred', [
-                    'sale_id' => $newSale->id,
-                    'existing_payments_count' => $existingPayments->count()
-                ]);
-            }
-        }
-
-        if (!$skipPaymentProcessing) {
-            /**
-             * Save Expense Payment Records
-             * */
+        // Handle payments based on operation type
+        if ($request->operation != 'convert') {
+            // For update operations, save payment records from the form
+            // This will recreate all payments based on form data
             $salePaymentsArray = $this->saveSalePayments($request);
             if (!$salePaymentsArray['status']) {
                 throw new \Exception($salePaymentsArray['message']);
@@ -1251,6 +1238,27 @@ class SaleController extends Controller
             ->addColumn('sale_code', function ($row) {
                 return $row->sale_code;
             })
+            ->addColumn('status', function ($row) {
+                        if ($row->saleOrder) {
+                            return [
+                                'text' => "Converted from Sale Order",
+                                'code' => $row->saleOrder->order_code,
+                                'url'  => route('sale.order.details', ['id' => $row->saleOrder->id]), // Sale Order link
+                            ];
+                        } elseif ($row->quotation) {
+                            return [
+                                'text' => "Converted from Quotation",
+                                'code' => $row->quotation->quotation_code,
+                                'url'  => route('sale.quotation.details', ['id' => $row->quotation->id]), // Quotation link
+                            ];
+                        }
+
+                        return [
+                            'text' => "",
+                            'code' => "",
+                            'url'  => "",
+                        ];
+                    })
             ->addColumn('party_name', function ($row) {
                 return $row->party->first_name . " " . $row->party->last_name;
             })
@@ -1594,15 +1602,18 @@ class SaleController extends Controller
             $saleOrderId = $sale->sale_order_id ?? request('sale_order_id');
 
             if ($saleOrderId) {
-                $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction')->find($saleOrderId);
+                $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction.paymentType')->find($saleOrderId);
 
                 // Check if SaleOrder has payments
                 if ($saleOrder && $saleOrder->paymentTransaction && $saleOrder->paymentTransaction->isNotEmpty()) {
                     $existingPayments = $saleOrder->paymentTransaction->map(function ($payment) {
+                        // Get payment type name
+                        $paymentType = $payment->paymentType;
                         return [
                             'id' => $payment->id,
                             'amount' => $payment->amount,
                             'payment_type_id' => $payment->payment_type_id,
+                            'type' => $paymentType ? $paymentType->name : '',
                             'transaction_date' => $payment->transaction_date,
                             'reference_no' => $payment->reference_no ?? '',
                             'note' => $payment->note ?? '',
@@ -1625,15 +1636,18 @@ class SaleController extends Controller
             $quotationId = $sale->quotation_id ?? request('quotation_id');
 
             if ($quotationId) {
-                $quotation = \App\Models\Sale\Quotation::with('paymentTransaction')->find($quotationId);
+                $quotation = \App\Models\Sale\Quotation::with('paymentTransaction.paymentType')->find($quotationId);
 
                 // Check if Quotation has payments
                 if ($quotation && $quotation->paymentTransaction && $quotation->paymentTransaction->isNotEmpty()) {
                     $existingPayments = $quotation->paymentTransaction->map(function ($payment) {
+                        // Get payment type name
+                        $paymentType = $payment->paymentType;
                         return [
                             'id' => $payment->id,
                             'amount' => $payment->amount,
                             'payment_type_id' => $payment->payment_type_id,
+                            'type' => $paymentType ? $paymentType->name : '',
                             'transaction_date' => $payment->transaction_date,
                             'reference_no' => $payment->reference_no ?? '',
                             'note' => $payment->note ?? '',
@@ -1657,21 +1671,28 @@ class SaleController extends Controller
     }
 
     /**
-     * Handle payment transfer during conversion operations
+     * Handle payment transfer during conversion operations with enhanced validation
      */
     private function handleConversionPaymentTransfer($request, $sale)
     {
-        $convertingFrom = $request->converting_from;
+        $convertingFrom = $request->convertingFrom ?? $request->converting_from;
 
         if ($convertingFrom == 'Sale Order' && $request->sale_order_id) {
-            $this->transferPaymentsFromSaleOrder($request->sale_order_id, $sale);
+            return $this->transferPaymentsFromSaleOrder($request->sale_order_id, $sale);
         } elseif ($convertingFrom == 'Quotation' && $request->quotation_id) {
-            $this->transferPaymentsFromQuotation($request->quotation_id, $sale);
+            return $this->transferPaymentsFromQuotation($request->quotation_id, $sale);
         }
+
+        return [
+            'success' => true,
+            'transferred_count' => 0,
+            'failed_count' => 0,
+            'message' => 'No conversion operation detected'
+        ];
     }
 
     /**
-     * Transfer payments from Sale Order to Sale
+     * Transfer payments from Sale Order to Sale with enhanced logic and validation
      */
     private function transferPaymentsFromSaleOrder($saleOrderId, $sale)
     {
@@ -1680,7 +1701,7 @@ class SaleController extends Controller
             'sale_id' => $sale->id
         ]);
 
-        $saleOrder = \App\Models\Sale\SaleOrder::with('paymentTransaction')->find($saleOrderId);
+        $saleOrder = SaleOrder::with('paymentTransaction.paymentType')->find($saleOrderId);
 
         if ($saleOrder && $saleOrder->paymentTransaction->isNotEmpty()) {
             Log::info('Found payments to transfer', [
@@ -1688,41 +1709,115 @@ class SaleController extends Controller
                 'total_amount' => $saleOrder->paymentTransaction->sum('amount')
             ]);
 
+            $transferredPayments = [];
+            $failedPayments = [];
+
             foreach ($saleOrder->paymentTransaction as $payment) {
-                // Create new payment for Sale using polymorphic relationship
-                $newPayment = $payment->replicate();
-                $newPayment->transaction_id = $sale->id;
-                $newPayment->transaction_type = \App\Models\Sale\Sale::class;
-                $newPayment->save();
+                // Validate payment before transfer
+                if ($payment->amount <= 0) {
+                    Log::warning('Skipping invalid payment with zero or negative amount', [
+                        'payment_id' => $payment->id,
+                        'amount' => $payment->amount
+                    ]);
+                    continue;
+                }
 
-                Log::info('Payment transferred', [
-                    'original_payment_id' => $payment->id,
-                    'new_payment_id' => $newPayment->id,
-                    'amount' => $payment->amount
-                ]);
+                try {
+                    // Create new payment for Sale using polymorphic relationship
+                    $newPayment = $payment->replicate();
+                    $newPayment->transaction_id = $sale->id;
+                    $newPayment->transaction_type = Sale::class;
 
-                // Delete original payment
-                $payment->delete();
+                    // Ensure all necessary fields are properly set
+                    $newPayment->created_at = now();
+                    $newPayment->updated_at = now();
+
+                    if ($newPayment->save()) {
+                        Log::info('Payment transferred successfully', [
+                            'original_payment_id' => $payment->id,
+                            'new_payment_id' => $newPayment->id,
+                            'amount' => $payment->amount
+                        ]);
+
+                        $transferredPayments[] = [
+                            'original_id' => $payment->id,
+                            'new_id' => $newPayment->id,
+                            'amount' => $payment->amount
+                        ];
+
+                        // Delete original payment
+                        $payment->delete();
+                    } else {
+                        Log::error('Failed to transfer payment', [
+                            'original_payment_id' => $payment->id,
+                            'amount' => $payment->amount
+                        ]);
+                        $failedPayments[] = $payment->id;
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Exception during payment transfer', [
+                        'original_payment_id' => $payment->id,
+                        'amount' => $payment->amount,
+                        'error' => $e->getMessage()
+                    ]);
+                    $failedPayments[] = $payment->id;
+                }
             }
 
-            // Update amounts
-            $saleOrder->update(['paid_amount' => 0]);
-            $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+            // Update amounts only if payments were transferred
+            if (!empty($transferredPayments)) {
+                // Update the source sale order paid amount
+                $saleOrder->update(['paid_amount' => 0]);
 
-            Log::info('Payment transfer completed', [
-                'sale_order_id' => $saleOrderId,
-                'sale_id' => $sale->id,
-                'new_paid_amount' => $sale->refresh()->paid_amount
-            ]);
+                // Update the destination sale paid amount
+                $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+
+                Log::info('Payment transfer completed with validation', [
+                    'sale_order_id' => $saleOrderId,
+                    'sale_id' => $sale->id,
+                    'transferred_payments_count' => count($transferredPayments),
+                    'failed_payments_count' => count($failedPayments),
+                    'new_paid_amount' => $sale->refresh()->paid_amount
+                ]);
+
+                // Return success information
+                return [
+                    'success' => true,
+                    'transferred_count' => count($transferredPayments),
+                    'failed_count' => count($failedPayments),
+                    'total_transferred_amount' => collect($transferredPayments)->sum('amount')
+                ];
+            } else {
+                Log::warning('No valid payments were transferred', [
+                    'sale_order_id' => $saleOrderId,
+                    'sale_id' => $sale->id
+                ]);
+
+                // Return information about failed transfers
+                return [
+                    'success' => false,
+                    'transferred_count' => 0,
+                    'failed_count' => count($failedPayments),
+                    'message' => 'No valid payments were transferred'
+                ];
+            }
         } else {
-            Log::info('No payments found to transfer', [
+            Log::info('No payments found to transfer or sale order not found', [
                 'sale_order_id' => $saleOrderId
             ]);
+
+            // Return information about no payments found
+            return [
+                'success' => true,
+                'transferred_count' => 0,
+                'failed_count' => 0,
+                'message' => 'No payments found to transfer'
+            ];
         }
     }
 
     /**
-     * Transfer payments from Quotation to Sale
+     * Transfer payments from Quotation to Sale with enhanced logic and validation
      */
     private function transferPaymentsFromQuotation($quotationId, $sale)
     {
@@ -1731,23 +1826,112 @@ class SaleController extends Controller
             'sale_id' => $sale->id
         ]);
 
-        $quotation = \App\Models\Sale\Quotation::with('paymentTransaction')->find($quotationId);
+        $quotation = \App\Models\Sale\Quotation::with('paymentTransaction.paymentType')->find($quotationId);
 
         if ($quotation && $quotation->paymentTransaction->isNotEmpty()) {
-            foreach ($quotation->paymentTransaction as $payment) {
-                // Create new payment for Sale using polymorphic relationship
-                $newPayment = $payment->replicate();
-                $newPayment->transaction_id = $sale->id;
-                $newPayment->transaction_type = \App\Models\Sale\Sale::class;
-                $newPayment->save();
+            $transferredPayments = [];
+            $failedPayments = [];
 
-                // Delete original payment
-                $payment->delete();
+            foreach ($quotation->paymentTransaction as $payment) {
+                // Validate payment before transfer
+                if ($payment->amount <= 0) {
+                    Log::warning('Skipping invalid payment with zero or negative amount', [
+                        'payment_id' => $payment->id,
+                        'amount' => $payment->amount
+                    ]);
+                    continue;
+                }
+
+                try {
+                    // Create new payment for Sale using polymorphic relationship
+                    $newPayment = $payment->replicate();
+                    $newPayment->transaction_id = $sale->id;
+                    $newPayment->transaction_type = \App\Models\Sale\Sale::class;
+
+                    // Ensure all necessary fields are properly set
+                    $newPayment->created_at = now();
+                    $newPayment->updated_at = now();
+
+                    if ($newPayment->save()) {
+                        Log::info('Payment transferred successfully', [
+                            'original_payment_id' => $payment->id,
+                            'new_payment_id' => $newPayment->id,
+                            'amount' => $payment->amount
+                        ]);
+
+                        $transferredPayments[] = [
+                            'original_id' => $payment->id,
+                            'new_id' => $newPayment->id,
+                            'amount' => $payment->amount
+                        ];
+
+                        // Delete original payment
+                        $payment->delete();
+                    } else {
+                        Log::error('Failed to transfer payment', [
+                            'original_payment_id' => $payment->id,
+                            'amount' => $payment->amount
+                        ]);
+                        $failedPayments[] = $payment->id;
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Exception during payment transfer', [
+                        'original_payment_id' => $payment->id,
+                        'amount' => $payment->amount,
+                        'error' => $e->getMessage()
+                    ]);
+                    $failedPayments[] = $payment->id;
+                }
             }
 
-            // Update amounts
-            $quotation->update(['paid_amount' => 0]);
-            $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+            // Update amounts only if payments were transferred
+            if (!empty($transferredPayments)) {
+                // Update the source quotation paid amount
+                $quotation->update(['paid_amount' => 0]);
+
+                // Update the destination sale paid amount
+                $this->paymentTransactionService->updateTotalPaidAmountInModel($sale);
+
+                Log::info('Quotation payment transfer completed', [
+                    'quotation_id' => $quotationId,
+                    'sale_id' => $sale->id,
+                    'transferred_payments_count' => count($transferredPayments),
+                    'failed_payments_count' => count($failedPayments)
+                ]);
+
+                // Return success information
+                return [
+                    'success' => true,
+                    'transferred_count' => count($transferredPayments),
+                    'failed_count' => count($failedPayments),
+                    'total_transferred_amount' => collect($transferredPayments)->sum('amount')
+                ];
+            } else {
+                Log::warning('No valid payments were transferred from quotation', [
+                    'quotation_id' => $quotationId,
+                    'sale_id' => $sale->id
+                ]);
+
+                // Return information about failed transfers
+                return [
+                    'success' => false,
+                    'transferred_count' => 0,
+                    'failed_count' => count($failedPayments),
+                    'message' => 'No valid payments were transferred'
+                ];
+            }
+        } else {
+            Log::info('No payments found to transfer or quotation not found', [
+                'quotation_id' => $quotationId
+            ]);
+
+            // Return information about no payments found
+            return [
+                'success' => true,
+                'transferred_count' => 0,
+                'failed_count' => 0,
+                'message' => 'No payments found to transfer'
+            ];
         }
     }
 
