@@ -39,7 +39,7 @@ class SaleOrderRequest extends FormRequest
             'order_date'           => ['required', 'date_format:'.implode(',', $this->getDateFormats())],
             'due_date'             => ['nullable', 'date_format:'.implode(',', $this->getDateFormats())],
             'prefix_code'          => ['nullable', 'string','max:250'],
-            'order_code'           => ['required', 'string','max:50'],
+            'order_code'           => ['required', 'string','max:50', Rule::unique('sale_orders')],
             'order_status'         => ['nullable', 'string','max:50'], // Made nullable for both create and update
             'count_id'             => ['required', 'numeric'],
             'round_off'            => ['nullable',Rule::requiredIf( fn () => empty($this->input('round_off'))),'numeric',],
@@ -48,9 +48,9 @@ class SaleOrderRequest extends FormRequest
             'state_id'             => ['nullable', 'integer', Rule::exists('states', 'id')],
             'carrier_id'           => ['nullable', 'integer', Rule::exists('carriers', 'id')],
             'row_count'            => ['required', 'integer', 'min:1'],
-            'currency_id'          => ['nullable', 'integer', 'min:1'],
-            'exchange_rate'        => ['nullable', 'numeric', 'min:0'],
-            'shipping_charge'      => ['nullable', 'numeric', 'min:0'],
+            'currency_id' => ['nullable', 'integer', 'min:1'],
+            'exchange_rate' => ['nullable', 'numeric', 'min:0'],
+            'shipping_charge' => ['nullable', 'numeric', 'min:0'],
             'is_shipping_charge_distributed' => ['nullable', 'boolean'],
         ];
 
@@ -58,6 +58,8 @@ class SaleOrderRequest extends FormRequest
         if ($this->isMethod('PUT')) {
             $rulesArray['order_status'] = ['required', 'string','max:50'];
             $rulesArray['sale_order_id'] = ['required'];
+            // For updates, exclude the current record from the unique check
+            $rulesArray['order_code'] = ['required', 'string', 'max:50', Rule::unique('sale_orders')->ignore($this->input('sale_order_id'))];
         }
 
         return $rulesArray;

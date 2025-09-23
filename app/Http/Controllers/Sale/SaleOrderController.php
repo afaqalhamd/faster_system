@@ -131,6 +131,17 @@ class SaleOrderController extends Controller
     {
         $prefix = Prefix::findOrNew($this->companyId);
         $lastCountId = $this->getLastCountId();
+
+        // Ensure we have a unique order code
+        $countId = $lastCountId + 1;
+        $orderCode = $prefix->sale_order . $countId;
+
+        // Check if order code already exists and increment until we find a unique one
+        while (SaleOrder::where('order_code', $orderCode)->exists()) {
+            $countId++;
+            $orderCode = $prefix->sale_order . $countId;
+        }
+
         $selectedPaymentTypesArray = json_encode($this->paymentTypeService->selectedPaymentTypesArray());
 
         // Prepare empty item transactions structure similar to edit method
@@ -141,7 +152,7 @@ class SaleOrderController extends Controller
 
         $data = [
             'prefix_code' => $prefix->sale_order,
-            'count_id' => ($lastCountId + 1),
+            'count_id' => $countId,
         ];
 
         return view('sale.order.create', compact('data', 'selectedPaymentTypesArray', 'itemTransactionsJson', 'taxList'));
@@ -336,13 +347,24 @@ class SaleOrderController extends Controller
             $validatedData = $request->validated();
 
             if ($request->operation == 'save') {
+                // Ensure order code is unique
+                $orderCode = $validatedData['order_code'];
+                $prefixCode = $validatedData['prefix_code'];
+                $countId = $validatedData['count_id'];
+
+                // Check if order code already exists and increment until we find a unique one
+                while (SaleOrder::where('order_code', $orderCode)->exists()) {
+                    $countId++;
+                    $orderCode = $prefixCode . $countId;
+                }
+
                 $fillableColumns = [
                     'party_id' => $validatedData['party_id'],
                     'order_date' => $validatedData['order_date'],
                     'due_date' => $validatedData['due_date'],
-                    'prefix_code' => $validatedData['prefix_code'],
-                    'count_id' => $validatedData['count_id'],
-                    'order_code' => $validatedData['order_code'],
+                    'prefix_code' => $prefixCode,
+                    'count_id' => $countId,
+                    'order_code' => $orderCode,
                     'note' => $validatedData['note'],
                     'round_off' => $validatedData['round_off'],
                     'grand_total' => $validatedData['grand_total'],
@@ -368,13 +390,30 @@ class SaleOrderController extends Controller
 
                 $request->request->add(['sale_order_id' => $newSaleOrder->id]);
             } else {
+                // For updates, we allow the same order code as the existing record
+                $orderCode = $validatedData['order_code'];
+                $prefixCode = $validatedData['prefix_code'];
+                $countId = $validatedData['count_id'];
+
+                // If this is an update operation, we need to check if the order code is being changed
+                // and if so, ensure it's unique (excluding the current record)
+                $newSaleOrder = SaleOrder::findOrFail($validatedData['sale_order_id']);
+
+                if ($newSaleOrder->order_code !== $orderCode) {
+                    // Order code is being changed, ensure it's unique
+                    while (SaleOrder::where('order_code', $orderCode)->where('id', '!=', $newSaleOrder->id)->exists()) {
+                        $countId++;
+                        $orderCode = $prefixCode . $countId;
+                    }
+                }
+
                 $fillableColumns = [
                     'party_id' => $validatedData['party_id'],
                     'order_date' => $validatedData['order_date'],
                     'due_date' => $validatedData['due_date'],
-                    'prefix_code' => $validatedData['prefix_code'],
-                    'count_id' => $validatedData['count_id'],
-                    'order_code' => $validatedData['order_code'],
+                    'prefix_code' => $prefixCode,
+                    'count_id' => $countId,
+                    'order_code' => $orderCode,
                     'note' => $validatedData['note'],
                     'round_off' => $validatedData['round_off'],
                     'grand_total' => $validatedData['grand_total'],
@@ -387,7 +426,6 @@ class SaleOrderController extends Controller
                     'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'] ?? 0,
                 ];
 
-                $newSaleOrder = SaleOrder::findOrFail($validatedData['sale_order_id']);
                 $newSaleOrder->update($fillableColumns);
                 $newSaleOrder->itemTransaction()->delete();
                 // $newSaleOrder->accountTransaction()->delete();

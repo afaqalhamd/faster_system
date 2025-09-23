@@ -2,10 +2,10 @@
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
         <div>
-            <img src={{ url("/app/getimage/" . app('site')['colored_logo']) }} class="logo-icon" alt="logo icon">
+            <img src={{ url("/app/getimage/" . app('company')['colored_logo']) }} class="logo-icon" alt="logo icon">
         </div>
         <div>
-            <h4 class="logo-text">{{ app('site')['name'] }}</h4>
+            <h4 class="logo-text">{{ app('company')['name'] }}</h4>
         </div>
         <div class="toggle-icon ms-auto"><i class='bx bx-arrow-back'></i>
         </div>
@@ -91,10 +91,24 @@
                         </li>
                     @endcan
 
-                    @can('sale.invoice.view')
+                    @can('sale.payment.in.view')
                         <li class="{{ request()->is('payment/in') ? 'mm-active' : '' }}">
                             <a href="{{ route('sale.payment.in') }}"><i
                                     class='bx bx-radio-circle'></i>{{ __('payment.payment_in') }}</a>
+                        </li>
+                    @endcan
+
+                    {{-- @can('sale.combined.payment.in.view')
+                        <li class="{{ request()->is('sale/combined-payment') ? 'mm-active' : '' }}">
+                            <a href="{{ route('sale.combined.payment') }}"><i
+                                    class='bx bx-radio-circle'></i>{{ __('payment.combined_payments') }}</a>
+                        </li>
+                    @endcan --}}
+
+                    @can('sale.order.payment.view')
+                        <li class="{{ request()->is('sale/order/payment-in') ? 'mm-active' : '' }}">
+                            <a href="{{ route('sale.order.payment.in') }}"><i
+                                    class='bx bx-radio-circle'></i>{{ __('payment.sale_order_payment_in') }}</a>
                         </li>
                     @endcan
 

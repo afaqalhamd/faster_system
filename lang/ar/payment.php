@@ -42,9 +42,13 @@ return [
 
 'payment_out' => 'الدفع الصادر',
 
-'payment_in' => 'الدفع الوارد',
+'payment_in'                => 'الدفع الوارد',
 
-'payment_receipt' => 'إيصال الدفع',
+'sale_order_payment_in'     => 'مدفوعات طلبات البيع',
+
+'combined_payments'         => 'المدفوعات المجمعة',
+
+'payment_receipt'           => 'إيصال الدفع',
 
 
 'previously_paid'           => 'المدفوعة سابقا',

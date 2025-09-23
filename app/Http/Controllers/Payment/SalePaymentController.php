@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Contracts\View\View;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 use App\Traits\FormatNumber;
 use App\Traits\FormatsDateInputs;
@@ -21,6 +22,7 @@ use App\Services\AccountTransactionService;
 
 use App\Http\Controllers\Sale\SaleController;
 use App\Models\Sale\Sale;
+use App\Models\Sale\SaleOrder;
 use App\Models\PaymentTransaction;
 use App\Services\PartyService;
 
@@ -47,6 +49,44 @@ class SalePaymentController extends Controller
         $this->partyService = $partyService;
     }
 
+    /**
+     * Helper method to check if current user is associated with a carrier
+     * @return bool
+     */
+    private function isCarrierUser(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->carrier_id && $user->role && strtolower($user->role->name) === 'delivery';
+    }
+
+    /**
+     * Apply carrier filtering to query for delivery users
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $type The transaction type (Sale::class or SaleOrder::class)
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyCarrierFilter($query, string $type)
+    {
+        $user = auth()->user();
+        if ($this->isCarrierUser()) {
+            // For delivery users, filter payments based on:
+            // 1. The carrier_id in the related models (Sale or SaleOrder)
+            // 2. The user who created the payment (created_by field)
+            if ($type === Sale::class) {
+                // Filter by carrier_id in Sale model and created_by user
+                $query->whereHas('transaction', function ($subQuery) use ($user) {
+                    $subQuery->where('carrier_id', $user->carrier_id);
+                })->where('created_by', $user->id);
+            } elseif ($type === SaleOrder::class) {
+                // Filter by carrier_id in SaleOrder model and created_by user
+                $query->whereHas('transaction', function ($subQuery) use ($user) {
+                    $subQuery->where('carrier_id', $user->carrier_id);
+                })->where('created_by', $user->id);
+            }
+        }
+        return $query;
+    }
+
     /***
      * View Payment History
      *
@@ -64,9 +104,9 @@ class SalePaymentController extends Controller
     }
 
     /**
-     * Print Sale
+     * Print Sale Bill Payment
      *
-     * @param int $id, the ID of the sale
+     * @param int $id, the ID of the sale bill payment
      * @return \Illuminate\View\View
      */
     public function printSaleBillPayment($id, $isPdf = false) : View {
@@ -103,37 +143,12 @@ class SalePaymentController extends Controller
         /**
          * Display in browser
          * 'I'
-         * Downloadn PDF
+         * Download PDF
          * 'D'
          * */
         $mpdf->Output('Sale-Bill-Payment-'.$id.'.pdf', 'D');
     }
 
-    function getSaleBillPaymentHistoryData($id){
-        $model = Sale::with('party','paymentTransaction.paymentType')->find($id);
-
-        $data = [
-            'party_id'  => $model->party->id,
-            'party_name'  => $model->party->first_name.' '.$model->party->last_name,
-            'balance'  => $this->formatWithPrecision($model->grand_total - $model->paid_amount),
-            'invoice_id'  => $id,
-            'invoice_code'  => $model->sale_code,
-            'invoice_date'  => $this->toUserDateFormat($model->sale_date),
-            'balance_amount'  => $this->formatWithPrecision($model->grand_total - $model->paid_amount),
-            'paid_amount'  => $this->formatWithPrecision($model->paid_amount),
-            'paid_amount_without_format'  => $model->paid_amount,
-            'paymentTransactions' => $model->paymentTransaction->map(function ($transaction) {
-                                        return [
-                                            'payment_id' => $transaction->id,
-                                            'transaction_date' => $this->toUserDateFormat($transaction->transaction_date),
-                                            'reference_no' => $transaction->reference_no??'',
-                                            'payment_type' => $transaction->paymentType->name,
-                                            'amount' => $this->formatWithPrecision($transaction->amount),
-                                        ];
-                                    })->toArray(),
-        ];
-        return $data;
-    }
     public function getSaleBillPayment($id) : JsonResponse{
         $model = Sale::with('party')->find($id);
 
@@ -180,7 +195,7 @@ class SalePaymentController extends Controller
 
             /**
              * Update Sale Model
-             * Total Paid Amunt
+             * Total Paid Amount
              * */
             $sale = Sale::find($saleId);
             if(!$this->paymentTransactionService->updateTotalPaidAmountInModel($sale)){
@@ -188,7 +203,6 @@ class SalePaymentController extends Controller
             }
 
             DB::commit();
-
             return response()->json([
                 'status'    => true,
                 'message' => __('app.record_deleted_successfully'),
@@ -335,6 +349,9 @@ class SalePaymentController extends Controller
                             return $query->where('reference_no', 'like', '%' . $request->reference_no . '%');
                         }
                     });
+
+                    // Apply carrier filtering for delivery users
+                    $query = $this->applyCarrierFilter($query, Sale::class);
                 }
 
             }
@@ -386,4 +403,5 @@ class SalePaymentController extends Controller
                     ->rawColumns(['action'])
                     ->make(true);
     }
+
 }

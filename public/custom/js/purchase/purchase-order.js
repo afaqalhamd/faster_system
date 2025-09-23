@@ -655,8 +655,9 @@ function setSumOfTablefooter() {
 function setBottomInvoiceTotal() {
     var sumOfTotalColumn = returnSumOfTotalColumn();
     var getRoundOff = getCurrentRoundOffAmount();
+    var shipping_charge = returnDecimalValueByName('shipping_charge')
 
-    sumOfTotalColumn = parseFloat(sumOfTotalColumn) + parseFloat(getRoundOff);
+    sumOfTotalColumn = parseFloat(sumOfTotalColumn) + parseFloat(getRoundOff) + parseFloat(shipping_charge);
 
     //Set Grand Total
     $(".grand_total").val(_parseFix(sumOfTotalColumn));
@@ -702,6 +703,13 @@ $(document).on('change', '.round_off', function () {
     setBottomInvoiceTotal();
 });
 
+/**
+ * When change Shipping charge
+ */
+$(document).on('change', 'input[name="shipping_charge"], #is_shipping_charge_distributed', function(){
+    setBottomOfTableRecords();
+});
+
 
 function setRoundOffAmount(workType = 'automatic') {
     if (workType == 'automatic') {
@@ -716,6 +724,16 @@ function setRoundOffAmount(workType = 'automatic') {
 
 function getCurrentRoundOffAmount() {
     return $(".round_off").val();
+}
+
+function returnDecimalValueByName(inputBoxName) {
+    var _inpuBoxId = $("input[name ='" + inputBoxName + "']");
+    var inputBoxValue = _inpuBoxId.val();
+
+    if (inputBoxValue == '' || isNaN(inputBoxValue)) {
+        return parseFloat(0);
+    }
+    return parseFloat(inputBoxValue);
 }
 
 /**
@@ -963,7 +981,50 @@ $(document).ready(function () {
     if (operation == 'update') {
         updateOperation();
     }
+
+    /**
+     * Apply user permissions based on role
+     */
+    applyUserPermissions();
 });
+
+/**
+ * Apply user permissions based on role
+ */
+function applyUserPermissions() {
+    // Get user permissions from hidden input
+    const permissionsJson = $('#user_permissions').val();
+    if (!permissionsJson) return;
+
+    const permissions = JSON.parse(permissionsJson);
+
+    // If user can edit all fields, no need to apply restrictions
+    if (permissions.can_edit_all_fields) return;
+
+    // Show permission notice for delivery users
+    if (window.userRole === 'Delivery') {
+        showDeliveryUserNotice();
+    }
+}
+
+/**
+ * Show notice for delivery users about their permissions
+ */
+function showDeliveryUserNotice() {
+    // Check if notice already exists
+    if ($('#deliveryUserNotice').length) return;
+
+    const noticeHtml = `
+        <div class="alert alert-info alert-dismissible fade show" role="alert" id="deliveryUserNotice">
+            <i class="bx bx-info-circle me-2"></i>
+            <strong>Delivery User Notice:</strong> You can only modify the order status and add payments. Other sections are hidden.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+
+    // Insert notice at the top of the form
+    $('#invoiceForm').prepend(noticeHtml);
+}
 
 function updateOperation() {
 

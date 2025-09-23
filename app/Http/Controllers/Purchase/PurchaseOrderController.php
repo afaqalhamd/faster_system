@@ -84,6 +84,27 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Check if user can edit purchase order status
+     *
+     * @return bool
+     */
+    public static function canUserEditPurchaseOrderStatus(): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Get user role name
+        $userRole = $user->role ? $user->role->name : null;
+
+        // Check if user has one of the allowed roles
+        $allowedRoles = ['Admin', 'Delivery', 'Operations-Department'];
+
+        return in_array($userRole, $allowedRoles);
+    }
+
+    /**
      * Create a new order.
      *
      * @return \Illuminate\View\View
@@ -190,7 +211,10 @@ class PurchaseOrderController extends Controller
 
         $taxList = CacheService::get('tax')->toJson();
 
-        return view('purchase.order.edit', compact('taxList', 'order', 'itemTransactionsJson', 'selectedPaymentTypesArray', 'paymentHistory'));
+        // Get user role for JavaScript functionality
+        $userRole = auth()->user()->role ? auth()->user()->role->name : null;
+
+        return view('purchase.order.edit', compact('taxList', 'order', 'itemTransactionsJson', 'selectedPaymentTypesArray', 'paymentHistory', 'userRole'));
     }
 
     function cleanNumber($number) {
@@ -313,6 +337,8 @@ class PurchaseOrderController extends Controller
                     'exchange_rate' => $validatedData['exchange_rate'],
                     'order_status' => $validatedData['order_status'],
                     'carrier_id' => $validatedData['carrier_id'],
+                    'shipping_charge' => $validatedData['shipping_charge'] ?? 0,
+                    'is_shipping_charge_distributed' => $validatedData['is_shipping_charge_distributed'] ?? 0,
                 ];
 
                 $newPurchaseOrder = PurchaseOrder::findOrFail($validatedData['purchase_order_id']);
@@ -633,7 +659,7 @@ class PurchaseOrderController extends Controller
                 $orderCodes = json_decode($request->order_codes);
                 return $query->whereIn('order_code', $orderCodes);
             })
-            ->when(!auth()->user()->can('purchase.order.can.view.other.users.purchase.orders'), function ($query) use ($request) {
+            ->when(!\Illuminate\Support\Facades\Gate::forUser(auth()->user())->allows('purchase.order.can.view.other.users.purchase.orders'), function ($query) use ($request) {
                 return $query->where('created_by', auth()->user()->id);
             })
             ->where('order_type', 'purchase');

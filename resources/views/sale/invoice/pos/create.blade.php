@@ -31,7 +31,7 @@
                         <li class="nav-item"> <a class="nav-link" href="{{ route('item.list') }}"><i class='bx bx-package me-1'></i>{{ __('item.list') }}</a>
                         </li>
                         @endcan
-                        @can('sale.invoice.view')
+                        @can('sale.payment.in.view')
                         <li class="nav-item"> <a class="nav-link" href="{{ route('sale.payment.in') }}"><i class='bx bx-money me-1'></i>{{ __('payment.payment_in') }}</a>
                         </li>
                         @endcan

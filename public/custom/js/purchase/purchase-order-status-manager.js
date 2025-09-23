@@ -9,8 +9,10 @@ class PurchaseOrderStatusManager {
         this.initializeEventListeners();
         // Initialize collapse state on page load
         this.initializeCollapseState();
+        // Hide specific statuses for Delivery users
+        this.hideDeliveryStatuses();
         // Automatically load status history on page load
-        this.loadStatusHistoryOnPageLoad();
+        // Status history is loaded on demand when the user clicks the history button
     }
 
     /**
@@ -45,40 +47,6 @@ class PurchaseOrderStatusManager {
     }
 
     /**
-     * Load status history automatically when page loads
-     */
-    loadStatusHistoryOnPageLoad() {
-        // Check if we're on the purchase order edit page and the status history section exists
-        if ($('#statusHistoryContent').length && $('#purchase_order_id').length) {
-            const orderId = $('#purchase_order_id').val();
-            if (orderId) {
-                // Show loading indicator
-                $('#statusHistoryContent').html('<div class="text-center py-5"><i class="bx bx-loader-alt bx-spin text-primary" style="font-size: 2rem;"></i><p class="mt-2">Loading status history...</p></div>');
-
-                // Fetch status history via AJAX
-                $.ajax({
-                    url: `/purchase/order/get-status-history/${orderId}`,
-                    method: 'GET',
-                    success: (response) => {
-                        if (response.status) {
-                            this.updateStatusHistorySection(response.data);
-                        } else {
-                            $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + (response.message || 'Unknown error') + '</p></div>');
-                        }
-                    },
-                    error: (xhr) => {
-                        let errorMessage = 'An error occurred while fetching status history.';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                        }
-                        $('#statusHistoryContent').html('<div class="text-center py-5 text-danger"><i class="bx bx-error"></i><p>Error loading status history: ' + errorMessage + '</p></div>');
-                    }
-                });
-            }
-        }
-    }
-
-    /**
      * Initialize collapse state
      */
     initializeCollapseState() {
@@ -86,6 +54,21 @@ class PurchaseOrderStatusManager {
         if ($('#statusHistoryContent').length && $('.view-status-history').length) {
             // The section is already shown by default, so we just need to update the icon
             $('[data-bs-target="#statusHistoryCollapse"]').find('i').removeClass('bx-chevron-down').addClass('bx-chevron-up');
+        }
+    }
+
+    /**
+     * Hide specific statuses for Delivery users
+     */
+    hideDeliveryStatuses() {
+        // Check if we're on the purchase order edit page and user role is available
+        if ($('#order_status').length && typeof window.userRole !== 'undefined') {
+            // If user role is Delivery, hide Pending, Processing, and Completed options
+            if (window.userRole === 'Delivery') {
+                $('#order_status option[value="Pending"]').remove();
+                $('#order_status option[value="Processing"]').remove();
+                $('#order_status option[value="Completed"]').remove();
+            }
         }
     }
 
@@ -104,11 +87,43 @@ class PurchaseOrderStatusManager {
     }
 
     /**
+     * Validate if the purchase order is fully paid before allowing ROG status
+     */
+    validatePaymentForROG() {
+        // Get grand total and paid amount from the form
+        // Remove any non-numeric characters (commas, currency symbols, etc.)
+        const grandTotalStr = $('.grand_total').val() || '0';
+        const paidAmountStr = $('.paid_amount').val() || '0';
+
+        // Parse the values, handling formatted numbers
+        const grandTotal = parseFloat(grandTotalStr.replace(/[^0-9.-]+/g, '')) || 0;
+        const paidAmount = parseFloat(paidAmountStr.replace(/[^0-9.-]+/g, '')) || 0;
+
+        // Allow a small tolerance for floating point comparison
+        const tolerance = 0.01;
+
+        // Check if paid amount is equal to or greater than grand total (within tolerance)
+        return (paidAmount + tolerance) >= grandTotal;
+    }
+
+    /**
      * Show modal for status update with proof requirements
      */
     showStatusUpdateModal(orderId, status) {
+        // Additional validation for ROG status
+        if (status === 'ROG' && !this.validatePaymentForROG()) {
+            iziToast.error({
+                title: 'Error',
+                message: 'Cannot select ROG status. Please ensure the purchase order is fully paid before changing to ROG status.',
+                position: 'topRight'
+            });
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.purchase-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            return;
+        }
+
         const modal = `
-            <div class="modal fade" id="statusUpdateModal" tabindex="-1">
+            <div class="modal fade" id="statusUpdateModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -132,7 +147,7 @@ class PurchaseOrderStatusManager {
                                 ` : ''}
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-secondary" id="cancelStatusUpdate">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Update Status</button>
                             </div>
                         </form>
@@ -147,6 +162,23 @@ class PurchaseOrderStatusManager {
         // Add modal to body and show
         $('body').append(modal);
         $('#statusUpdateModal').modal('show');
+
+        // Handle cancel button click
+        $(document).off('click', '#cancelStatusUpdate').on('click', '#cancelStatusUpdate', () => {
+            // Reset the status dropdown to the previous value
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.purchase-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            $('#statusUpdateModal').modal('hide');
+        });
+
+        // Handle modal close (X button or clicking outside)
+        $('#statusUpdateModal').on('hidden.bs.modal', () => {
+            // Reset the status dropdown to the previous value
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.purchase-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            // Remove the modal from DOM
+            $('#statusUpdateModal').remove();
+        });
     }
 
     /**
@@ -158,6 +190,7 @@ class PurchaseOrderStatusManager {
         formData.append('order_status', status);
         formData.append('notes', ''); // Empty notes for direct updates
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        formData.append('order_id', orderId);
 
         this.submitStatusUpdateRequest(orderId, formData);
     }
@@ -348,31 +381,46 @@ class PurchaseOrderStatusManager {
                                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#proofImageModal${item.id}">
                                         <i class="bx bx-image me-1"></i>View Proof
                                     </button>
-
-                                    <!-- Proof Image Modal -->
-                                    <div class="modal fade" id="proofImageModal${item.id}" tabindex="-1">
-                                        <div class="modal-dialog modal-xl">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Proof Image - ${item.new_status} Status</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body text-center">
-                                                    <img src="${item.proof_image_url}" alt="Proof for ${item.new_status} status" class="img-fluid rounded">
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <a href="${item.proof_image_url}" download class="btn btn-primary">
-                                                        <i class="bx bx-download me-1"></i>Download
-                                                    </a>
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 ` : ''}
                             </div>
                         </div>
                     </div>
+
+                    <!-- Proof Image Modal (only created if it doesn't already exist in the DOM) -->
+                    ${item.proof_image_url && !$(`#proofImageModal${item.id}`).length ? `
+                        <div class="modal fade" id="proofImageModal${item.id}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="proofImageModalLabel${item.id}" aria-hidden="true">
+                            <div class="modal-dialog modal-xl">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="proofImageModalLabel${item.id}">Proof Image - ${item.new_status} Status</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body text-center">
+                                        <img src="${item.proof_image_url}" alt="Proof for ${item.new_status} status" class="img-fluid rounded">
+                                        ${item.notes ? `
+                                            <div class="mt-3 p-3 bg-light rounded">
+                                                <strong>Notes:</strong>
+                                                <p class="mb-0">${item.notes}</p>
+                                            </div>
+                                        ` : ''}
+                                        <div class="mt-3 text-muted">
+                                            <small>
+                                                Changed by: ${item.changed_by || 'Unknown User'} |
+                                                ${new Date(item.changed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                ${new Date(item.changed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <a href="${item.proof_image_url}" download class="btn btn-primary">
+                                            <i class="bx bx-download me-1"></i>Download
+                                        </a>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
                 `;
             });
         }

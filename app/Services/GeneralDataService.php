@@ -157,12 +157,7 @@ class GeneralDataService{
                     'color'    =>  'primary',
                     'icon'    =>  'bx-loader-circle bx-spin',
                 ],
-                [
-                    'id'    =>  'Ordered',
-                    'name'    =>  __('purchase.ordered'),
-                    'color'    =>  'info',
-                    'icon'    =>  'bx-check-circle',
-                ],
+
                 [
                     'id'    =>  'Shipped',
                     'name'    =>  __('purchase.shipped'),

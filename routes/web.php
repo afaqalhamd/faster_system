@@ -1748,6 +1748,48 @@ Route::middleware('auth')->group(function () {
 
 
         /**
+         * Sale Order
+         * */
+        //get Payment details
+        Route::get('/sale-order/get/{id}', [SaleOrderPaymentController::class, 'getSaleOrderPayment'])
+                ->middleware('can:sale.order.create');
+        //save payment
+        Route::post('/sale-order/store', [SaleOrderPaymentController::class, 'storeSaleOrderPayment'])->name('store.sale.order.payment');//Save operation
+        //get payment history
+        Route::get('/sale-order/history/{id}', [SaleOrderPaymentController::class, 'getSaleOrderPaymentHistory'])
+                ->middleware('can:sale.order.view');
+        Route::get('/sale-order/delete/{id}', [SaleOrderPaymentController::class, 'deleteSaleOrderPayment'])
+                ->middleware('can:sale.order.delete')
+                ->name('sale.order.payment.delete');
+        Route::get('/sale-order/print/{id}', [SaleOrderPaymentController::class, 'printSaleOrderPayment'])
+                    ->middleware('can:sale.order.view')
+                    ->name('sale.order.payment.print');
+        Route::get('/sale-order/pdf/{id}', [SaleOrderPaymentController::class, 'pdfSaleOrderPayment'])
+                    ->middleware('can:sale.order.view')
+                    ->name('sale.order.payment.pdf');
+
+        /**
+         * Quotation
+         *
+         * */
+        //get Payment details
+        Route::get('/quotation/get/{id}', [QuotationPaymentController::class, 'getQuotationPayment'])
+                ->middleware('can:quotation.create');
+        //save payment
+        Route::post('/quotation/store', [QuotationPaymentController::class, 'storeQuotationPayment'])->name('store.quotation.payment');//Save operation
+        //get payment history
+        Route::get('/quotation/history/{id}', [QuotationPaymentController::class, 'getQuotationPaymentHistory'])
+                ->middleware('can:quotation.view');
+        Route::get('/quotation/delete/{id}', [QuotationPaymentController::class, 'deleteQuotationPayment'])
+                ->middleware('can:quotation.delete');
+        Route::get('/quotation/print/{id}', [QuotationPaymentController::class, 'printQuotationPayment'])
+                    ->middleware('can:quotation.view')
+                    ->name('quotation.payment.print');
+        Route::get('/quotation/pdf/{id}', [QuotationPaymentController::class, 'pdfQuotationPayment'])
+                    ->middleware('can:quotation.view')
+                    ->name('quotation.payment.pdf');
+
+        /**
          * Sale Bill
          *
          * */
@@ -1794,10 +1836,30 @@ Route::middleware('auth')->group(function () {
          * */
         Route::get('/in', function () {
                     return view('sale.payment-in.list');
-                    })->middleware('can:sale.invoice.view')
+                    })->middleware('can:sale.payment.in.view')
                     ->name('sale.payment.in');//View
         Route::get('/in/datatable-list', [SalePaymentController::class, 'datatableSaleBillPayment'])->name('sale.invoice.payment.datatable.list'); //Datatable List
     });
+
+    /**
+     * Sale Order Payment Out
+     * */
+    Route::group(['prefix' => 'sale/order'], function () {
+        Route::get('/payment-in', function () {
+            return view('sale.order.payment-in.list');
+        })->middleware('can:sale.order.payment.view')
+          ->name('sale.order.payment.in');//View
+        Route::get('/payment-in/datatable-list', [SaleOrderPaymentController::class, 'datatableSaleOrderPayment'])->name('sale.order.payment.datatable.list'); //Datatable List
+    });
+
+    // Combined payment list for both sale and sale order payments
+    Route::group(['prefix' => 'transaction/'], function () {
+        Route::get('/combined-payment/datatable-list', [SalePaymentController::class, 'datatableCombinedPayment'])->name('combined.payment.datatable.list'); //Datatable List
+    });
+    Route::get('/sale/combined-payment', function () {
+        return view('sale.combined-payment.list');
+    })->middleware('can:sale.combined.payment.in.view')
+      ->name('sale.combined.payment');//View
 
     /**
      * Sale Bill

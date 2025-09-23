@@ -54,6 +54,8 @@ class PurchaseOrder extends Model
         'post_receipt_action',
         'post_receipt_action_at',
         'carrier_id',
+        'shipping_charge',
+        'is_shipping_charge_distributed',
     ];
 
     /**

@@ -781,6 +781,10 @@ class RolesAndPermissionsSeeder extends Seeder
                                     [
                                         'name' => 'sale.order.delete',
                                         'displayName' => 'Delete',
+                                    ],
+                                    [
+                                        'name' => 'sale.order.payment.view',
+                                        'displayName' => 'View Payment List',
                                     ]
 
                                 ],
@@ -803,8 +807,12 @@ class RolesAndPermissionsSeeder extends Seeder
                                     [
                                         'name' => 'sale.invoice.delete',
                                         'displayName' => 'Delete',
-                                    ]
-
+                                    ],
+                                    [
+                                        'name' => 'sale.payment.in.view',
+                                        'displayName' => 'View Payment In',
+                                    ],
+                                    
                                 ],
             ],
             [
@@ -829,20 +837,20 @@ class RolesAndPermissionsSeeder extends Seeder
 
                                 ],
             ],
-            [
-            'groupName' => 'Delivery',
-            'permissionName' => [
-                                    [
-                                        'name' => 'delivery.view',
-                                        'displayName' => 'View',
-                                    ],
-                                    [
-                                        'name' => 'delivery.payment.record',
-                                        'displayName' => 'Record Delivery Payment',
-                                    ],
+            // [
+            // 'groupName' => 'Delivery',
+            // 'permissionName' => [
+            //                         [
+            //                             'name' => 'delivery.view',
+            //                             'displayName' => 'View',
+            //                         ],
+            //                         [
+            //                             'name' => 'delivery.payment.record',
+            //                             'displayName' => 'Record Delivery Payment',
+            //                         ],
 
-                                ],
-            ],
+            //                     ],
+            // ],
             [
             'groupName' => 'Cash & Bank Transaction',
             'permissionName' => [
@@ -905,19 +913,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         }
 
-        // Create Delivery role
-        $deliveryRole = Role::firstOrCreate(['name' => 'Delivery']);
-
-        // Assign delivery permission to delivery role
-        $deliveryPermission = Permission::where('name', 'delivery.view')->first();
-        if ($deliveryPermission) {
-            $deliveryRole->givePermissionTo($deliveryPermission);
-        }
-
-        // Assign delivery payment permission to delivery role
-        $deliveryPaymentPermission = Permission::where('name', 'delivery.payment.record')->first();
-        if ($deliveryPaymentPermission) {
-            $deliveryRole->givePermissionTo($deliveryPaymentPermission);
-        }
+        
     }
 }

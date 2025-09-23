@@ -183,6 +183,15 @@ class SaleOrderStatusManager {
             $(`.sale-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
             $('#statusUpdateModal').modal('hide');
         });
+
+        // Handle modal close (X button or clicking outside)
+        $('#statusUpdateModal').on('hidden.bs.modal', () => {
+            // Reset the status dropdown to the previous value
+            const currentStatus = $('#current_order_status').val() || 'Pending';
+            $(`.sale-order-status-select[data-order-id="${orderId}"]`).val(currentStatus);
+            // Remove the modal from DOM
+            $('#statusUpdateModal').remove();
+        });
     }
 
     /**

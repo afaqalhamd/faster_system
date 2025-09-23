@@ -7,10 +7,12 @@ use App\Models\Sale\SaleOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Services\PaymentTransactionService;
+use App\Services\SaleOrderStatusService;
 
 class SaleOrderController extends Controller
 {
     protected $paymentTransactionService;
+    protected $saleOrderStatusService;
 
     /**
      * Create a new controller instance.
@@ -18,9 +20,10 @@ class SaleOrderController extends Controller
      * @param PaymentTransactionService $paymentTransactionService
      * @return void
      */
-    public function __construct(PaymentTransactionService $paymentTransactionService)
+    public function __construct(PaymentTransactionService $paymentTransactionService, SaleOrderStatusService $saleOrderStatusService)
     {
         $this->paymentTransactionService = $paymentTransactionService;
+        $this->saleOrderStatusService = $saleOrderStatusService;
     }
 
     /**
@@ -314,6 +317,359 @@ class SaleOrderController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to convert sale order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Display a listing of sale orders for delivery users.
+     * Applies carrier filtering based on user's carrier assignment.
+     * Includes pagination for mobile performance.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deliveryOrders(Request $request)
+    {
+        $user = auth()->user();
+
+        // Check if user is a delivery user with carrier assignment
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        $query = SaleOrder::with(['party', 'carrier'])
+            ->where('carrier_id', $user->carrier_id)
+            ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled']);
+
+        // Apply status filter if provided
+        if ($request->has('status')) {
+            $query->where('order_status', $request->status);
+        }
+
+        // Apply date range filters if provided
+        if ($request->has('date_from')) {
+            $query->where('order_date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('order_date', '<=', $request->date_to);
+        }
+
+        // Implement pagination
+        $perPage = $request->get('per_page', 15);
+        $saleOrders = $query->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $saleOrders
+        ]);
+    }
+
+    /**
+     * Display the specified sale order with delivery details.
+     * Optimized for mobile performance with selective field loading.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deliveryOrderDetails($id)
+    {
+        $user = auth()->user();
+
+        // Check if user is a delivery user with carrier assignment
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        // Optimize query for mobile by selecting only necessary fields
+        $saleOrder = SaleOrder::select([
+                'id', 'order_code', 'order_date', 'due_date', 'grand_total',
+                'paid_amount', 'order_status', 'party_id', 'carrier_id',
+                'created_at', 'updated_at'
+            ])
+            ->with([
+                'party:id,first_name,last_name,address,phone,email',
+                'itemTransaction:id,transaction_id,transaction_type,item_id,quantity,unit_price,total',
+                'itemTransaction.item:id,name,sku',
+                'carrier:id,name'
+            ])
+            ->where('carrier_id', $user->carrier_id)
+            ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled'])
+            ->find($id);
+
+        if (!$saleOrder) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sale order not found or not assigned to your carrier'
+            ], 404);
+        }
+
+        // Get payment records array
+        $paymentRecords = $this->paymentTransactionService->getPaymentRecordsArray($saleOrder);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'order' => $saleOrder,
+                'payment_records' => $paymentRecords
+            ]
+        ]);
+    }
+
+    /**
+     * Get delivery user profile with carrier information
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deliveryProfile()
+    {
+        $user = auth()->user();
+
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        // Create response data with user and carrier information
+        $responseData = [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'role_id' => $user->role_id,
+            'carrier_id' => $user->carrier_id,
+            'status' => $user->status,
+            'avatar' => $user->avatar,
+            'mobile' => $user->mobile,
+            'is_allowed_all_warehouses' => $user->is_allowed_all_warehouses,
+            'fc_token' => $user->fc_token,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+            'carrier' => $user->carrier
+        ];
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $responseData
+        ]);
+    }
+
+    /**
+     * Get valid delivery statuses
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deliveryStatuses()
+    {
+        $statuses = [
+            ['id' => 'Delivery', 'name' => 'Delivery', 'description' => 'Order is out for delivery'],
+            ['id' => 'POD', 'name' => 'POD', 'description' => 'Proof of delivery collected'],
+            ['id' => 'Cancelled', 'name' => 'Cancelled', 'description' => 'Order cancelled'],
+            ['id' => 'Returned', 'name' => 'Returned', 'description' => 'Order returned']
+        ];
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $statuses
+        ]);
+    }
+
+    /**
+     * Update sale order status for delivery operations
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateDeliveryStatus(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        // Check if user is a delivery user with carrier assignment
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        // Find the sale order with carrier filtering
+        $saleOrder = SaleOrder::where('carrier_id', $user->carrier_id)
+            ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled'])
+            ->find($id);
+
+        if (!$saleOrder) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sale order not found or not assigned to your carrier'
+            ], 404);
+        }
+
+        // Validate request
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:Delivery,POD,Cancelled,Returned',
+            'notes' => 'nullable|string|max:500',
+            'proof_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Use the SaleOrderStatusService to update the status
+        $result = $this->saleOrderStatusService->updateSaleOrderStatus(
+            $saleOrder,
+            $request->status,
+            [
+                'notes' => $request->notes,
+                'proof_image' => $request->file('proof_image')
+            ]
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $result['message']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message']
+            ], 400);
+        }
+    }
+
+    /**
+     * Get status history for a delivery order
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deliveryOrderStatusHistory($id)
+    {
+        $user = auth()->user();
+
+        // Check if user is a delivery user with carrier assignment
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        // Find the sale order with carrier filtering
+        $saleOrder = SaleOrder::where('carrier_id', $user->carrier_id)
+            ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled'])
+            ->with('saleOrderStatusHistories.changedBy')
+            ->find($id);
+
+        if (!$saleOrder) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sale order not found or not assigned to your carrier'
+            ], 404);
+        }
+
+        // Use the SaleOrderStatusService to get the status history
+        $history = $this->saleOrderStatusService->getStatusHistory($saleOrder);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $history
+        ]);
+    }
+
+    /**
+     * Collect payment for a delivery order
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function collectDeliveryPayment(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        // Check if user is a delivery user with carrier assignment
+        if (!$user || !$user->carrier_id || !$user->role || strtolower($user->role->name) !== 'delivery') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User must be a delivery user with carrier assignment.'
+            ], 403);
+        }
+
+        // Find the sale order with carrier filtering
+        $saleOrder = SaleOrder::where('carrier_id', $user->carrier_id)
+            ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled'])
+            ->find($id);
+
+        if (!$saleOrder) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sale order not found or not assigned to your carrier'
+            ], 404);
+        }
+
+        // Validate request
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0',
+            'payment_type_id' => 'required|exists:payment_types,id',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Record the payment
+            $paymentData = [
+                'transaction_date' => now()->format('Y-m-d'),
+                'amount' => $request->amount,
+                'payment_type_id' => $request->payment_type_id,
+                'note' => $request->note ?? '',
+                'payment_from_unique_code' => \App\Enums\General::INVOICE->value,
+            ];
+
+            $payment = $this->paymentTransactionService->recordPayment($saleOrder, $paymentData);
+
+            if (!$payment) {
+                throw new \Exception(__('payment.failed_to_record_payment_transactions'));
+            }
+
+            // Update total paid amount in the sale order model
+            $this->paymentTransactionService->updateTotalPaidAmountInModel($saleOrder);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Payment collected successfully',
+                'data' => [
+                    'payment' => $payment,
+                    'updated_order' => $saleOrder->refresh()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to collect payment: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -22,6 +22,7 @@
                         <input type="hidden" id="base_url" value="{{ url('/') }}">
                         <input type="hidden" id="operation" name="operation" value="update">
                         <input type="hidden" id="selectedPaymentTypesArray" value="{{ $selectedPaymentTypesArray }}">
+                        <input type="hidden" id="current_order_status" value="{{ $order->order_status }}">
                         <div class="row">
                             <div class="col-12 col-lg-12">
                                 <div class="card">
@@ -76,7 +77,11 @@
                                                 <x-label for="order_status" name="{{ __('sale.order_status') }}" />
                                                 <div class="d-flex gap-2">
                                                     <div class="position-relative flex-grow-1">
-                                                        <select class="form-select purchase-order-status-select" name="order_status" id="order_status" data-order-id="{{ $order->id }}">
+                                                        @php
+                                                            // Check if user can edit purchase order status
+                                                            $canEditStatus = \App\Http\Controllers\Purchase\PurchaseOrderController::canUserEditPurchaseOrderStatus();
+                                                        @endphp
+                                                        <select class="form-select purchase-order-status-select" name="order_status" id="order_status" data-order-id="{{ $order->id }}" {{ !$canEditStatus ? 'disabled' : '' }}>
                                                             @php
                                                                 $generalDataService = new \App\Services\GeneralDataService();
                                                                 $statusOptions = $generalDataService->getPurchaseOrderStatus();
@@ -90,6 +95,8 @@
                                                                 </option>
                                                             @endforeach
                                                         </select>
+                                                        <!-- Hidden input to store current status for JavaScript validation -->
+                                                        <input type="hidden" id="current_order_status" value="{{ $order->order_status }}">
                                                     </div>
                                                     @if(isset($order) && $order->id)
                                                     <button type="button" class="btn btn-outline-info view-status-history" data-order-id="{{ $order->id }}" title="{{ __('View Status History') }}">
@@ -97,10 +104,17 @@
                                                     </button>
                                                     @endif
                                                 </div>
-                                                <small class="text-muted">
-                                                    <i class="bx bx-info-circle"></i>
-                                                    {{ __('ROG, Cancelled, and Returned statuses require proof images and notes') }}
-                                                </small>
+                                                @if(!$canEditStatus)
+                                                    <small class="text-muted">
+                                                        <i class="bx bx-info-circle"></i>
+                                                        {{ __('You do not have permission to edit the order status. Only Admin, Delivery, and Operations-Department roles can edit status.') }}
+                                                    </small>
+                                                @else
+                                                    <small class="text-muted">
+                                                        <i class="bx bx-info-circle"></i>
+                                                        {{ __('ROG, Cancelled, and Returned statuses require proof images and notes') }}
+                                                    </small>
+                                                @endif
                                             </div>
 
                                             <div class="col-md-4">
@@ -196,6 +210,21 @@
                                             <div class="col-md-4 mt-4">
                                                 <table class="table mb-0 table-striped">
                                                    <tbody>
+                                                    @if(app('company')['is_enable_carrier_charge'])
+                                                       <tr>
+                                                         <td>
+                                                            <span class="fw-bold">{{ __('carrier.shipping_charge') }}</span>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="is_shipping_charge_distributed" name="is_shipping_charge_distributed" {{ $order->is_shipping_charge_distributed ? 'checked' : '' }}>
+                                                                <label class="form-check-label small cursor-pointer" for="is_shipping_charge_distributed">{{ __('carrier.distribute_across_items') }}</label>
+                                                            </div>
+                                                            </div>
+                                                        </td>
+                                                         <td>
+                                                            <x-input type="text" additionalClasses="text-end" name="shipping_charge" :required="true" placeholder="Shipping Charge" value="{{ $formatNumber->formatWithPrecision($order->shipping_charge ?? 0) }}"/>
+                                                        </td>
+                                                      </tr>
+                                                      @endif
                                                       <tr>
                                                          <td class="w-50">
                                                             <div class="form-check">
@@ -347,16 +376,16 @@
                                                         </div>
 
                                                         {{-- Compact Proof Image Modal --}}
-                                                        @if($history->proof_image)
-                                                        <div class="modal fade" id="proofImageModal{{ $history->id }}" tabindex="-1">
+                                                        @if($history->proof_image_path)
+                                                        <div class="modal fade" id="proofImageModal{{ $history->id }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
                                                             <div class="modal-dialog modal-lg">
                                                                 <div class="modal-content">
                                                                     <div class="modal-header">
                                                                         <h6 class="modal-title">{{ $history->new_status }} Proof Image</h6>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                     </div>
                                                                     <div class="modal-body text-center">
-                                                                        <img src="{{ asset('storage/' . $history->proof_image) }}"
+                                                                        <img src="{{ asset('storage/' . $history->proof_image_path) }}"
                                                                              alt="{{ $history->new_status }} Proof"
                                                                              class="img-fluid rounded">
 
@@ -384,13 +413,12 @@
                                                                                  | {{ $history->changed_at->format('M d, Y H:i') }}
                                                                             </small>
                                                                         </div>
-                                                                    </div>
-                                                                    <div class="modal-footer">
-                                                                        <a href="{{ asset('storage/' . $history->proof_image) }}" download class="btn btn-primary btn-sm">
-                                                                            <i class="bx bx-download me-1"></i>Download
-                                                                        </a>
-                                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <a href="{{ asset('storage/' . $history->proof_image_path) }}" download class="btn btn-primary btn-sm">
+                                                                        <i class="bx bx-download me-1"></i>Download
+                                                                    </a>
+                                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -503,27 +531,32 @@
                                 </div>
                             </div>
                         </div>
-
+                        <div class="row">
+                            <div class="col-12 col-lg-12">
+                                <div class="card">
+                                    <div class="card-body p-4 row g-3">
+                                        <div class="col-md-12 text-end">
+                                            <button type="submit" class="btn btn-primary px-5" id="submit-btn">{{ __('app.update') }}</button>
+                                            <button type="button" class="btn btn-outline-primary px-5" id="save-btn">{{ __('app.save') }}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
-                <!--end row-->
             </div>
         </div>
-        <!-- Import Modals -->
-        @include("modals.service.create")
-        @include("modals.expense-category.create")
-        @include("modals.payment-type.create")
-        @include("modals.item.serial-tracking")
-        @include("modals.party.create")
-        @include("modals.item.create")
-        @include("modals.purchase.order.load-purchased-items")
-
+        <!--end page wrapper -->
         @endsection
 
 @section('js')
 <script type="text/javascript">
         const itemsTableRecords = @json($itemTransactionsJson);
         const taxList = JSON.parse('{!! $taxList !!}');
+
+        // Pass user role to JavaScript
+        window.userRole = @json($userRole);
 </script>
 <script src="{{ versionedAsset('custom/js/items/serial-tracking.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
@@ -542,4 +575,35 @@
 
 
 
+@endsection
+
+@section('css')
+<style>
+    .readonly-field {
+        opacity: 0.8;
+    }
+
+    .readonly-field .form-control,
+    .readonly-field .form-select,
+    .readonly-field .input-group-text {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+    .readonly-field .btn:not(.view-status-history) {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    .readonly-field label .badge {
+        font-size: 0.7em;
+        vertical-align: super;
+    }
+
+    /* Ensure status history button remains functional */
+    .view-status-history {
+        pointer-events: auto !important;
+        opacity: 1 !important;
+    }
+</style>
 @endsection

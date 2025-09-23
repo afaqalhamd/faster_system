@@ -14,7 +14,7 @@ class WarehouseSeeder extends Seeder
     public function run(): void
     {
         Warehouse::create([
-            'name'               => 'Main',
+            'name'               => 'China-Foshan',
             'is_deletable'       => 0,
         ]);
     }

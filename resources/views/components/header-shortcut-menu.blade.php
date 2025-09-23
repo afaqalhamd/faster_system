@@ -48,7 +48,7 @@
                                         </div>
                                         @endcan
 
-                                        @can('sale.invoice.create')
+                                        @can('sale.payment.in.view')
                                          <div class="col">
                                               <a href="{{ route('sale.payment.in') }}">
                                                 <div class="app-box d-flex align-items-center">

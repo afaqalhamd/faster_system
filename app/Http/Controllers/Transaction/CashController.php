@@ -195,14 +195,14 @@ class CashController extends Controller
                         return $this->formatWithPrecision($row->amount);
                     })
                     ->addColumn('transaction_type', function ($row) use ($cashAdjustmentKey) {
-                        if($row->transaction_type == $cashAdjustmentKey){
+                        if($row->transaction_type == $cashAdjustmentKey && $row->transaction){
                             return $row->transaction->adjustment_type;
                         }else{
                             return $row->transaction_type;
                         }
                     })
                     ->addColumn('color_class', function ($row) use ($dangerTypes, $cashAdjustmentKey) {
-                        if($row->transaction_type == $cashAdjustmentKey){
+                        if($row->transaction_type == $cashAdjustmentKey && $row->transaction){
                             return in_array($row->transaction->adjustment_type, $dangerTypes) ? "danger" : "success";
                         }else{
                             return in_array($row->transaction_type, $dangerTypes) ? "danger" : "success";
@@ -210,7 +210,11 @@ class CashController extends Controller
 
                     })
                     ->addColumn('party_name', function ($row) {
-                        return $row->transaction->party? $row->transaction->party->getFullName() : (($row->transaction->category) ? $row->transaction->category->name : '');
+                        // Check if transaction exists before accessing its properties
+                        if ($row->transaction) {
+                            return $row->transaction->party ? $row->transaction->party->getFullName() : (($row->transaction->category) ? $row->transaction->category->name : '');
+                        }
+                        return '';
                     })
                     ->addColumn('action', function($row) use ($cashAdjustmentKey){
                             $id = $row->id;
@@ -224,11 +228,11 @@ class CashController extends Controller
                                             <ul class="dropdown-menu">';
 
                                                     $actionBtn .= '<li>
-                                                        <a class="dropdown-item edit-cash-adjustment" data-cash-adjustment-id="' . $row->transaction->id . '" role="button"></i><i class="bx bx-edit"></i> '.__('app.edit').'</a>
+                                                        <a class="dropdown-item edit-cash-adjustment" data-cash-adjustment-id="' . ($row->transaction ? $row->transaction->id : '') . '" role="button"></i><i class="bx bx-edit"></i> '.__('app.edit').'</a>
                                                     </li>';
 
                                                     $actionBtn .= '<li>
-                                                    <button type="button" class="dropdown-item text-danger deleteRequest " data-delete-id='.$row->transaction->id.'><i class="bx bx-trash"></i> '.__('app.delete').'</button>
+                                                    <button type="button" class="dropdown-item text-danger deleteRequest " data-delete-id='.($row->transaction ? $row->transaction->id : '').'><i class="bx bx-trash"></i> '.__('app.delete').'</button>
                                                 </li>';
 
                                             $actionBtn .= '</ul>
@@ -295,6 +299,8 @@ class CashController extends Controller
                     'message' => __('app.cannot_delete_records'),
                 ],409);
             }
+            // Re-throw the exception if it's not a foreign key constraint violation
+            throw $e;
         }
     }
 
@@ -422,7 +428,7 @@ class CashController extends Controller
                 $isCashIn = true;
 
                 //If Party Related Cash transaction
-                $partyName = $data->transaction->party? $data->transaction->party->getFullName() : '';
+                $partyName = ($data->transaction && $data->transaction->party) ? $data->transaction->party->getFullName() : '';
 
                 if(!empty($data->transfer_to_payment_type_id)){
                     if($this->paymentTransactionService->getChequeTransactionType($data->transaction_type) == 'Withdraw'){
@@ -437,9 +443,9 @@ class CashController extends Controller
                 }else{
                     if($data->transaction_type == 'Cash Adjustment'){
                         $transactionDetails = $data->transaction_type;
-                        $classColor = ($data->transaction->adjustment_type == 'Cash Increase') ? 'success' : 'danger';
-                        $isCashIn = ($data->transaction->adjustment_type == 'Cash Increase');
-                        $partyName = $data->transaction->adjustment_type;
+                        $classColor = ($data->transaction && $data->transaction->adjustment_type == 'Cash Increase') ? 'success' : 'danger';
+                        $isCashIn = ($data->transaction && $data->transaction->adjustment_type == 'Cash Increase');
+                        $partyName = $data->transaction ? $data->transaction->adjustment_type : '';
                     }else{
                         $transactionDetails = $data->transaction_type;
 
@@ -456,9 +462,9 @@ class CashController extends Controller
 
                 $recordsArray[] = [
                                 'transaction_date'      => $this->toUserDateFormat($data->transaction_date),
-                                'invoice_or_bill_code'  => method_exists($data->transaction, 'getTableCode') ? $data->transaction->getTableCode() : '',
+                                'invoice_or_bill_code'  => ($data->transaction && method_exists($data->transaction, 'getTableCode')) ? $data->transaction->getTableCode() : '',
                                 'party_name'            => $partyName,
-                                'category_name'         => $data->transaction->category ? $data->transaction->category->name : '',
+                                'category_name'         => ($data->transaction && $data->transaction->category) ? $data->transaction->category->name : '',
                                 'transaction_details'   => $transactionDetails,
                                 'class_color'           => $classColor,
                                 'cash_in'               => ($isCashIn) ? $this->formatWithPrecision($data->amount, comma:false) : 0,

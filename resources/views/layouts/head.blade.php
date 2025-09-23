@@ -46,5 +46,5 @@
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{{ versionedAsset('custom/css/custom.css') }}">
 	@yield('css')
-	<title>@yield('title', app('company')['name'])</title>
+	<title>@yield('title', app('company')['name'] ?? 'Faster System')</title>
 </head>

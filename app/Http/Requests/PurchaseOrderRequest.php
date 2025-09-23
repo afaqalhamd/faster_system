@@ -48,9 +48,16 @@ class PurchaseOrderRequest extends FormRequest
             'row_count'            => ['required', 'integer', 'min:1'],
             'currency_id'          => ['nullable', 'integer', 'min:1'],
             'exchange_rate'        => ['nullable', 'numeric', 'min:0'],
-            'order_status'         => ['required', 'string','max:50'],
+            'order_status'         => ['nullable', 'string','max:50'], // Made nullable for create operations
             'carrier_id'           => ['nullable', 'integer', Rule::exists('carriers', 'id')],
+            'shipping_charge'      => ['nullable', 'numeric', 'min:0'],
+            'is_shipping_charge_distributed' => ['nullable', 'boolean'],
         ];
+
+        // For update operations, we still want to validate order_status
+        if ($this->isMethod('PUT')) {
+              $rulesArray['order_status'] = ['required', 'string','max:50'];
+        }
 
         if ($this->isMethod('PUT')) {
             $rulesArray['purchase_order_id']          = ['required'];
@@ -78,6 +85,13 @@ class PurchaseOrderRequest extends FormRequest
             'order_code' => $this->getOrderCode(),
             'state_id' => (!empty($this->input('state_id'))) ? $this->input('state_id') : null,
         ]);
+
+        // Set default order_status to Pending for create operations if not provided
+        if (!$this->isMethod('PUT') && !$this->has('order_status')) {
+            $this->merge([
+                'order_status' => 'Pending',
+            ]);
+        }
 
         //check is invoice_currency_id is exist or not
         if($this->has('invoice_currency_id')){

@@ -17,7 +17,7 @@ return [
     'status'                    => 'Payment Status',
     'payment_status'            => 'Payment Status',
     'paid'                      => 'Paid',
-    'unpaid'                    => 'Unpaid',
+    'unpaid'                      => 'Unpaid',
     'partially_paid'            => 'Partially Paid',
     'paid_amount'               => 'Paid Amount',
     'balance'                   => 'Balance',
@@ -43,6 +43,10 @@ return [
     'payment_out'               => 'Payment Out',
 
     'payment_in'                => 'Payment In',
+
+    'sale_order_payment_in'     => 'Order Payment-In',
+
+    'combined_payments'         => 'Combined Payments',
 
     'payment_receipt'           => 'Payment Receipt',
 
@@ -164,7 +168,6 @@ return [
     /*1.1.2*/
     'change_return'                         => 'Change Return',
     'due_payment'                           => 'Due Payment',
-    'due_payments'                          => 'Due Payments',
     'due_payment_report'                    => 'Due Payment Report',
 
     'receipt'                               => 'Receipt',
