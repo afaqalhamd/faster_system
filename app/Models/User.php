@@ -14,6 +14,7 @@ use App\Models\Role;
 use App\Models\UserWarehouse;
 use App\Models\OrderedProduct;
 use App\Models\Carrier;
+use App\Models\Warehouse;
 
 
 class User extends Authenticatable

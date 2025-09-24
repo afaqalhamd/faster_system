@@ -37,6 +37,64 @@ Route::get('/getimage/{image_name}', function($image_name) {
         ->header('Cache-Control', 'public, max-age=31536000');
 })->where('image_name', '.*');
 
+// Item Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/items', [App\Http\Controllers\Api\ItemController::class, 'index']);
+    Route::get('/items/search', [App\Http\Controllers\Api\ItemController::class, 'search']);
+    Route::get('/items/category/{categoryId}', [App\Http\Controllers\Api\ItemController::class, 'getItemsByCategory']);
+    Route::get('/items/sku/{sku}', [App\Http\Controllers\Api\ItemController::class, 'getItemBySKU']);
+    Route::get('/items/{id}', [App\Http\Controllers\Api\ItemController::class, 'show']);
+    Route::post('/items', [App\Http\Controllers\Api\ItemController::class, 'store']);
+    Route::put('/items/{id}', [App\Http\Controllers\Api\ItemController::class, 'update']);
+    // رفع صورة منتج
+    Route::post('/items/upload-image', [App\Http\Controllers\Api\ItemController::class, 'uploadItemImage']);
+});
+
+// Currency Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/currencies', [App\Http\Controllers\Api\CurrencyController::class, 'index']);
+    Route::get('/currencies/{id}', [App\Http\Controllers\Api\CurrencyController::class, 'show']);
+    Route::get('/company-currency', [App\Http\Controllers\Api\CurrencyController::class, 'getCompanyCurrency']);
+});
+
+// Sale Order Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/sale-orders', [SaleOrderController::class, 'index']);
+    Route::get('/sale-orders/{id}', [SaleOrderController::class, 'show']);
+    Route::post('/sale-orders', [SaleOrderController::class, 'store']);
+    Route::put('/sale-orders/{id}', [SaleOrderController::class, 'update']);
+    Route::delete('/sale-orders/{id}', [SaleOrderController::class, 'destroy']);
+    Route::post('/sale-orders/{id}/status', [SaleOrderController::class, 'updateStatus']);
+    Route::get('/sale-orders/{id}/status-history', [SaleOrderController::class, 'getStatusHistory']);
+});
+
+// Delivery API Routes
+Route::prefix('delivery')->group(function () {
+    // Delivery Authentication
+    Route::post('/login', [App\Http\Controllers\Api\Delivery\AuthController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        // Delivery Profile
+        Route::get('/profile', [App\Http\Controllers\Api\Delivery\AuthController::class, 'profile']);
+        Route::post('/logout', [App\Http\Controllers\Api\Delivery\AuthController::class, 'logout']);
+
+        // Delivery Orders
+        Route::get('/orders', [App\Http\Controllers\Api\Delivery\OrderController::class, 'index']);
+        Route::get('/orders/{id}', [App\Http\Controllers\Api\Delivery\OrderController::class, 'show']);
+        Route::put('/orders/{id}', [App\Http\Controllers\Api\Delivery\OrderController::class, 'update']);
+
+        // Delivery Status Management
+        Route::get('/statuses', [App\Http\Controllers\Api\Delivery\StatusController::class, 'index']);
+        Route::post('/orders/{id}/status', [App\Http\Controllers\Api\Delivery\OrderController::class, 'updateStatus']);
+        Route::get('/orders/{id}/status-history', [App\Http\Controllers\Api\Delivery\OrderController::class, 'statusHistory']);
+
+        // Delivery Payment Collection
+        Route::get('/orders/{id}/payment', [App\Http\Controllers\Api\Delivery\PaymentController::class, 'show']);
+        Route::post('/orders/{id}/payment', [App\Http\Controllers\Api\Delivery\OrderController::class, 'collectPayment']);
+        Route::get('/orders/{id}/payment-history', [App\Http\Controllers\Api\Delivery\OrderController::class, 'paymentHistory']);
+    });
+});
+
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

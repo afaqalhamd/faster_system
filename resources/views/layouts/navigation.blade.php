@@ -2,7 +2,7 @@
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
         <div>
-            <img src={{ url("/app/getimage/" . app('company')['colored_logo']) }} class="logo-icon" alt="logo icon">
+            <img src={{ url("/company/getimage/" . app('company')['colored_logo']) }} class="logo-icon" alt="logo icon">
         </div>
         <div>
             <h4 class="logo-text">{{ app('company')['name'] }}</h4>

@@ -157,5 +157,6 @@ return [
 
     // POD Payment Error
     'pod_payment_error'             => 'Cannot select POD status. Please ensure the sale is fully paid before changing to POD status.',
+    'sale_order'=>'Sale Order'
 
 ];

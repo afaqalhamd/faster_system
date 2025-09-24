@@ -72,6 +72,6 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'check.party.permission' => \App\Http\Middleware\CheckPartyTypePermission::class,//Custom
-
+        'delivery.auth' => \App\Http\Middleware\DeliveryAuthMiddleware::class,//Custom
     ];
 }

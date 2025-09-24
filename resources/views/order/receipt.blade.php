@@ -58,7 +58,7 @@
                                             <div class="col invoice-to">
                                                 <div class="text-gray-light text-uppercase">{{ __('order.receipt_to') }}:</div>
                                                 <h2 class="to">{{ $order->party->first_name .' '. $order->party->last_name }}</h2>
-                                                <div class="address">{{ $order->party->address }}</div>
+                                                <div class="address">{{ $order->party->shipping_address }}</div>
                                                 <div class="email"><a href="mailto:{{ $order->party->email }}">{{ $order->party->email }}</a>
                                                 </div>
                                             </div>

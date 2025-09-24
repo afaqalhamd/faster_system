@@ -395,7 +395,7 @@ class SaleOrderController extends Controller
                 'created_at', 'updated_at'
             ])
             ->with([
-                'party:id,first_name,last_name,address,phone,email',
+                'party:id,first_name,last_name,shipping_address,phone,email',
                 'itemTransaction:id,transaction_id,transaction_type,item_id,quantity,unit_price,total',
                 'itemTransaction.item:id,name,sku',
                 'carrier:id,name'

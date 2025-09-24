@@ -36,7 +36,7 @@
 
 								<div class="">
 									<div class="mb-3 text-center">
-										<img src={{ url("/app/getimage/" . app('site')['colored_logo']) }} width="60" alt="">
+										<img src={{ url("/app/getmage/" . app('site')['colored_logo']) }} width="60" alt="">
 									</div>
 									<div class="text-center mb-4">
 										<h5 class="">{{ app('site')['name'] }}</h5>
@@ -75,7 +75,7 @@
 											@if(false)
 											<div class="col-12">
 												<div class="text-center ">
-													<p class="mb-0">{{ __('auth.dont_have_account') }}
+													<p class="mb-i0">{{ __('auth.dont_have_account') }}
 														<x-anchor-tag href="{{ route('register') }}" text="Sign up here" />
 													</p>
 												</div>
