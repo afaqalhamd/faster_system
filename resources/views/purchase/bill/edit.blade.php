@@ -326,12 +326,12 @@
                                     </div>
 
                                     {{-- Status Change History Section --}}
-                                    @if(isset($purchase->purchaseStatusHistories) && $purchase->purchaseStatusHistories->count() > 0)
+                                    @if($purchase->purchaseStatusHistories->count() > 0)
                                     <div class="card-header px-4 py-4">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <h4 class="mb-0 fw-bold">{{ __('purchase.status_change_history') }}</h4>
                                             <div class="d-flex align-items-center">
-                                                <span class="badge bg-light text-muted me-3" style="font-size: 13px; padding: 6px 12px;">{{ isset($purchase->purchaseStatusHistories) ? $purchase->purchaseStatusHistories->count() : 0 }} {{ __('app.changes') }}</span>
+                                                <span class="badge bg-light text-muted me-3" style="font-size: 13px; padding: 6px 12px;">{{ $purchase->purchaseStatusHistories->count() }} {{ __('app.changes') }}</span>
                                                 <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#statusHistoryCollapse">
                                                     <i class="bx bx-chevron-down" style="font-size: 18px;"></i>
                                                 </button>
@@ -341,7 +341,6 @@
                                     <div class="collapse show" id="statusHistoryCollapse">
                                         <div class="card-body p-5 row g-3">
                                             <div class="col-md-12">
-                                            @if(isset($purchase->purchaseStatusHistories))
                                             @foreach($purchase->purchaseStatusHistories->sortByDesc('changed_at') as $history)
                                                 @php
                                                     $statusConfig = [
@@ -483,7 +482,6 @@
                                                 </div>
                                                 @endif
                                             @endforeach
-                                            @endif
                                             </div>
                                         </div>
                                     </div>
