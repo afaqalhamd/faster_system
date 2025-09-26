@@ -310,7 +310,8 @@ return [
     'receive' => 'Receive',
     'changes'                           => 'changes',
     'initial'                           => 'Initial',
-    'total_items' =>'Total Products :'
+    'total_items' =>'Total Products :',
+    'inventory_status' => 'Inventory Status',
 
 
 

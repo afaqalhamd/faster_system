@@ -567,6 +567,161 @@
                                         </div>
                                     </div>
 
+                                    {{-- Shipment Tracking Section --}}
+                                    <div class="card-header px-4 py-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h5 class="mb-0">{{ __('shipment.tracking') }}</h5>
+                                            <div class="d-flex align-items-center">
+                                                <button type="button" class="btn btn-sm btn-primary" id="addTrackingBtn">
+                                                    <i class="bx bx-plus me-1"></i>{{ __('shipment.add_tracking') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-4 row g-3">
+                                        <div class="col-md-12" id="trackingContent">
+                                            @if($order->shipmentTrackings->count() > 0)
+                                                @foreach($order->shipmentTrackings as $tracking)
+                                                    <div class="tracking-item mb-4 p-3 border rounded" data-tracking-id="{{ $tracking->id }}">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <div>
+                                                                <h6 class="mb-1">
+                                                                    @if($tracking->carrier)
+                                                                        {{ $tracking->carrier->name }}
+                                                                    @else
+                                                                        {{ __('shipment.unknown_carrier') }}
+                                                                    @endif
+                                                                    @if($tracking->tracking_number)
+                                                                        (#{{ $tracking->tracking_number }})
+                                                                    @endif
+                                                                </h6>
+                                                                <span class="badge bg-{{ $tracking->status === 'Delivered' ? 'success' : ($tracking->status === 'Failed' ? 'danger' : 'info') }}">
+                                                                    {{ $tracking->status }}
+                                                                </span>
+                                                                @if($tracking->estimated_delivery_date)
+                                                                    <small class="d-block text-muted">
+                                                                        {{ __('shipment.estimated_delivery_date') }}: {{ $tracking->estimated_delivery_date->format('M d, Y') }}
+                                                                    </small>
+                                                                @endif
+                                                                @if($tracking->actual_delivery_date)
+                                                                    <small class="d-block text-muted">
+                                                                        {{ __('shipment.actual_delivery') }}: {{ $tracking->actual_delivery_date->format('M d, Y H:i') }}
+                                                                    </small>
+                                                                @endif
+                                                            </div>
+                                                            <div class="d-flex gap-2">
+                                                                <button type="button" class="btn btn-sm btn-outline-primary edit-tracking" data-tracking-id="{{ $tracking->id }}">
+                                                                    <i class="bx bx-edit"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger delete-tracking" data-tracking-id="{{ $tracking->id }}">
+                                                                    <i class="bx bx-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        @if($tracking->trackingEvents->count() > 0)
+                                                            <div class="tracking-events mt-4">
+                                                                <h6 class="mb-3 pb-2 border-bottom">{{ __('shipment.events') }}</h6>
+                                                                <div class="timeline-container">
+                                                                    @foreach($tracking->trackingEvents->sortBy('event_date') as $index => $event)
+                                                                        <div class="timeline-item d-flex mb-4">
+                                                                            <div class="timeline-marker flex-shrink-0 me-3">
+                                                                                <div class="timeline-badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                                                    <i class="bx bx-map text-white"></i>
+                                                                                </div>
+                                                                                <div class="timeline-connector"></div>
+                                                                            </div>
+                                                                            <div class="timeline-content flex-grow-1">
+                                                                                <div class="card border-0 shadow-sm">
+                                                                                    <div class="card-body">
+                                                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                                            <div>
+                                                                                                <h6 class="mb-1 fw-bold">{{ $event->location ?? __('shipment.unknown_location') }}</h6>
+                                                                                                <small class="text-muted d-block">{{ $event->event_date->format('M d, Y H:i') }}</small>
+                                                                                            </div>
+                                                                                            <div class="d-flex align-items-center gap-2">
+                                                                                                @if($event->status)
+                                                                                                    <span class="badge bg-secondary">{{ $event->status }}</span>
+                                                                                                @endif
+                                                                                                <button type="button" class="btn btn-sm btn-outline-danger delete-event" data-event-id="{{ $event->id }}">
+                                                                                                    <i class="bx bx-trash"></i>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        {{-- Display status change information --}}
+                                                                                        @php
+                                                                                            // Get the previous event to compare statuses
+                                                                                            $previousEvent = $index > 0 ? $tracking->trackingEvents->sortBy('event_date')->values()[$index - 1] : null;
+                                                                                        @endphp
+
+                                                                                        @if($previousEvent && $previousEvent->status)
+                                                                                            <div class="status-change-info mb-2">
+                                                                                                <div class="d-flex align-items-center">
+                                                                                                    <span class="badge bg-light text-dark me-2">{{ $previousEvent->status }}</span>
+                                                                                                    <i class="bx bx-right-arrow-alt text-muted"></i>
+                                                                                                    @if($event->status)
+                                                                                                        <span class="badge bg-secondary ms-2">{{ $event->status }}</span>
+                                                                                                    @endif
+                                                                                                </div>
+                                                                                                <small class="text-muted">{{ __('shipment.status_changed') }}</small>
+                                                                                            </div>
+                                                                                        @elseif($event->status)
+                                                                                            <div class="status-change-info mb-2">
+                                                                                                <div class="d-flex align-items-center">
+                                                                                                    <span class="badge bg-light text-dark me-2">{{ __('shipment.initial_status') }}</span>
+                                                                                                    <i class="bx bx-right-arrow-alt text-muted"></i>
+                                                                                                    <span class="badge bg-secondary ms-2">{{ $event->status }}</span>
+                                                                                                </div>
+                                                                                                <small class="text-muted">{{ __('shipment.status_set') }}</small>
+                                                                                            </div>
+                                                                                        @endif
+
+                                                                                        @if($event->description)
+                                                                                            <p class="mb-3 text-muted">{{ $event->description }}</p>
+                                                                                        @endif
+
+                                                                                        {{-- Display proof image in a professional gallery-style layout --}}
+                                                                                        @if($event->proof_image)
+                                                                                            <div class="proof-image-container mt-3">
+                                                                                                <h6 class="mb-2">{{ __('shipment.proof_image') }}</h6>
+                                                                                                <div class="proof-image-wrapper">
+                                                                                                    <a href="{{ asset('storage/' . $event->proof_image) }}"
+                                                                                                       data-fancybox="event-{{ $event->id }}"
+                                                                                                       data-caption="{{ $event->location ?? __('shipment.event') }} - {{ $event->event_date->format('M d, Y H:i') }}">
+                                                                                                        <img src="{{ asset('storage/' . $event->proof_image) }}"
+                                                                                                             alt="{{ __('shipment.proof_image') }}"
+                                                                                                             class="img-fluid rounded proof-image-preview">
+                                                                                                    </a>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        @endif
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        <div class="mt-3">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary add-event-btn" data-tracking-id="{{ $tracking->id }}">
+                                                                <i class="bx bx-plus-circle me-1"></i>{{ __('shipment.add_event') }}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @else
+                                                <div class="text-center py-4" id="noTrackingMessage">
+                                                    <i class="bx bx-package text-muted" style="font-size: 3rem;"></i>
+                                                    <p class="text-muted mt-2">{{ __('shipment.no_tracking_available') }}</p>
+                                                    <p class="text-muted small">{{ __('shipment.tracking_will_be_recorded') }}</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+
                                     <div class="card-header px-4 py-3"></div>
                                     <div class="card-body p-4 row g-3">
                                             <div class="col-md-12">
@@ -595,6 +750,150 @@
         @include("modals.item.create")
         @include("modals.sale.order.load-sold-items")
 
+        {{-- Add Tracking Modal --}}
+        <div class="modal fade" id="addTrackingModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ __('shipment.add_tracking') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="trackingForm">
+                            <input type="hidden" id="trackingId" name="tracking_id">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="carrierId" class="form-label">{{ __('carrier.carrier') }}</label>
+                                        <select class="form-select" id="carrierId" name="carrier_id">
+                                            <option value="">{{ __('app.select') }}</option>
+                                            @foreach(\App\Models\Carrier::all() as $carrier)
+                                                <option value="{{ $carrier->id }}">{{ $carrier->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="trackingNumber" class="form-label">{{ __('shipment.tracking_number') }}</label>
+                                        <input type="text" class="form-control" id="trackingNumber" name="tracking_number">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="trackingUrl" class="form-label">{{ __('shipment.tracking_url') }}</label>
+                                        <input type="url" class="form-control" id="trackingUrl" name="tracking_url">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="trackingStatus" class="form-label">{{ __('shipment.status') }}</label>
+                                        <select class="form-select" id="trackingStatus" name="status">
+                                            <option value="Pending">{{ __('shipment.pending') }}</option>
+                                            <option value="In Transit">{{ __('shipment.in_transit') }}</option>
+                                            <option value="Out for Delivery">{{ __('shipment.out_for_delivery') }}</option>
+                                            <option value="Delivered">{{ __('shipment.delivered') }}</option>
+                                            <option value="Failed">{{ __('shipment.failed') }}</option>
+                                            <option value="Returned">{{ __('shipment.returned') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="estimatedDeliveryDate" class="form-label">{{ __('shipment.estimated_delivery_date') }}</label>
+                                        <input type="date" class="form-control" id="estimatedDeliveryDate" name="estimated_delivery_date">
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="trackingNotes" class="form-label">{{ __('app.note') }}</label>
+                                        <textarea class="form-control" id="trackingNotes" name="notes" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
+                        <button type="button" class="btn btn-primary" id="saveTrackingBtn">{{ __('app.save') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Add Event Modal --}}
+        <div class="modal fade" id="addEventModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ __('shipment.add_event') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="eventForm">
+                            <input type="hidden" id="eventTrackingId" name="tracking_id">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventDate" class="form-label">{{ __('shipment.event_date') }}</label>
+                                        <input type="datetime-local" class="form-control" id="eventDate" name="event_date">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventLocation" class="form-label">{{ __('shipment.location') }}</label>
+                                        <input type="text" class="form-control" id="eventLocation" name="location">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventStatus" class="form-label">{{ __('shipment.status') }}</label>
+                                        <select class="form-select" id="eventStatus" name="status">
+                                            <option value="">{{ __('app.select') }}</option>
+                                            <option value="Pending">{{ __('shipment.pending') }}</option>
+                                            <option value="In Transit">{{ __('shipment.in_transit') }}</option>
+                                            <option value="Out for Delivery">{{ __('shipment.out_for_delivery') }}</option>
+                                            <option value="Delivered">{{ __('shipment.delivered') }}</option>
+                                            <option value="Failed">{{ __('shipment.failed') }}</option>
+                                            <option value="Returned">{{ __('shipment.returned') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="eventDescription" class="form-label">{{ __('app.description') }}</label>
+                                        <textarea class="form-control" id="eventDescription" name="description" rows="3"></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventLatitude" class="form-label">{{ __('shipment.latitude') }}</label>
+                                        <input type="number" class="form-control" id="eventLatitude" name="latitude" step="any">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventLongitude" class="form-label">{{ __('shipment.longitude') }}</label>
+                                        <input type="number" class="form-control" id="eventLongitude" name="longitude" step="any">
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="eventProofImage" class="form-label">{{ __('shipment.proof_image') }}</label>
+                                        <input type="file" class="form-control" id="eventProofImage" name="proof_image" accept="image/*">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
+                        <button type="button" class="btn btn-primary" id="saveEventBtn">{{ __('app.save') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @endsection
 
 @section('js')
@@ -604,6 +903,9 @@
 
         // Pass user role to JavaScript
         window.userRole = @json($userRole);
+
+        // Pass sale order ID to JavaScript
+        window.saleOrderId = @json($order->id);
 </script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
@@ -617,8 +919,17 @@
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>
+<script src="{{ versionedAsset('custom/js/sale/shipment-tracking.js') }}"></script>
+<!-- Fancybox for image viewing -->
+<script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.umd.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.css">
 
-
+<script>
+// Initialize Fancybox for proof images
+Fancybox.bind("[data-fancybox]", {
+    // Your custom options
+});
+</script>
 
 <style>
 /* Compact Status History Styles */
@@ -687,6 +998,145 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* Tracking Styles */
+.tracking-item {
+    transition: all 0.2s ease;
+}
+
+.tracking-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline-item:before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #0d6efd;
+}
+
+.timeline-item:first-child:before {
+    top: 15px;
+}
+
+.timeline-item:last-child:before {
+    bottom: auto;
+    height: 15px;
+}
+
+/* Enhanced Timeline Styles */
+.timeline-marker {
+    position: relative;
+}
+
+.timeline-badge {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-connector {
+    position: absolute;
+    left: 17px;
+    top: 36px;
+    bottom: -20px;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item:last-child .timeline-connector {
+    display: none;
+}
+
+.timeline-content .card {
+    border-left: 3px solid #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.timeline-content .card:hover {
+    border-left-color: #0b5ed7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Event Delete Button Styles */
+.delete-event {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+.delete-event .bx-trash {
+    font-size: 1rem;
+}
+
+/* Status Change Information Styles */
+.status-change-info {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-left: 3px solid #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.status-change-info:hover {
+    background-color: #e9ecef;
+    border-left-color: #0b5ed7;
+}
+
+.status-change-info .badge {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.status-change-info .badge.bg-light {
+    background-color: #e9ecef !important;
+}
+
+.status-change-info .bx-right-arrow-alt {
+    font-size: 1.2rem;
+    vertical-align: middle;
+    color: #6c757d;
+}
+
+.status-change-info small {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* Proof Image Styles */
+.proof-image-container {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.proof-image-wrapper {
+    display: inline-block;
+}
+
+.proof-image-preview {
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: cover;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.proof-image-preview:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .timeline-item {
@@ -710,6 +1160,11 @@
     .timeline-status-circle {
         width: 24px !important;
         height: 24px !important;
+    }
+
+    .proof-image-preview {
+        max-width: 150px;
+        max-height: 150px;
     }
 }
 

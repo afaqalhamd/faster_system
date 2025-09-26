@@ -323,7 +323,8 @@ return [
     'receive' => 'استلام',
     'changes'                           => 'تغييرات',
     'initial'                           => 'ابتدائي',
-        'total_items' =>' عدد المنتجات :'
+        'total_items' =>' عدد المنتجات :',
+        'inventory_status'=>'حالة المخزون :',
 
 
 

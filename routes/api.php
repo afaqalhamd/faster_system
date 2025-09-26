@@ -66,6 +66,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/sale-orders/{id}', [SaleOrderController::class, 'destroy']);
     Route::post('/sale-orders/{id}/status', [SaleOrderController::class, 'updateStatus']);
     Route::get('/sale-orders/{id}/status-history', [SaleOrderController::class, 'getStatusHistory']);
+
+    // Shipment Tracking Routes
+    Route::post('/sale-orders/{saleOrderId}/tracking', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'store']);
+    Route::get('/shipment-tracking/{id}', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'show']);
+    Route::put('/shipment-tracking/{id}', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'update']);
+    Route::delete('/shipment-tracking/{id}', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'destroy']);
+    Route::post('/shipment-tracking/{trackingId}/events', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'addEvent']);
+    Route::delete('/shipment-events/{eventId}', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'deleteEvent']);
+    Route::post('/shipment-tracking/{trackingId}/documents', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'uploadDocument']);
+    Route::get('/sale-orders/{saleOrderId}/tracking-history', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getTrackingHistory']);
+    Route::get('/tracking-statuses', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getStatuses']);
+    Route::get('/tracking-document-types', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getDocumentTypes']);
 });
 
 // Delivery API Routes
@@ -198,42 +210,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/sales-api/sold-items/{partyId}/{itemId}', [App\Http\Controllers\Api\SaleControllerApi::class, 'getSoldItemsData']);
     });
 
-    // Reports Routes
-    Route::middleware('auth:sanctum')->group(function () {
-        // Sale Transaction Report Routes
-        Route::get('/reports/sales', [App\Http\Controllers\Api\SaleTransactionReportController::class, 'getAllSaleRecords']);
-        Route::get('/reports/sales/items', [App\Http\Controllers\Api\SaleTransactionReportController::class, 'getAllSaleItemRecords']);
-        Route::get('/reports/sales/payments', [App\Http\Controllers\Api\SaleTransactionReportController::class, 'getAllSalePaymentRecords']);
-
-        // Stock Report Routes
-        Route::get('/reports/stock/moved-out', [App\Http\Controllers\Api\StockReportController::class, 'getProductsMovedOutLast24Hours']);
-        Route::get('/reports/stock/out-of-stock', [App\Http\Controllers\Api\StockReportController::class, 'getOutOfStockProducts']);
-        Route::get('/reports/stock/increased-quantity', [App\Http\Controllers\Api\StockReportController::class, 'getProductsWithIncreasedQuantity']);
-
-        // Item Transaction Report Routes
-        Route::get('/reports/item-transactions/moved-in-24h', [App\Http\Controllers\Api\ItemTransactionReportController::class, 'getItemsMovedInLast24Hours']);
-        Route::get('/reports/item-transactions/moved-out-24h', [App\Http\Controllers\Api\ItemTransactionReportController::class, 'getItemsMovedOutLast24Hours']);
-    });
-
-    // Device Token Routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/device-tokens', [App\Http\Controllers\Api\DeviceTokenController::class, 'store']);
-        Route::delete('/device-tokens', [App\Http\Controllers\Api\DeviceTokenController::class, 'destroy']);
-    });
-
-    // Notification Test Routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/notifications/test', [App\Http\Controllers\Api\NotificationTestController::class, 'sendTestNotification']);
-        Route::post('/notifications/test-all', [App\Http\Controllers\Api\NotificationTestController::class, 'sendTestNotificationToAllUsers']);
-    });
-
-    // Permission Groups Routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::apiResource('permission-groups', App\Http\Controllers\Api\UserPermissionsGroupController::class);
-    });
 });
-
-Route::get('/send-notification', [PushNotificationController::class, 'sendPushNotification']);
-Route::get('/check-firebase', [App\Http\Controllers\PushNotificationController::class, 'checkFirebaseConnection']);
-Route::post('/send-notification', [App\Http\Controllers\PushNotificationController::class, 'sendCustomNotification']);
-Route::post('/notifications/send-custom', [App\Http\Controllers\PushNotificationController::class, 'sendCustomNotification']);

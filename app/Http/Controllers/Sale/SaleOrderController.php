@@ -194,6 +194,10 @@ class SaleOrderController extends Controller
             ],
             'saleOrderStatusHistories' => [
                 'changedBy'
+            ],
+            'shipmentTrackings' => [
+                'carrier',
+                'trackingEvents'
             ]])->findOrFail($id);
         // Add formatted dates from ItemBatchMaster model
         $order->itemTransaction->each(function ($transaction) {

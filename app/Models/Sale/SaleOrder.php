@@ -214,4 +214,14 @@ class SaleOrder extends Model
         return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 
+    /**
+     * Define the relationship between SaleOrder and ShipmentTracking.
+     *
+     * @return HasMany
+     */
+    public function shipmentTrackings(): HasMany
+    {
+        return $this->hasMany(ShipmentTracking::class, 'sale_order_id');
+    }
+
 }
