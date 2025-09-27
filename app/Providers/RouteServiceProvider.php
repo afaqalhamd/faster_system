@@ -33,11 +33,6 @@ class RouteServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
 
-       /* $this->routes(function () {
-            $this->mapApiRoutes();
-            $this->mapWebRoutes();
-        });*/
-
          $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
@@ -49,6 +44,8 @@ class RouteServiceProvider extends ServiceProvider
                     require base_path('routes/web.php');
                     // Load waybill routes
                     require base_path('routes/waybill.php');
+                    // Load public routes
+                    require base_path('routes/public.php');
                 });
         });
 
