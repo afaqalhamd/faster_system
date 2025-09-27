@@ -135,6 +135,7 @@ return [
     'pdf'                               => 'PDF',
     'export_to_pdf'                     => 'Export to PDF',
     'download_pdf'                      => 'Download PDF',
+    'print_waybill'                     => 'Print Waybill',
     'thank_you'                         => 'Thank you',
     'computer_generated_receipt'        => 'Computer Generated Receipt',
     'staff'                             => 'Staff',

@@ -19,7 +19,7 @@
 					<div class="col-12 col-xl-5 col-xxl-4 auth-cover-right align-items-center justify-content-center">
 						<div class="card rounded-0 m-3 shadow-none bg-transparent mb-0">
 							<div class="card-body p-sm-5">
-								
+
 								@include('layouts.session')
 
 								<form class="row g-3" method="POST" action="{{ route('password.store') }}">
@@ -32,7 +32,7 @@
 
 								<div class="p-3">
 									<div class="text-center">
-										<img src={{ "/app/getimage/" . app('site')['colored_logo'] }} width="60" alt="">
+										<img src={{ url("/app/getimage/" . app('site')['colored_logo']) }} width="60" alt="">
 									</div>
 									<h4 class="mt-5 font-weight-bold">{{ __('app.change_password') }}</h4>
 									<p class="text-muted">{{ __('auth.requested_to_change_password') }}</p>

@@ -28,6 +28,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\StockTransferController;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Export\ExportController;
 
 use App\Http\Controllers\Accounts\AccountController;
@@ -37,7 +38,7 @@ use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\Expenses\ExpenseCategoryController;
 use App\Http\Controllers\Expenses\ExpenseSubcategoryController;
 use App\Http\Controllers\Expenses\ExpenseController;
-
+use App\Http\Controllers\Sale\SaleOrderController;
 use App\Http\Controllers\Items\ItemController;
 use App\Http\Controllers\Items\ItemTransactionController;
 use App\Http\Controllers\Items\ItemCategoryController;
@@ -66,31 +67,14 @@ use App\Http\Controllers\Reports\SupplierReportController;
 use App\Http\Controllers\Reports\StockReportController;
 use App\Http\Controllers\Sale\SaleReturnOrderController;
 
-use App\Http\Controllers\Sale\SaleOrderController;
-use App\Http\Controllers\Sale\SaleController;
-
-use App\Http\Controllers\Sale\SaleReturnController;
-
-use App\Http\Controllers\Payment\SaleOrderPaymentController;
-use App\Http\Controllers\Payment\SalePaymentController;
-use App\Http\Controllers\Payment\SaleReturnPaymentController;
-use App\Http\Controllers\StockAdjustmentController;
-use App\Http\Controllers\Reports\StockAdjustmentReportController;
-use App\Http\Controllers\Sale\QuotationController;
-use App\Http\Controllers\Transaction\CashController;
-use App\Http\Controllers\Transaction\ChequeController;
-use App\Http\Controllers\Transaction\BankController;
-use App\Models\Sale\Sale;
-use App\Models\Sale\SaleOrder;
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
 
@@ -2091,8 +2075,12 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/export/items', [ExportController::class, 'exportItems'])
-    ->name('export.items')
+    ->name('export.items');
+
+Route::get('/sale-orders/{id}/waybill-print', [App\Http\Controllers\Sale\SaleOrderController::class, 'printWaybill'])
+    ->name('sale.order.waybill.print')
     ->middleware(['auth']);
+
 /**
  * Items Excel File
  * Download Excel files
@@ -2137,5 +2125,8 @@ Route::group(['prefix' => 'delivery', 'middleware' => 'auth'], function () {
         return view('delivery.payment');
     })->name('delivery.payment');
 });
+
+// Include waybill routes
+require __DIR__.'/waybill.php';
 
 require __DIR__.'/auth.php';

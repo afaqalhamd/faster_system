@@ -594,10 +594,16 @@
                                                                     @if($tracking->tracking_number)
                                                                         (#{{ $tracking->tracking_number }})
                                                                     @endif
+                                                                    @if($tracking->waybill_number)
+                                                                        <span class="badge bg-info ms-2">{{ __('shipment.waybill') }}: {{ $tracking->waybill_number }}</span>
+                                                                    @endif
                                                                 </h6>
                                                                 <span class="badge bg-{{ $tracking->status === 'Delivered' ? 'success' : ($tracking->status === 'Failed' ? 'danger' : 'info') }}">
                                                                     {{ $tracking->status }}
                                                                 </span>
+                                                                @if($tracking->waybill_type)
+                                                                    <span class="badge bg-secondary ms-1">{{ $tracking->waybill_type }}</span>
+                                                                @endif
                                                                 @if($tracking->estimated_delivery_date)
                                                                     <small class="d-block text-muted">
                                                                         {{ __('shipment.estimated_delivery_date') }}: {{ $tracking->estimated_delivery_date->format('M d, Y') }}
@@ -610,6 +616,11 @@
                                                                 @endif
                                                             </div>
                                                             <div class="d-flex gap-2">
+                                                                @if($tracking->waybill_number)
+                                                                    <a href="{{ route('sale.order.waybill.print', $order->id) }}" target="_blank" class="btn btn-sm btn-outline-info" title="{{ __('shipment.print_waybill') }}">
+                                                                        <i class="bx bx-printer"></i>
+                                                                    </a>
+                                                                @endif
                                                                 <button type="button" class="btn btn-sm btn-outline-primary edit-tracking" data-tracking-id="{{ $tracking->id }}">
                                                                     <i class="bx bx-edit"></i>
                                                                 </button>
@@ -798,6 +809,52 @@
                                         </select>
                                     </div>
                                 </div>
+
+                                {{-- Waybill Fields --}}
+                                <div class="col-md-12">
+                                    <div class="card border-primary mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0">{{ __('shipment.waybill_information') }}</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="waybillNumber" class="form-label">{{ __('shipment.waybill_number') }}</label>
+                                                        <div class="input-group">
+                                                            <input type="text" class="form-control" id="waybillNumber" name="waybill_number" placeholder="{{ __('shipment.enter_waybill_number') }}">
+                                                            <button class="btn btn-outline-secondary" type="button" id="scanWaybillBtn">
+                                                                <i class="bx bx-barcode-reader"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div class="form-text text-muted" id="waybillValidationFeedback"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="waybillType" class="form-label">{{ __('shipment.waybill_type') }}</label>
+                                                        <select class="form-select" id="waybillType" name="waybill_type">
+                                                            <option value="">{{ __('app.select') }}</option>
+                                                            <option value="AirwayBill">{{ __('shipment.airway_bill') }}</option>
+                                                            <option value="BillOfLading">{{ __('shipment.bill_of_lading') }}</option>
+                                                            <option value="CourierWaybill">{{ __('shipment.courier_waybill') }}</option>
+                                                            <option value="Other">{{ __('shipment.other') }}</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="alert alert-info mb-0">
+                                                        <i class="bx bx-info-circle"></i>
+                                                        <small>{{ __('shipment.waybill_info_text') }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="estimatedDeliveryDate" class="form-label">{{ __('shipment.estimated_delivery_date') }}</label>

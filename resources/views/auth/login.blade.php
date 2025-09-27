@@ -36,10 +36,9 @@
 
 								<div class="">
 									<div class="mb-3 text-center">
-										<img src={{ url("/app/getmage/" . app('site')['colored_logo']) }} width="60" alt="">
+										<img src={{ url("/app/getimage/" . app('site')['colored_logo']) }} width="60" alt="">
 									</div>
 									<div class="text-center mb-4">
-										<h5 class="">{{ app('site')['name'] }}</h5>
 										<p class="mb-0">{{ __('auth.login_to_account') }}</p>
 									</div>
 									<div class="form-body">

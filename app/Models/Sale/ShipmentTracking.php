@@ -22,6 +22,10 @@ class ShipmentTracking extends Model
         'sale_order_id',
         'carrier_id',
         'tracking_number',
+        'waybill_number',
+        'waybill_type',
+        'waybill_data',
+        'waybill_validated',
         'tracking_url',
         'status',
         'estimated_delivery_date',
@@ -39,6 +43,8 @@ class ShipmentTracking extends Model
     protected $casts = [
         'estimated_delivery_date' => 'date',
         'actual_delivery_date' => 'datetime',
+        'waybill_data' => 'array',
+        'waybill_validated' => 'boolean',
     ];
 
     /**

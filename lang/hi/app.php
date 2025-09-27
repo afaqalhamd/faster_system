@@ -130,6 +130,7 @@ return [
     'pdf'                               => 'पीडीएफ़',
     'export_to_pdf'                     => 'पीडीएफ में निर्यात करें',
     'download_pdf'                      => 'पीडीएफ़ डाउनलोड करें',
+    'print_waybill'                     => 'वेबिल प्रिंट करें',
     'thank_you'                         => 'धन्यवाद',
     'computer_generated_receipt'        => 'कंप्यूटर द्वारा उत्पन्न रसीद',
     'staff'                             => 'स्टाफ',

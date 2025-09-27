@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Sale\ShipmentTracking;
 use App\Models\Sale\ShipmentTrackingEvent;
 use App\Models\Sale\ShipmentDocument;
+use App\Services\WaybillValidationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,13 @@ use Exception;
 
 class ShipmentTrackingService
 {
+    protected $waybillValidationService;
+
+    public function __construct(WaybillValidationService $waybillValidationService)
+    {
+        $this->waybillValidationService = $waybillValidationService;
+    }
+
     /**
      * Validate tracking data
      *
@@ -26,6 +34,8 @@ class ShipmentTrackingService
             'sale_order_id' => $isUpdate ? 'sometimes|exists:sale_orders,id' : 'required|exists:sale_orders,id',
             'carrier_id' => 'nullable|exists:carriers,id',
             'tracking_number' => 'nullable|string|max:255',
+            'waybill_number' => 'nullable|string|max:255|unique:shipment_trackings,waybill_number',
+            'waybill_type' => 'nullable|string|in:AirwayBill,BillOfLading,CourierWaybill,Other',
             'tracking_url' => 'nullable|url|max:500',
             'status' => 'nullable|string|in:Pending,In Transit,Out for Delivery,Delivered,Failed,Returned',
             'estimated_delivery_date' => 'nullable|date',
@@ -99,8 +109,25 @@ class ShipmentTrackingService
     public function createTracking(array $data): ShipmentTracking
     {
         try {
-            // Generate tracking number if not provided
-            if (empty($data['tracking_number'])) {
+            // Validate waybill data if provided
+            if (!empty($data['waybill_number'])) {
+                $this->waybillValidationService->validateWaybillData($data);
+
+                // Validate barcode format
+                if (!$this->waybillValidationService->validateWaybillBarcode($data['waybill_number'])) {
+                    throw new ValidationException(
+                        validator($data, [
+                            'waybill_number' => 'Invalid waybill number format'
+                        ])
+                    );
+                }
+
+                // Mark as validated
+                $data['waybill_validated'] = true;
+            }
+
+            // Generate tracking number if not provided and no waybill
+            if (empty($data['tracking_number']) && empty($data['waybill_number'])) {
                 $data['tracking_number'] = $this->generateTrackingNumber();
             }
 
@@ -153,6 +180,23 @@ class ShipmentTrackingService
     public function updateTracking(ShipmentTracking $tracking, array $data): ShipmentTracking
     {
         try {
+            // Validate waybill data if provided
+            if (!empty($data['waybill_number'])) {
+                $this->waybillValidationService->validateWaybillData($data);
+
+                // Validate barcode format
+                if (!$this->waybillValidationService->validateWaybillBarcode($data['waybill_number'])) {
+                    throw new ValidationException(
+                        validator($data, [
+                            'waybill_number' => 'Invalid waybill number format'
+                        ])
+                    );
+                }
+
+                // Mark as validated
+                $data['waybill_validated'] = true;
+            }
+
             // Validate data for update operation
             $this->validateTrackingData($data, true);
 

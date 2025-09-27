@@ -142,6 +142,7 @@ return [
     'pdf'                   => 'PDF',
     'export_to_pdf'         => 'تصدير إلى PDF',
     'download_pdf'          => 'تحميل PDF',
+    'print_waybill'         => 'طباعة البوليصة',
     'thank_you'             => 'شكرا لك',
     'computer_generated_receipt' => 'إيصال مولد بالحاسوب',
     'staff'                 => 'الموظف',

@@ -78,6 +78,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sale-orders/{saleOrderId}/tracking-history', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getTrackingHistory']);
     Route::get('/tracking-statuses', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getStatuses']);
     Route::get('/tracking-document-types', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getDocumentTypes']);
+
+    // Waybill Validation Routes
+    Route::post('/waybill/validate', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateWaybill']);
+    Route::post('/waybill/validate-barcode', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateWaybillBarcode']);
+    Route::get('/waybill/rules', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'getWaybillRules']);
+
+    // QR Code Processing Route
+    Route::post('/waybill/process-qr', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'processScannedQRCode']);
+
 });
 
 // Delivery API Routes
@@ -192,22 +201,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/sales-api', [App\Http\Controllers\Api\SaleControllerApi::class, 'store']);
         Route::put('/sales-api/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'update']);
         Route::delete('/sales-api/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'destroy']);
-        Route::apiResource('purchase-orders', App\Http\Controllers\Api\PurchaseOrderController::class);
-
-        // Convert sale to return
-        Route::post('/sales-api/{id}/convert-to-return', [App\Http\Controllers\Api\SaleControllerApi::class, 'convertToReturn']);
-
-        // Email operations
-        Route::post('/sales-api/{id}/send-email', [App\Http\Controllers\Api\SaleControllerApi::class, 'sendEmail']);
-        Route::get('/sales-api/{id}/email-content', [App\Http\Controllers\Api\SaleControllerApi::class, 'getEmailContent']);
-
-        // SMS operations
-        Route::post('/sales-api/{id}/send-sms', [App\Http\Controllers\Api\SaleControllerApi::class, 'sendSms']);
-        Route::get('/sales-api/{id}/sms-content', [App\Http\Controllers\Api\SaleControllerApi::class, 'getSmsContent']);
-
-        // Get sold items data for returns
-        Route::get('/sales-api/sold-items/{partyId}', [App\Http\Controllers\Api\SaleControllerApi::class, 'getSoldItemsData']);
-        Route::get('/sales-api/sold-items/{partyId}/{itemId}', [App\Http\Controllers\Api\SaleControllerApi::class, 'getSoldItemsData']);
     });
-
 });

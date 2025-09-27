@@ -16,7 +16,7 @@
                                  <img src="assets/images/login-images/register-cover.svg" class="img-fluid " width="550" alt=""/>
 							</div>
 						</div>
-						
+
 					</div>
 
 					<div class="col-12 col-xl-5 col-xxl-4 auth-cover-right align-items-center justify-content-center">
@@ -24,7 +24,7 @@
 							<div class="card-body p-sm-5">
 								<div class="">
 									<div class="mb-3 text-center">
-										<img src={{ "/app/getimage/" . app('site')['colored_logo'] }} width="60" alt="">
+										<img src={{ url("/app/getimage/" . app('site')['colored_logo']) }} width="60" alt="">
 									</div>
 									<div class="text-center mb-4">
 										<h5 class="">{{ app('company')['name'] }}</h5>
@@ -95,11 +95,11 @@
 		</div>
 	</div>
 	<!--end wrapper-->
-	
+
 	@section('js')
 	<!-- Login page -->
 	<script src="custom/js/register.js"></script>
-	
+
 	@endsection
 
 </body>

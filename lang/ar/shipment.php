@@ -42,4 +42,26 @@ return [
     'events_will_be_recorded' => 'سيتم تسجيل أحداث التتبع هنا',
     'initial_status'=> 'الحالة الأولية ',
 
+    // Waybill translations
+    'waybill_information' => 'معلومات البوليصة',
+    'waybill_number' => 'رقم البوليصة',
+    'enter_waybill_number' => 'أدخل رقم البوليصة',
+    'waybill_type' => 'نوع البوليصة',
+    'airway_bill' => 'بوليصة جوية',
+    'bill_of_lading' => 'بوليصة شحن',
+    'courier_waybill' => 'بوليصة ساعي',
+    'waybill_info_text' => 'أدخل رقم البوليصة المقدم من الناقل. سيقوم النظام تلقائياً بالتحقق من التنسيق بناءً على الناقل المحدد.',
+    'status_changed' => 'تم تغيير الحالة',
+    'status_set' => 'تم تعيين الحالة',
+    'waybill' => 'بوليصة',
+    'print_waybill' => 'طباعة البوليصة',
+    'qrcode' => 'رمز الاستجابة السريعة',
+
+    // QR Scanner translations
+    'qr_code_scanner' => 'ماسح رمز الاستجابة السريعة',
+    'point_camera_at_qr_code' => 'وجه الكاميرا نحو رمز الاستجابة السريعة',
+    'scan_successful' => 'نجح المسح',
+    'start_scanner' => 'بدء الماسح',
+    'stop_scanner' => 'إيقاف الماسح',
+    'tracking_information' => 'معلومات التتبع',
 ];

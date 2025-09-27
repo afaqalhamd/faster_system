@@ -23,6 +23,9 @@ $(document).ready(function() {
         $('#trackingForm')[0].reset();
         $('#trackingId').val('');
 
+        // Reset waybill validation feedback
+        $('#waybillValidationFeedback').removeClass('text-success text-danger').text('');
+
         // Automatically select the carrier from the sale order
         var saleOrderCarrierId = $('#carrier_id').val();
         if (saleOrderCarrierId) {
@@ -57,6 +60,13 @@ $(document).ready(function() {
                     $('#trackingStatus').val(tracking.status);
                     $('#estimatedDeliveryDate').val(tracking.estimated_delivery_date);
                     $('#trackingNotes').val(tracking.notes);
+
+                    // Populate waybill fields if they exist
+                    $('#waybillNumber').val(tracking.waybill_number);
+                    $('#waybillType').val(tracking.waybill_type);
+
+                    // Reset waybill validation feedback
+                    $('#waybillValidationFeedback').removeClass('text-success text-danger').text('');
 
                     // Show modal
                     $('#addTrackingModal').modal('show');
@@ -253,6 +263,72 @@ $(document).ready(function() {
             ]
         });
     });
+
+    // Waybill number input validation
+    $('#waybillNumber').on('input', function() {
+        var waybillNumber = $(this).val().trim();
+        var carrierId = $('#carrierId').val();
+        var carrierName = $('#carrierId option:selected').text();
+
+        // Clear previous validation feedback
+        $('#waybillValidationFeedback').removeClass('text-success text-danger').text('');
+
+        if (waybillNumber.length > 0) {
+            // Validate waybill format
+            validateWaybillFormat(waybillNumber, carrierName);
+        }
+    });
+
+    // Carrier selection change handler
+    $('#carrierId').on('change', function() {
+        var waybillNumber = $('#waybillNumber').val().trim();
+        var carrierName = $('#carrierId option:selected').text();
+
+        if (waybillNumber.length > 0) {
+            // Re-validate when carrier changes
+            validateWaybillFormat(waybillNumber, carrierName);
+        }
+    });
+
+    // Scan waybill button click handler
+    $('#scanWaybillBtn').on('click', function() {
+        // In a real implementation, this would integrate with a barcode scanner
+        // For now, we'll show a simple prompt for demonstration
+        var waybillNumber = prompt('Enter waybill number (simulating barcode scan):');
+        if (waybillNumber) {
+            $('#waybillNumber').val(waybillNumber);
+
+            // Trigger validation
+            var carrierName = $('#carrierId option:selected').text();
+            validateWaybillFormat(waybillNumber, carrierName);
+        }
+    });
+
+    // Validate waybill format function
+    function validateWaybillFormat(waybillNumber, carrierName) {
+        // Show loading indicator
+        $('#waybillValidationFeedback').removeClass('text-success text-danger').text('Validating...').addClass('text-muted');
+
+        // Send request to validate waybill
+        $.ajax({
+            url: '/api/waybill/validate',
+            method: 'POST',
+            data: {
+                waybill_number: waybillNumber,
+                carrier: carrierName
+            },
+            success: function(response) {
+                if (response.status && response.valid) {
+                    $('#waybillValidationFeedback').removeClass('text-muted text-danger').text('✓ Valid waybill format').addClass('text-success');
+                } else {
+                    $('#waybillValidationFeedback').removeClass('text-muted text-success').text('✗ Invalid waybill format').addClass('text-danger');
+                }
+            },
+            error: function() {
+                $('#waybillValidationFeedback').removeClass('text-muted text-success').text('Validation failed').addClass('text-danger');
+            }
+        });
+    }
 
     // Generate tracking number function
     function generateTrackingNumber() {

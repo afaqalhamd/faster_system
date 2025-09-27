@@ -76,7 +76,9 @@ class ShipmentTrackingController extends Controller
                 'tracking_url',
                 'status',
                 'estimated_delivery_date',
-                'notes'
+                'notes',
+                'waybill_number',
+                'waybill_type'
             ]);
 
             // Automatically set carrier_id from sale order if not provided in request
@@ -131,7 +133,9 @@ class ShipmentTrackingController extends Controller
                 'status',
                 'estimated_delivery_date',
                 'actual_delivery_date',
-                'notes'
+                'notes',
+                'waybill_number',
+                'waybill_type'
             ]);
 
             // Only update carrier_id if explicitly provided in request
@@ -405,6 +409,145 @@ class ShipmentTrackingController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to delete shipment event: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate a waybill number format
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function validateWaybill(Request $request): JsonResponse
+    {
+        try {
+            $waybillNumber = $request->input('waybill_number');
+            $carrier = $request->input('carrier');
+
+            if (empty($waybillNumber)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Waybill number is required'
+                ], 422);
+            }
+
+            // Validate the waybill format
+            $isValid = $this->shipmentTrackingService->waybillValidationService->validateWaybillFormat($waybillNumber, $carrier);
+
+            return response()->json([
+                'status' => true,
+                'valid' => $isValid,
+                'message' => $isValid ? 'Waybill number is valid' : 'Waybill number format is invalid'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to validate waybill: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate waybill barcode format
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function validateWaybillBarcode(Request $request): JsonResponse
+    {
+        try {
+            $waybillNumber = $request->input('waybill_number');
+
+            if (empty($waybillNumber)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Waybill number is required'
+                ], 422);
+            }
+
+            // Validate the barcode format
+            $isValid = $this->shipmentTrackingService->waybillValidationService->validateWaybillBarcode($waybillNumber);
+
+            return response()->json([
+                'status' => true,
+                'valid' => $isValid,
+                'message' => $isValid ? 'Waybill barcode format is valid' : 'Waybill barcode format is invalid'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to validate waybill barcode: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get waybill validation rules
+     *
+     * @return JsonResponse
+     */
+    public function getWaybillRules(): JsonResponse
+    {
+        try {
+            $rules = $this->shipmentTrackingService->waybillValidationService->getWaybillRules();
+
+            return response()->json([
+                'status' => true,
+                'data' => $rules
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to get waybill rules: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process scanned QR code data
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function processScannedQRCode(Request $request): JsonResponse
+    {
+        try {
+            $waybillNumber = $request->input('waybill_number');
+
+            if (empty($waybillNumber)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Waybill number is required'
+                ], 422);
+            }
+
+            // Find shipment tracking by waybill number
+            $tracking = ShipmentTracking::with(['saleOrder.party', 'carrier'])
+                ->where('waybill_number', $waybillNumber)
+                ->first();
+
+            if (!$tracking) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No shipment tracking found for this waybill number'
+                ], 404);
+            }
+
+            // Return relevant information
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'tracking' => $tracking,
+                    'sale_order' => $tracking->saleOrder,
+                    'customer' => $tracking->saleOrder->party ?? null,
+                    'carrier' => $tracking->carrier ?? null
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to process scanned QR code: ' . $e->getMessage()
             ], 500);
         }
     }

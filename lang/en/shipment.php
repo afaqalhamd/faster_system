@@ -41,4 +41,27 @@ return [
     'no_events_available' => 'No tracking events available',
     'events_will_be_recorded' => 'Tracking events will be recorded here',
     'initial_status'=> 'Initial Status',
+
+    // Waybill translations
+    'waybill_information' => 'Waybill Information',
+    'waybill_number' => 'Waybill Number',
+    'enter_waybill_number' => 'Enter waybill number',
+    'waybill_type' => 'Waybill Type',
+    'airway_bill' => 'Airway Bill',
+    'bill_of_lading' => 'Bill of Lading',
+    'courier_waybill' => 'Courier Waybill',
+    'waybill_info_text' => 'Enter the waybill number provided by the carrier. The system will automatically validate the format based on the selected carrier.',
+    'status_changed' => 'Status changed',
+    'status_set' => 'Status set',
+    'waybill' => 'Waybill',
+    'print_waybill' => 'Print Waybill',
+    'qrcode' => 'QR Code',
+
+    // QR Scanner translations
+    'qr_code_scanner' => 'QR Code Scanner',
+    'point_camera_at_qr_code' => 'Point camera at QR code',
+    'scan_successful' => 'Scan Successful',
+    'start_scanner' => 'Start Scanner',
+    'stop_scanner' => 'Stop Scanner',
+    'tracking_information' => 'Tracking Information',
 ];

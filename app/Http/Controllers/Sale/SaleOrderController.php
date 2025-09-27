@@ -1334,4 +1334,31 @@ class SaleOrderController extends Controller
         }
     }
 
+    /**
+     * Print waybill for a sale order
+     *
+     * @param int $id The ID of the sale order
+     * @return \Illuminate\View\View
+     */
+    public function printWaybill($id)
+    {
+        $order = SaleOrder::with(['party',
+            'shipmentTrackings' => [
+                'carrier'
+            ]])->findOrFail($id);
+
+        // Get the first shipment tracking with waybill information
+        $shipmentTracking = $order->shipmentTrackings->firstWhere('waybill_number', '!=', null);
+
+        // If no shipment tracking with waybill, get the first one
+        if (!$shipmentTracking) {
+            $shipmentTracking = $order->shipmentTrackings->first();
+        }
+
+        $data = [
+            'name' => __('shipment.waybill'),
+        ];
+
+        return view('print.sale.waybill-print', compact('order', 'shipmentTracking', 'data'));
+    }
 }

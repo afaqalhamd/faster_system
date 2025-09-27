@@ -44,7 +44,12 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')
-                ->group(base_path('routes/web.php'));
+                ->group(function () {
+                    // Load main web routes
+                    require base_path('routes/web.php');
+                    // Load waybill routes
+                    require base_path('routes/waybill.php');
+                });
         });
 
     }
