@@ -14,6 +14,7 @@ use App\Http\Requests\DeliveryOrderStatusRequest;
 use App\Http\Requests\DeliveryPaymentRequest;
 use App\Http\Requests\DeliveryOrderUpdateRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
@@ -77,8 +78,8 @@ class OrderController extends Controller
                 });
             }
 
-            // Paginate results
-            $orders = $query->orderBy('order_date', 'desc')
+            // Paginate results - Order by created_at to show newest orders first
+            $orders = $query->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 15));
 
             return response()->json([
@@ -381,6 +382,132 @@ class OrderController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to retrieve payment history: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Complete delivery process with payment verification
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function completeDelivery(Request $request, $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Validate user is delivery personnel
+            if (!$this->isDeliveryUser($user)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
+            // Find order with carrier validation
+            $order = SaleOrder::where('carrier_id', $user->carrier_id)
+                              ->findOrFail($id);
+
+            // Check if payment is complete
+            $balance = $order->grand_total - $order->paid_amount;
+            $isPaymentComplete = $balance <= 0;
+
+            // If payment is not complete, collect remaining payment
+            if (!$isPaymentComplete) {
+                // Validate payment data
+                $paymentValidator = Validator::make($request->all(), [
+                    'amount' => 'required|numeric|min:0|max:' . $balance,
+                    'payment_type_id' => 'required|exists:payment_types,id',
+                    'reference_number' => 'nullable|string|max:100',
+                    'notes' => 'nullable|string|max:500'
+                ]);
+
+                if ($paymentValidator->fails()) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Payment validation failed',
+                        'errors' => $paymentValidator->errors()
+                    ], 422);
+                }
+
+                // Collect the payment
+                $paymentData = [
+                    'transaction_date' => now()->format('Y-m-d'),
+                    'amount' => $request->amount,
+                    'payment_type_id' => $request->payment_type_id,
+                    'note' => $request->notes,
+                    'reference_number' => $request->reference_number
+                ];
+
+                $payment = $this->paymentTransactionService->recordPayment($order, $paymentData);
+
+                if (!$payment) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Failed to record payment'
+                    ], 500);
+                }
+
+                // Update total paid amount
+                $this->paymentTransactionService->updateTotalPaidAmountInModel($order);
+            }
+
+            // Now that payment is complete (or was already complete), update status to POD
+            // Validate POD data
+            $podValidator = Validator::make($request->all(), [
+                'notes' => 'required|string|max:500', // Notes are mandatory for POD
+                'signature' => 'nullable|string',
+                'photos' => 'nullable|array',
+                'photos.*' => 'string',
+                'latitude' => 'nullable|numeric|between:-90,90',
+                'longitude' => 'nullable|numeric|between:-180,180'
+            ]);
+
+            if ($podValidator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'POD validation failed',
+                    'errors' => $podValidator->errors()
+                ], 422);
+            }
+
+            // Update status to POD using existing service
+            $result = $this->saleOrderStatusService->updateSaleOrderStatus(
+                $order,
+                'POD',
+                [
+                    'notes' => $request->notes,
+                    'signature' => $request->signature,
+                    'proof_images' => $request->photos,
+                    'latitude' => $request->latitude,
+                    'longitude' => $request->longitude,
+                    'changed_by' => $user->id
+                ]
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Delivery completed successfully',
+                    'data' => [
+                        'order_id' => $order->id,
+                        'order_code' => $order->order_code,
+                        'status' => 'POD',
+                        'payment_status' => 'complete'
+                    ]
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['message']
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to complete delivery: ' . $e->getMessage()
             ], 500);
         }
     }

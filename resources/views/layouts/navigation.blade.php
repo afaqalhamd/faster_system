@@ -273,7 +273,7 @@
                                 <div class="menu-title">{{
 
                                 }} --}}
-                        @canany(['service.create', 'service.view'])
+                        {{-- @canany(['service.create', 'service.view'])
                         <li>
                             <a href="javascript:;" class="has-arrow">
                                 <div class="parent-icon"><i class="bx bx-package"></i>
@@ -294,7 +294,7 @@
                                 @endcan
                             </ul>
                         </li>
-                        @endcanany
+                        @endcanany --}}
 
 
         {{-- @canany(['stock_transfer.view', 'stock_adjustment.view'])

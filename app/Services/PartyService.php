@@ -147,6 +147,11 @@ class PartyService{
 				    ->selectRaw('coalesce(sum(grand_total - paid_amount), 0) as total')
 				    ->value('total');
 
+		// Sale Order & Sale Order Payments
+		$saleOrderBalance = \App\Models\Sale\SaleOrder::where('party_id', $partyId)
+				    ->selectRaw('coalesce(sum(grand_total - paid_amount), 0) as total')
+				    ->value('total');
+
 		// Sale Return & its Payments
 		$saleReturnBalance = SaleReturn::where('party_id', $partyId)
 		    		->selectRaw('coalesce(sum(grand_total - paid_amount), 0) as total')
@@ -173,7 +178,7 @@ class PartyService{
 	    $balance = $openingBalance - ($partyPaymentReceiveSum - $partyPaymentPaySum);
 
 	    // Calculate balance for customers (amount to receive)
-	    $balance += ($saleBalance) - ($saleReturnBalance);
+	    $balance += ($saleBalance + $saleOrderBalance) - ($saleReturnBalance);
 
 	    // Calculate balance for suppliers (amount to pay)
 	    $balance -= ($purchaseBalance) - ($purchaseReturnBalance);

@@ -65,6 +65,12 @@
                     </li>
                     @endcan --}}
 
+                    <li class="nav-item">
+                        <a href="{{ asset('storage/delivery/Quick-Delivery.apk') }}" class="btn btn-sm btn-outline-success radius-30 px-4" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ __('app.download_app') }}" download>
+                            <i class="bx bx-download mr-1"></i>{{ __('app.download_app') }}
+                        </a>
+                    </li>
+
                     <x-header-shortcut-menu />
                     <x-flag-toggle />
 

@@ -128,4 +128,24 @@ class User extends Authenticatable
         return $this->belongsTo(Carrier::class, 'carrier_id');
     }
 
+    /**
+     * Check if user has Admin role
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->roles()
+            ->where('name', 'Admin')
+            ->exists();
+    }
+
+    /**
+     * Get all support tickets created by this user
+     */
+    public function supportTickets()
+    {
+        return $this->morphMany(\App\Models\SupportTicket::class, 'ticketable');
+    }
+
 }

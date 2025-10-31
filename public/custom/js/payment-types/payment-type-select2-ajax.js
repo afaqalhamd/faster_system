@@ -4,7 +4,7 @@ $(function() {
 
   var nextRowNumber = 1; // Track the next row number
 
-  var amountLang = $('#amount_lang').data('0')?.trim() || '';
+  var amountLang = $('#amount_lang').data('name')?.trim() || '';
 
   var paymentTypeLang = $('#payment_type_lang').text().trim();
 
@@ -91,7 +91,7 @@ $(function() {
     /**
      * update operation
      * */
-    if(operation == 'convert' || operation =='update-expense' || operation == 'update'){
+    if(operation == 'convert' || operation =='update-expense'){
         autoAddPaymentRecordsInTable();
     }
 
@@ -130,26 +130,14 @@ function autoAddPaymentRecordsInTable(){
 
     var jsonObject = JSON.parse(jsonString);
 
-    // Check if jsonObject is an array (multiple payments) or a single object
-    if (Array.isArray(jsonObject)) {
-        jsonObject.forEach((data, index) => {
-            if($(`select[name="payment_type_id[${index}]"]`).length == 0){
-                addPaymentTypeRow();
-            }
-            var newOption = new Option(data.type, data.payment_type_id, false, false);
-            $(`select[name="payment_type_id[${index}]"]`).append(newOption).trigger('change');
-            $(`input[name="payment_amount[${index}]"]`).val(_parseFix(data.amount));
-            $(`textarea[name="payment_note[${index}]"]`).val(data.note);
-        });
-    } else {
-        // Handle single payment object (backward compatibility)
-        if($(`select[name="payment_type_id[0]"]`).length == 0){
-            addPaymentTypeRow();
-        }
-        var newOption = new Option(jsonObject.type, jsonObject.payment_type_id, false, false);
-        $(`select[name="payment_type_id[0]"]`).append(newOption).trigger('change');
-        $(`input[name="payment_amount[0]"]`).val(_parseFix(jsonObject.amount));
-        $(`textarea[name="payment_note[0]"]`).val(jsonObject.note);
-    }
+    jsonObject.forEach((data, index) => {
+          if($(`select[name="payment_type_id[${index}]"]`).length == 0){
+              addPaymentTypeRow();
+          }
+          var newOption = new Option(data.type, data.payment_type_id, false, false);
+          $(`select[name="payment_type_id[${index}]"]`).append(newOption).trigger('change');
+          $(`input[name="payment_amount[${index}]"]`).val(_parseFix(data.amount));
+          $(`textarea[name="payment_note[${index}]"]`).val(data.note);
+      });
   }
 });

@@ -28,6 +28,7 @@ use App\Services\Communication\Email\SaleOrderEmailNotificationService;
 use App\Services\Communication\Sms\SaleOrderSmsNotificationService;
 use App\Enums\ItemTransactionUniqueCode;
 use App\Services\SaleOrderStatusService;
+use App\Services\PartyNotificationService;
 
 use Mpdf\Mpdf;
 use App\Notifications\NewSaleOrderNotification;
@@ -61,6 +62,8 @@ class SaleOrderController extends Controller
 
     public $saleOrderStatusService;
 
+    public $partyNotificationService;
+
     public function __construct(
         PaymentTypeService                $paymentTypeService,
         PaymentTransactionService         $paymentTransactionService,
@@ -70,7 +73,8 @@ class SaleOrderController extends Controller
         SaleOrderSmsNotificationService   $saleOrderSmsNotificationService,
         GeneralDataService                $generalDataService,
         StatusHistoryService              $statusHistoryService,
-        SaleOrderStatusService            $saleOrderStatusService
+        SaleOrderStatusService            $saleOrderStatusService,
+        PartyNotificationService          $partyNotificationService
     )
     {
         $this->companyId = App::APP_SETTINGS_RECORD_ID->value;
@@ -83,6 +87,7 @@ class SaleOrderController extends Controller
         $this->generalDataService = $generalDataService;
         $this->statusHistoryService = $statusHistoryService;
         $this->saleOrderStatusService = $saleOrderStatusService;
+        $this->partyNotificationService = $partyNotificationService;
     }
 
     /**
@@ -392,6 +397,22 @@ class SaleOrderController extends Controller
                     $user->notify(new NewSaleOrderNotification($newSaleOrder));
                 }
 
+                // إرسال إشعار Firebase للعميل عند إنشاء طلب جديد
+                try {
+                    $notificationResult = $this->partyNotificationService->sendNewOrderNotification($newSaleOrder);
+
+                    \Log::info('Party Firebase notification sent after order creation', [
+                        'sale_order_id' => $newSaleOrder->id,
+                        'notification_result' => $notificationResult
+                    ]);
+                } catch (\Exception $e) {
+                    // تسجيل الخطأ دون إيقاف عملية إنشاء الطلب
+                    \Log::error('Failed to send party Firebase notification after order creation', [
+                        'sale_order_id' => $newSaleOrder->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+
                 $request->request->add(['sale_order_id' => $newSaleOrder->id]);
             } else {
                 // For updates, we allow the same order code as the existing record
@@ -432,21 +453,41 @@ class SaleOrderController extends Controller
 
                 $newSaleOrder->update($fillableColumns);
                 $newSaleOrder->itemTransaction()->delete();
-                // $newSaleOrder->accountTransaction()->delete();
-                // // Check if paymentTransactions exist
-                // $paymentTransactions = $newSaleOrder->paymentTransaction;
-                // if ($paymentTransactions->isNotEmpty()) {
-                //     foreach ($paymentTransactions as $paymentTransaction) {
-                //         $accountTransactions = $paymentTransaction->accountTransaction;
-                //         if ($accountTransactions->isNotEmpty()) {
-                //             foreach ($accountTransactions as $accountTransaction) {
-                //                 // Do something with the individual accountTransaction
-                //                 $accountTransaction->delete(); // Or any other operation
-                //             }
-                //         }
-                //     }
-                // }
-                // $newSaleOrder->paymentTransaction()->delete();
+
+                // Delete account transactions and update accounts
+                foreach ($newSaleOrder->accountTransaction as $saleOrderAccount) {
+                    // Get account id before deleting
+                    $saleOrderAccountId = $saleOrderAccount->account_id;
+
+                    // Delete account transaction
+                    $saleOrderAccount->delete();
+
+                    // Update account balances
+                    $this->accountTransactionService->calculateAccounts($saleOrderAccountId);
+                }
+
+                // Check if paymentTransactions exist and delete their account transactions
+                $paymentTransactions = $newSaleOrder->paymentTransaction;
+                if ($paymentTransactions->isNotEmpty()) {
+                    foreach ($paymentTransactions as $paymentTransaction) {
+                        $accountTransactions = $paymentTransaction->accountTransaction;
+                        if ($accountTransactions->isNotEmpty()) {
+                            foreach ($accountTransactions as $accountTransaction) {
+                                // Get account id before deleting
+                                $accountId = $accountTransaction->account_id;
+
+                                // Delete account transaction
+                                $accountTransaction->delete();
+
+                                // Update account balances
+                                $this->accountTransactionService->calculateAccounts($accountId);
+                            }
+                        }
+                    }
+                }
+
+                // Delete payment transactions
+                $newSaleOrder->paymentTransaction()->delete();
 
 
             }
@@ -474,9 +515,6 @@ class SaleOrderController extends Controller
                 throw new \Exception($saleOrderPaymentsArray['message']);
             }
 
-            // Removed payment amount validation to allow saving orders regardless of payment status
-            // Payment validation can be handled at a later stage
-
             /**
              * Update Sale Order Model
              * Total Paid Amunt
@@ -486,14 +524,29 @@ class SaleOrderController extends Controller
             }
 
             /**
+             * Payment Should not be less than 0
+             * */
+            $paidAmount = $newSaleOrder->refresh('paymentTransaction')->paymentTransaction->sum('amount');
+            if ($paidAmount < 0) {
+                throw new \Exception(__('payment.paid_amount_should_not_be_less_than_zero'));
+            }
+
+            /**
+             * Paid amount should not be greater than grand total
+             * */
+            if ($paidAmount > $newSaleOrder->grand_total) {
+                throw new \Exception(__('payment.payment_should_not_be_greater_than_grand_total') . "<br>Paid Amount : " . $this->formatWithPrecision($paidAmount) . "<br>Grand Total : " . $this->formatWithPrecision($newSaleOrder->grand_total) . "<br>Difference : " . $this->formatWithPrecision($paidAmount - $newSaleOrder->grand_total));
+            }
+
+            /**
              * Update Account Transaction entry
              * Call Services
              * @return boolean
              * */
-            // $accountTransactionStatus = $this->accountTransactionService->saleOrderAccountTransaction($request->modelName);
-            // if(!$accountTransactionStatus){
-            //     throw new \Exception(__('payment.failed_to_update_account'));
-            // }
+            $accountTransactionStatus = $this->accountTransactionService->saleOrderAccountTransaction($request->modelName);
+            if(!$accountTransactionStatus){
+                throw new \Exception(__('payment.failed_to_update_account'));
+            }
 
             DB::commit();
 
@@ -540,6 +593,30 @@ class SaleOrderController extends Controller
     public function saveSaleOrderPayments($request)
     {
         $paymentCount = $request->row_count_payments;
+        $grandTotal = $request->grand_total;
+
+        //This is only for POS Page Payments
+        if ($request->is_pos_form) {
+            $paymentTotal = 0;
+            /**
+             * Used if Payment is greater then the payment.
+             * Data index start from 0
+             * payment_amount[0] & payment_amount[1] because POS page has only 2 payments static code
+             * */
+            //#0
+            $payment_0 = $request->payment_amount[0];
+            //#1
+            $payment_1 = $request->payment_amount[1];
+
+            //Only if single Payment has the value
+            if ($payment_1 == 0) {// #1
+                if ($payment_0 > 0 && $payment_0 > $grandTotal) {
+                    $request->merge([
+                        'payment_amount' => array_replace($request->input('payment_amount', []), [0 => $grandTotal]) // Replace 0th index value
+                    ]);
+                }
+            }
+        }
 
         for ($i = 0; $i <= $paymentCount; $i++) {
 
@@ -568,6 +645,7 @@ class SaleOrderController extends Controller
                     'amount' => $amount,
                     'payment_type_id' => $request->payment_type_id[$i],
                     'note' => $request->payment_note[$i],
+                    'payment_from_unique_code' => \App\Enums\General::SALE_ORDER->value,
                 ];
 
                 if (!$transaction = $this->paymentTransactionService->recordPayment($request->modelName, $paymentsArray)) {
@@ -1019,8 +1097,23 @@ class SaleOrderController extends Controller
             })
             ->addColumn('inventory_status', function ($row) {
                 $status = $row->inventory_status ?? 'pending';
-                $badgeClass = $status === 'deducted' ? 'bg-success' : 'bg-warning';
-                $statusText = $status === 'deducted' ? __('sale.inventory_deducted') : __('sale.reserved');
+
+                // Determine badge class and status text based on inventory status
+                switch ($status) {
+                    case 'deducted':
+                        $badgeClass = 'bg-success';
+                        $statusText = __('sale.inventory_deducted');
+                        break;
+                    case 'restored':
+                        $badgeClass = 'bg-info';
+                        $statusText = __('sale.inventory_restored');
+                        break;
+                    case 'pending':
+                    default:
+                        $badgeClass = 'bg-warning';
+                        $statusText = __('sale.reserved');
+                        break;
+                }
 
                 return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
             })

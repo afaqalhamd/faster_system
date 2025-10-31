@@ -1,121 +1,18 @@
 @extends('layouts.app')
 
-@section('title', __('sale.delivery_payment'))
+@section('title', __('delivery.collect_payment'))
 
 @section('content')
 <div class="page-wrapper">
     <div class="page-content">
-        <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
-            <div class="breadcrumb-title pe-3">{{ __('sale.delivery') }}</div>
-            <div class="ps-3">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0 p-0">
-                        <li class="breadcrumb-item"><a href="javascript:;"><i class="bx bx-home-alt"></i></a>
-                        </li>
-                        <li class="breadcrumb-item" aria-current="page">{{ __('sale.delivery_payment') }}</li>
-                    </ol>
-                </nav>
-            </div>
-        </div>
-
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header px-4 py-3">
-                        <h5 class="mb-0">{{ __('sale.delivery_payment') }}</h5>
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ __('delivery.collect_payment') }}</h5>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{ __('sale.sale_details') }}</h5>
-                                        <div class="table-responsive">
-                                            <table class="table table-borderless">
-                                                <tr>
-                                                    <th>{{ __('sale.sale_code') }}</th>
-                                                    <td id="sale_code">-</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('party.customer') }}</th>
-                                                    <td id="customer_name">-</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('sale.grand_total') }}</th>
-                                                    <td id="grand_total">-</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('payment.paid_amount') }}</th>
-                                                    <td id="paid_amount">-</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('payment.balance') }}</th>
-                                                    <td id="balance">-</td>
-                                                </tr>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{ __('payment.record_payment') }}</h5>
-                                        <form id="deliveryPaymentForm">
-                                            @csrf
-                                            <input type="hidden" id="sale_id" name="sale_id">
-
-                                            <div class="mb-3">
-                                                <label for="amount" class="form-label">{{ __('payment.amount') }}</label>
-                                                <input type="text" class="form-control cu_numeric" id="amount" name="amount" required>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <label for="payment_type_id" class="form-label">{{ __('payment.type') }}</label>
-                                                <select class="form-select" id="payment_type_id" name="payment_type_id" required>
-                                                    <option value="">{{ __('app.select') }} {{ __('payment.type') }}</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <label for="note" class="form-label">{{ __('payment.note') }}</label>
-                                                <textarea class="form-control" id="note" name="note" rows="3"></textarea>
-                                            </div>
-
-                                            <button type="submit" class="btn btn-primary">{{ __('payment.record_payment') }}</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="mb-0">{{ __('payment.payment_history') }}</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-striped table-hover" id="paymentHistoryTable">
-                                                <thead>
-                                                    <tr>
-                                                        <th>{{ __('app.date') }}</th>
-                                                        <th>{{ __('payment.amount') }}</th>
-                                                        <th>{{ __('payment.type') }}</th>
-                                                        <th>{{ __('payment.note') }}</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="paymentHistoryBody">
-                                                    <!-- Payment history will be loaded here -->
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="card-body">
+                        <p>{{ __('delivery.collect_payment') }} {{ __('app.page_under_construction') }}</p>
                     </div>
                 </div>
             </div>

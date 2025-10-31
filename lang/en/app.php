@@ -58,6 +58,7 @@ return [
     'app_cache_cleared'                 => 'The application cache has been cleared!',
 
     'download'                          => 'Download',
+    'download_app'                      => 'Download App',
     'create_group'                      => 'Create Group',
     'group_name'                        => 'Group Name',
     'group_list'                        => 'Group List',
@@ -313,7 +314,10 @@ return [
     'initial'                           => 'Initial',
     'total_items' =>'Total Products :',
     'inventory_status' => 'Inventory Status',
-
+    'reason' => 'Reason',
+    'after_delivery' => 'after delivery',
+    'page_not_found' => 'Page Not Found',
+    'page_under_construction' => 'Page Under Construction',
 
 
 ];

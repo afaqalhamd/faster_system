@@ -317,6 +317,7 @@
         const itemsTableRecords = @json($itemTransactionsJson);
         const taxList = JSON.parse('{!! $taxList !!}');
 </script>
+<script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/sale/sale-order-status-manager.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/currency-exchange.js') }}"></script>
@@ -325,7 +326,6 @@
 <script src="{{ versionedAsset('custom/js/items/batch-tracking-sale.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/payment-type/payment-type.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/payment-types/payment-type-select2-ajax.js') }}"></script>
-<script src="{{ versionedAsset('custom/js/common/common.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/party/party.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/item/item.js') }}"></script>
 <script src="{{ versionedAsset('custom/js/modals/sale/order/load-sold-items.js') }}"></script>

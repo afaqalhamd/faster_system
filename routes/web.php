@@ -30,6 +30,8 @@ use App\Http\Controllers\StockTransferController;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\Export\ExportController;
+use App\Http\Controllers\Transaction\CashController;
+
 
 use App\Http\Controllers\Accounts\AccountController;
 use App\Http\Controllers\Accounts\AccountGroupController;
@@ -48,9 +50,10 @@ use App\Http\Controllers\ImportController;
 use App\Http\Controllers\Items\BrandController;
 use App\Http\Controllers\Purchase\PurchaseOrderController;
 use App\Http\Controllers\Purchase\PurchaseController;
-
 use App\Http\Controllers\Purchase\PurchaseReturnController;
-
+use App\Http\Controllers\Payment\SalePaymentController;
+use App\Http\Controllers\Payment\SaleReturnPaymentController;
+use App\Http\Controllers\Payment\SaleOrderPaymentController;
 use App\Http\Controllers\Payment\PurchaseOrderPaymentController;
 use App\Http\Controllers\Payment\PurchasePaymentController;
 use App\Http\Controllers\Payment\PurchaseReturnPaymentController;
@@ -65,7 +68,15 @@ use App\Http\Controllers\Reports\ProfitReportController;
 use App\Http\Controllers\Reports\CustomerReportController;
 use App\Http\Controllers\Reports\SupplierReportController;
 use App\Http\Controllers\Reports\StockReportController;
+use App\Http\Controllers\Reports\StockAdjustmentReportController;
 use App\Http\Controllers\Sale\SaleReturnOrderController;
+use App\Http\Controllers\Sale\QuotationController;
+use App\Http\Controllers\Sale\SaleReturnController;
+use App\Http\Controllers\Sale\SaleController;
+use App\Http\Controllers\Transaction\ChequeController;
+use App\Http\Controllers\Transaction\BankController;
+use App\Http\Controllers\StockAdjustmentController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2103,6 +2114,16 @@ Route::get('/download-contact-sheet', function() {
 })->name('download-contact-sheet');
 
 /**
+ * Delivery Password Reset Routes (Guest)
+ */
+Route::prefix('delivery')->group(function () {
+    Route::get('/reset-password', [App\Http\Controllers\Delivery\PasswordResetController::class, 'showResetForm'])
+        ->name('delivery.password.reset');
+    Route::post('/reset-password', [App\Http\Controllers\Delivery\PasswordResetController::class, 'reset'])
+        ->name('delivery.password.update');
+});
+
+/**
  * Delivery Routes
  */
 Route::group(['prefix' => 'delivery', 'middleware' => 'auth'], function () {
@@ -2124,9 +2145,60 @@ Route::group(['prefix' => 'delivery', 'middleware' => 'auth'], function () {
     Route::get('/payment', function () {
         return view('delivery.payment');
     })->name('delivery.payment');
+
+    // QR Scanner page
+    Route::get('/qr-scanner', function () {
+        return view('delivery.qr-scanner');
+    })->name('delivery.qr-scanner');
 });
 
 // Include waybill routes
 require __DIR__.'/waybill.php';
 
 require __DIR__.'/auth.php';
+
+
+// Customer Password Reset Page (Public)
+Route::get('/customer/reset-password', function () {
+    return view('customer.reset-password');
+})->name('customer.reset-password');
+
+// Customer Account Deletion Page (for Google Play policy)
+Route::get('/customer/delete-account', [App\Http\Controllers\Customer\AccountDeletionController::class, 'showDeleteAccountPage'])
+    ->name('customer.delete-account');
+
+
+// Privacy Policy and Terms Routes (Public)
+Route::get('/privacy-policy', function () {
+    return view('privacy-policy');
+})->name('privacy.policy');
+
+Route::get('/terms', function () {
+    return view('terms-conditions');
+})->name('terms.conditions');
+
+/**
+ * Contact Us Routes
+ */
+Route::group(['prefix' => 'contact'], function () {
+    // Public contact page
+    Route::get('/', [App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
+    Route::post('/store', [App\Http\Controllers\ContactController::class, 'store'])->name('contact.store');
+
+    // Admin routes (protected)
+    Route::middleware('auth')->group(function () {
+        Route::get('/list', [App\Http\Controllers\ContactController::class, 'list'])
+            ->middleware('can:contact.view')
+            ->name('contact.list');
+        Route::get('/datatable-list', [App\Http\Controllers\ContactController::class, 'datatableList'])
+            ->name('contact.datatable.list');
+        Route::get('/show/{id}', [App\Http\Controllers\ContactController::class, 'show'])
+            ->name('contact.show');
+        Route::post('/delete', [App\Http\Controllers\ContactController::class, 'delete'])
+            ->middleware('can:contact.delete')
+            ->name('contact.delete');
+        Route::post('/update-status', [App\Http\Controllers\ContactController::class, 'updateStatus'])
+            ->middleware('can:contact.edit')
+            ->name('contact.update.status');
+    });
+});

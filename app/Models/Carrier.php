@@ -85,4 +85,14 @@ class Carrier extends Model
     {
         return $this->hasMany(User::class, 'carrier_id');
     }
+
+    /**
+     * Alias for carrierUsers relationship
+     *
+     * @return HasMany
+     */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'carrier_id');
+    }
 }

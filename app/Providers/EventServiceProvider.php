@@ -21,6 +21,9 @@ class EventServiceProvider extends ServiceProvider
         \App\Events\OrderPaymentsEvent::class => [
             \App\Listeners\OrderPaymentsListner::class,
         ],
+        \App\Events\OrderStatusUpdated::class => [
+            \App\Listeners\SendOrderStatusNotification::class,
+        ],
     ];
 
     /**

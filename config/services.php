@@ -30,12 +30,18 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-    // ... existing code ...
 
-'firebase' => [
-    'server_key' => env('FIREBASE_SERVER_KEY', ''),
-],
-
-// ... existing code ...
+    'firebase' => [
+        'project_id' => env('FIREBASE_PROJECT_ID', 'faster-delivery-system'),
+        'server_key' => env('FIREBASE_SERVER_KEY', ''),
+        'sender_id' => env('FIREBASE_SENDER_ID', ''),
+        'database_url' => env('FIREBASE_DATABASE_URL', 'https://faster-delivery-system-default-rtdb.firebaseio.com'),
+        'storage_bucket' => env('FIREBASE_STORAGE_BUCKET', 'faster-delivery-system.appspot.com'),
+        'api_key' => env('FIREBASE_API_KEY', ''),
+        'auth_domain' => env('FIREBASE_AUTH_DOMAIN', 'faster-delivery-system.firebaseapp.com'),
+        'app_id' => env('FIREBASE_APP_ID', ''),
+        'measurement_id' => env('FIREBASE_MEASUREMENT_ID', ''),
+        'vapid_key' => env('FIREBASE_VAPID_KEY', ''),
+    ],
 
 ];

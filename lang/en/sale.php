@@ -117,6 +117,7 @@ return [
 
     // Inventory Status
     'inventory_deducted'            => 'Inventory Deducted',
+    'inventory_restored'            => 'Inventory Restored',
     'ready_for_deduction'           => 'Ready for Deduction',
     'pending'                       => 'Pending',
     'processing'                    => 'Processing',

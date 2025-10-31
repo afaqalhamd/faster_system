@@ -5,19 +5,36 @@ namespace App\Services;
 use App\Models\Sale\SaleOrder;
 use App\Models\Sale\SaleOrderStatusHistory;
 use App\Services\ItemTransactionService;
+use App\Services\CarrierNotificationService;
+use App\Services\PartyNotificationService;
 use App\Enums\ItemTransactionUniqueCode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Services\PaymentReversalService;
+
 use Exception;
 
 class SaleOrderStatusService
 {
     private $itemTransactionService;
+    private $carrierNotificationService;
+    private $partyNotificationService;
+    private $paymentReversalService;
 
-    public function __construct(ItemTransactionService $itemTransactionService)
-    {
+
+    public function __construct(
+        ItemTransactionService $itemTransactionService,
+        CarrierNotificationService $carrierNotificationService,
+        PartyNotificationService $partyNotificationService,
+        PaymentReversalService $paymentReversalService
+
+    ) {
         $this->itemTransactionService = $itemTransactionService;
+        $this->carrierNotificationService = $carrierNotificationService;
+        $this->partyNotificationService = $partyNotificationService;
+        $this->paymentReversalService = $paymentReversalService;
+
     }
 
     /**
@@ -41,6 +58,25 @@ class SaleOrderStatusService
             if (!$inventoryResult['success']) {
                 throw new Exception($inventoryResult['message']);
             }
+             $paymentReversalResult = $this->handlePaymentReversal($saleOrder, $newStatus, $previousStatus);
+
+            if (!$paymentReversalResult['success']) {
+                Log::warning('Payment reversal failed but continuing with status update', [
+                    'sale_order_id' => $saleOrder->id,
+                    'error' => $paymentReversalResult['message']
+                ]);
+                // لا نقوم بإيقاف العملية لأن استرداد المدفوعات يمكن معالجته يدوياً
+                // Don't stop the process as payment reversal can be handled manually
+            }$paymentReversalResult = $this->handlePaymentReversal($saleOrder, $newStatus, $previousStatus);
+
+            if (!$paymentReversalResult['success']) {
+                Log::warning('Payment reversal failed but continuing with status update', [
+                    'sale_order_id' => $saleOrder->id,
+                    'error' => $paymentReversalResult['message']
+                ]);
+                // لا نقوم بإيقاف العملية لأن استرداد المدفوعات يمكن معالجته يدوياً
+                // Don't stop the process as payment reversal can be handled manually
+            }
 
             // Handle proof image upload if provided
             $proofImagePath = null;
@@ -54,13 +90,83 @@ class SaleOrderStatusService
             // Record status change history
             $this->recordStatusHistory($saleOrder, $previousStatus, $newStatus, $data['notes'] ?? null, $proofImagePath);
 
+            // Send carrier notifications if status changed to Delivery
+            $notificationResult = $this->carrierNotificationService->sendDeliveryNotification(
+                $saleOrder,
+                $newStatus,
+                $previousStatus
+            );
+
+            // إرسال إشعار Firebase للعميل عند تغيير حالة الطلب
+            try {
+                $partyNotificationResult = $this->partyNotificationService->sendOrderStatusNotification(
+                    $saleOrder,
+                    $newStatus,
+                    $previousStatus
+                );
+
+                Log::info('Party notification sent after status change', [
+                    'sale_order_id' => $saleOrder->id,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'notification_result' => $partyNotificationResult
+                ]);
+            } catch (Exception $e) {
+                // تسجيل الخطأ دون إيقاف عملية تغيير الحالة
+                Log::error('Failed to send party notification after status change', [
+                    'sale_order_id' => $saleOrder->id,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // إرسال إشعار خاص عند توصيل الطلب (POD)
+            if ($newStatus === 'POD') {
+                try {
+                    $deliveryNotificationResult = $this->partyNotificationService->sendOrderDeliveredNotification($saleOrder);
+
+                    Log::info('Order delivered notification sent to party', [
+                        'sale_order_id' => $saleOrder->id,
+                        'notification_result' => $deliveryNotificationResult
+                    ]);
+                } catch (Exception $e) {
+                    Log::error('Failed to send order delivered notification to party', [
+                        'sale_order_id' => $saleOrder->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            Log::info('Sale order status updated in database', [
+                'sale_order_id' => $saleOrder->id,
+                'previous_status' => $previousStatus,
+                'new_status' => $newStatus,
+                'current_status_in_model' => $saleOrder->order_status
+            ]);
+
             DB::commit();
 
-            return [
+            $response = [
                 'success' => true,
                 'message' => 'Sale order status updated successfully',
                 'inventory_updated' => $inventoryResult['inventory_updated'] ?? false
             ];
+
+            // Add notification result to response
+            if ($newStatus === 'Delivery') {
+                $response['notification_result'] = $notificationResult;
+                if ($notificationResult['success']) {
+                    $response['message'] .= sprintf(
+                        ' and %d delivery notifications sent',
+                        $notificationResult['notifications_sent']
+                    );
+                } else {
+                    $response['message'] .= ' but notification failed: ' . $notificationResult['message'];
+                }
+            }
+
+            return $response;
 
         } catch (Exception $e) {
             DB::rollback();
@@ -123,41 +229,38 @@ class SaleOrderStatusService
             ]);
         }
 
-        // NEW LOGIC: Handle Cancelled/Returned status with POD consideration
+        // UPDATED LOGIC: Handle Cancelled/Returned status - Always restore inventory
         if (in_array($newStatus, $restorationStatuses) && $saleOrder->inventory_status === 'deducted') {
-            // Check if the previous status was POD
-            if ($previousStatus === 'POD') {
-                // If coming from POD, keep inventory deducted (delivered items should remain as completed transactions)
-                Log::info('Keeping inventory deducted - sale order was already delivered (POD)', [
-                    'sale_order_id' => $saleOrder->id,
-                    'previous_status' => $previousStatus,
-                    'new_status' => $newStatus,
-                    'reason' => 'Items were delivered, treating cancellation/return as separate transaction'
-                ]);
+            // Always restore inventory when cancelling or returning, even from POD
+            Log::info('Restoring inventory for cancelled/returned sale order', [
+                'sale_order_id' => $saleOrder->id,
+                'previous_status' => $previousStatus,
+                'new_status' => $newStatus,
+                'reason' => 'User requested inventory restoration for post-delivery cancellations/returns'
+            ]);
 
-                // Update sale order status to indicate this is a post-delivery cancellation/return
+            $result = $this->restoreInventory($saleOrder);
+            if (!$result['success']) {
+                Log::error('Failed to restore inventory for sale order', [
+                    'sale_order_id' => $saleOrder->id,
+                    'error' => $result['message']
+                ]);
+                return $result;
+            }
+            $inventoryUpdated = true;
+
+            // Track that this was a post-delivery action if coming from POD
+            if ($previousStatus === 'POD') {
                 $saleOrder->update([
-                    'inventory_status' => 'deducted_delivered', // New status to indicate delivered but cancelled/returned
-                    'post_delivery_action' => $newStatus, // Track what action was taken after delivery
+                    'post_delivery_action' => $newStatus,
                     'post_delivery_action_at' => now()
                 ]);
 
-                // Note: Any return/cancellation of delivered items should be handled as a separate
-                // return transaction or credit note, not by restoring the original sale order inventory
-            } else {
-                // If NOT coming from POD, restore inventory (normal cancellation before delivery)
-                Log::info('Restoring inventory - sale order was not delivered yet', [
+                Log::info('Post-delivery action tracked for sale order', [
                     'sale_order_id' => $saleOrder->id,
-                    'previous_status' => $previousStatus,
-                    'new_status' => $newStatus,
-                    'reason' => 'Items were not delivered, safe to restore inventory'
+                    'post_delivery_action' => $newStatus,
+                    'action_time' => now()
                 ]);
-
-                $result = $this->restoreInventory($saleOrder);
-                if (!$result['success']) {
-                    return $result;
-                }
-                $inventoryUpdated = true;
             }
         }
 
@@ -247,6 +350,42 @@ class SaleOrderStatusService
             ]);
             return ['success' => false, 'message' => 'Failed to deduct inventory: ' . $e->getMessage()];
         }
+    }
+
+     /**
+     * معالجة استرداد المدفوعات التلقائي عند تغيير الحالة
+     * Handle automatic payment reversal when status changes
+     */
+    private function handlePaymentReversal($saleOrder, string $newStatus, string $previousStatus): array
+    {
+        Log::info('Handling payment reversal for status change', [
+            'sale_order_id' => $saleOrder->id,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus
+        ]);
+
+        // معالجة استرداد المدفوعات باستخدام خدمة الاسترداد
+        $result = $this->paymentReversalService->processPaymentReversal(
+            $saleOrder,
+            $newStatus,
+            $previousStatus,
+            "Order status changed from {$previousStatus} to {$newStatus}"
+        );
+
+        if ($result['success']) {
+            Log::info('Payment reversal completed successfully', [
+                'sale_order_id' => $saleOrder->id,
+                'payments_reversed' => $result['payments_reversed'],
+                'total_refunded' => $result['total_refunded']
+            ]);
+        } else {
+            Log::error('Payment reversal failed', [
+                'sale_order_id' => $saleOrder->id,
+                'error' => $result['message']
+            ]);
+        }
+
+        return $result;
     }
 
     /**

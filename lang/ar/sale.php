@@ -118,6 +118,7 @@ return [
 
 // Inventory Status
 'inventory_deducted'            => 'تم خصم المخزون',
+'inventory_restored'            => 'تم استرداد المخزون',
 'ready_for_deduction'           => 'جاهز للخصم',
 'pending'                       => 'قيد الانتظار',
 'processing'                    => 'قيد المعالجة',
@@ -155,5 +156,6 @@ return [
 'no_status_history_available'   => 'لا يوجد سجل حالات متاح حتى الآن.',
 'status_changes_will_be_recorded' => 'سيتم تسجيل تغييرات الحالة هنا.',
 'pod_payment_error' => 'لا يمكن تحديد حالة "إثبات التسليم" (أثبات التسليم). يرجى التأكد من أن عملية البيع مدفوعة بالكامل قبل تغيير الحالة.',
+'sale_order'=>'طلب البيع'
 
 ];

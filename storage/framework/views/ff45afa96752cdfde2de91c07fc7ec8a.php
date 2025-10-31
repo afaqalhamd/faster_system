@@ -1,0 +1,1 @@
+<a href="<?php echo e($href); ?>" class="<?php echo e($class); ?>"><?php echo $text; ?></a><?php /**PATH C:\xampp\htdocs\faster_system\resources\views/components/anchor-tag.blade.php ENDPATH**/ ?>

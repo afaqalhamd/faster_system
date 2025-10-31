@@ -19,6 +19,16 @@ use App\Http\Controllers\PushNotificationController;
 |
 */
 
+// Health Check / Ping Route
+Route::get('/ping', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'API is working',
+        'timestamp' => now()->toISOString(),
+        'server_time' => now()->format('Y-m-d H:i:s'),
+    ]);
+});
+
 // Authentication Routes
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -93,10 +103,22 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('delivery')->group(function () {
     // Delivery Authentication
     Route::post('/login', [App\Http\Controllers\Api\Delivery\AuthController::class, 'login']);
+    Route::post('/forgot-password', [App\Http\Controllers\Api\Delivery\AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [App\Http\Controllers\Api\Delivery\AuthController::class, 'resetPassword']);
+
+    // Debug endpoint for testing login data reception
+    Route::post('/debug-login', [App\Http\Controllers\Api\Delivery\AuthController::class, 'debugLogin']);
+    Route::get('/debug-login', [App\Http\Controllers\Api\Delivery\AuthController::class, 'debugLogin']);
 
     Route::middleware('auth:sanctum')->group(function () {
-        // Delivery Profile
-        Route::get('/profile', [App\Http\Controllers\Api\Delivery\AuthController::class, 'profile']);
+        // Delivery Profile Management
+        Route::get('/profile', [App\Http\Controllers\Api\Delivery\ProfileController::class, 'show']);
+        Route::put('/profile', [App\Http\Controllers\Api\Delivery\ProfileController::class, 'update']);
+        Route::post('/profile/upload-image', [App\Http\Controllers\Api\Delivery\ProfileController::class, 'uploadProfileImage']);
+        Route::delete('/profile/delete-image', [App\Http\Controllers\Api\Delivery\ProfileController::class, 'deleteProfileImage']);
+        Route::post('/profile/change-password', [App\Http\Controllers\Api\Delivery\ProfileController::class, 'changePassword']);
+
+        // Delivery Authentication
         Route::post('/logout', [App\Http\Controllers\Api\Delivery\AuthController::class, 'logout']);
 
         // Delivery Orders
@@ -113,7 +135,95 @@ Route::prefix('delivery')->group(function () {
         Route::get('/orders/{id}/payment', [App\Http\Controllers\Api\Delivery\PaymentController::class, 'show']);
         Route::post('/orders/{id}/payment', [App\Http\Controllers\Api\Delivery\OrderController::class, 'collectPayment']);
         Route::get('/orders/{id}/payment-history', [App\Http\Controllers\Api\Delivery\OrderController::class, 'paymentHistory']);
+
+        // Complete Delivery Process
+        Route::post('/orders/{id}/complete-delivery', [App\Http\Controllers\Api\Delivery\OrderController::class, 'completeDelivery']);
+
+        // Device Token Management for Notifications
+        Route::prefix('device-tokens')->group(function () {
+            Route::post('/register', [App\Http\Controllers\Api\DeviceTokenController::class, 'register']);
+            Route::put('/update', [App\Http\Controllers\Api\DeviceTokenController::class, 'update']);
+            Route::delete('/deactivate', [App\Http\Controllers\Api\DeviceTokenController::class, 'deactivate']);
+            Route::get('/status', [App\Http\Controllers\Api\DeviceTokenController::class, 'status']);
+        });
     });
+});
+
+// Firebase Testing Routes (Public for testing)
+Route::prefix('firebase-test')->group(function () {
+    Route::get('/connection', [App\Http\Controllers\FirebaseTestController::class, 'testConnection']);
+    Route::get('/config', [App\Http\Controllers\FirebaseTestController::class, 'getConfig']);
+    Route::get('/validate-service-account', [App\Http\Controllers\FirebaseTestController::class, 'validateServiceAccount']);
+    Route::post('/messaging', [App\Http\Controllers\FirebaseTestController::class, 'testMessaging']);
+    Route::post('/bulk-messaging', [App\Http\Controllers\FirebaseTestController::class, 'testBulkMessaging']);
+});
+
+// Notification Testing Routes (مسارات اختبار الإشعارات)
+Route::group(['prefix' => 'test', 'middleware' => 'auth:sanctum'], function () {
+    // Test carrier notifications
+    Route::post('/carrier-notification', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'testCarrierNotification']);
+
+    // Test delivery notification by changing status
+    Route::post('/delivery-notification', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'testDeliveryNotification']);
+
+    // Get delivery users for carrier
+    Route::get('/delivery-users', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'getDeliveryUsers']);
+
+    // Get carriers with delivery users
+    Route::get('/carriers-delivery-users', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'getCarriersWithDeliveryUsers']);
+
+    // Get test sale orders
+    Route::get('/sale-orders', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'getTestSaleOrders']);
+
+    // Simulate status change
+    Route::post('/simulate-status-change', [\App\Http\Controllers\Api\Test\NotificationTestController::class, 'simulateStatusChange']);
+});
+
+// FCM Token Management Routes (مسارات إدارة رموز FCM)
+Route::group(['prefix' => 'fcm', 'middleware' => 'auth:sanctum'], function () {
+    // Update FCM token
+    Route::put('/update-token', [\App\Http\Controllers\Api\Test\FcmTokenController::class, 'updateToken']);
+
+    // Test notification with current token
+    Route::post('/test-notification', [\App\Http\Controllers\Api\Test\FcmTokenController::class, 'testNotification']);
+
+    // Get current token info
+    Route::get('/token-info', [\App\Http\Controllers\Api\Test\FcmTokenController::class, 'getTokenInfo']);
+
+    // Debug token issues
+    Route::get('/debug-token', [\App\Http\Controllers\Api\Test\FcmTokenController::class, 'debugToken']);
+});
+
+// Chat Notification Routes (مسارات إشعارات الشات)
+Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
+    Route::post('/send-notification', [App\Http\Controllers\Api\ChatNotificationController::class, 'sendChatNotification']);
+});
+
+// FCM Token Update Routes (مسارات تحديث FCM Token)
+// Commented out - Controller not found
+// Route::middleware('auth:sanctum')->prefix('fcm-token')->group(function () {
+//     Route::post('/update', [App\Http\Controllers\Api\FcmTokenController::class, 'updateToken']);
+//     Route::get('/get', [App\Http\Controllers\Api\FcmTokenController::class, 'getToken']);
+// });
+
+// Support Tickets Routes
+Route::middleware('auth:sanctum')->prefix('support')->group(function () {
+    // Tickets Management
+    Route::get('/tickets', [App\Http\Controllers\Api\SupportTicketController::class, 'index']);
+    Route::post('/tickets', [App\Http\Controllers\Api\SupportTicketController::class, 'store']);
+    Route::get('/tickets/{id}', [App\Http\Controllers\Api\SupportTicketController::class, 'show']);
+    Route::post('/tickets/{id}/messages', [App\Http\Controllers\Api\SupportTicketController::class, 'addMessage']);
+    Route::post('/tickets/{id}/close', [App\Http\Controllers\Api\SupportTicketController::class, 'close']);
+    Route::post('/tickets/{id}/reopen', [App\Http\Controllers\Api\SupportTicketController::class, 'reopen']);
+
+    // Statistics
+    Route::get('/tickets/stats/summary', [App\Http\Controllers\Api\SupportTicketController::class, 'getStatistics']);
+
+    // Admin-only routes (admin check is done in controller methods)
+    Route::put('/tickets/{id}/status', [App\Http\Controllers\Api\SupportTicketController::class, 'updateTicketStatus']);
+    Route::put('/tickets/{id}/priority', [App\Http\Controllers\Api\SupportTicketController::class, 'updateTicketPriority']);
+    Route::put('/tickets/{id}/assign', [App\Http\Controllers\Api\SupportTicketController::class, 'assignTicket']);
+    Route::post('/tickets/{id}/staff-reply', [App\Http\Controllers\Api\SupportTicketController::class, 'addStaffReply']);
 });
 
 // Protected Routes
@@ -178,14 +288,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Item Transaction Routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/item-transactions', [App\Http\Controllers\Api\ItemTransactionController::class, 'index']);
-        Route::get('/item-transactions/{id}', [App\Http\Controllers\Api\ItemTransactionController::class, 'show']);
-        Route::get('/item-transactions/item/{itemId}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getTransactionsByItem']);
-        Route::get('/item-transactions/warehouse/{warehouseId}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getTransactionsByWarehouse']);
-        Route::get('/recent-item-transactions', [App\Http\Controllers\Api\ItemTransactionController::class, 'getRecentTransactions']);
-        Route::get('/items/{id}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getItemTransactions']);
-        Route::get('/{id}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getTransactionDetails']);
+    Route::middleware('auth:sanctum')->prefix('item-transactions')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\ItemTransactionController::class, 'index']);
+        Route::get('/recent', [App\Http\Controllers\Api\ItemTransactionController::class, 'getRecentTransactions']);
+        Route::get('/item/{itemId}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getTransactionsByItem']);
+        Route::get('/warehouse/{warehouseId}', [App\Http\Controllers\Api\ItemTransactionController::class, 'getTransactionsByWarehouse']);
+        Route::get('/{id}', [App\Http\Controllers\Api\ItemTransactionController::class, 'show']);
     });
 
     // Sale Routes
@@ -194,12 +302,110 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Sales API Routes - Complete CRUD and Operations
-    Route::middleware('auth:sanctum')->group(function () {
-        // Basic CRUD operations
-        Route::get('/sales-api', [App\Http\Controllers\Api\SaleControllerApi::class, 'index']);
-        Route::get('/sales-api/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'show']);
-        Route::post('/sales-api', [App\Http\Controllers\Api\SaleControllerApi::class, 'store']);
-        Route::put('/sales-api/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'update']);
-        Route::delete('/sales-api/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'destroy']);
+    Route::middleware('auth:sanctum')->prefix('sales-api')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\SaleControllerApi::class, 'index']);
+        Route::get('/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'show']);
+        Route::post('/', [App\Http\Controllers\Api\SaleControllerApi::class, 'store']);
+        Route::put('/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\SaleControllerApi::class, 'destroy']);
+    });
+});
+
+// Firebase Testing Routes (Public for testing)
+Route::prefix('firebase-test')->group(function () {
+    Route::get('/connection', [App\Http\Controllers\FirebaseTestController::class, 'testConnection']);
+    Route::get('/config', [App\Http\Controllers\FirebaseTestController::class, 'getConfig']);
+    Route::get('/validate-service-account', [App\Http\Controllers\FirebaseTestController::class, 'validateServiceAccount']);
+    Route::post('/messaging', [App\Http\Controllers\FirebaseTestController::class, 'testMessaging']);
+    Route::post('/bulk-messaging', [App\Http\Controllers\FirebaseTestController::class, 'testBulkMessaging']);
+});
+
+
+// Customer API Routes
+Route::prefix('customer')->group(function () {
+
+    // Authentication Routes (Public)
+    Route::prefix('auth')->group(function () {
+        Route::post('/register', [App\Http\Controllers\Api\Customer\AuthController::class, 'register']);
+        Route::post('/login', [App\Http\Controllers\Api\Customer\AuthController::class, 'login'])
+            ->middleware('throttle:5,1');
+        Route::post('/forgot-password', [App\Http\Controllers\Api\Customer\AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:10,1');  // 10 attempts per minute for development
+        Route::post('/reset-password', [App\Http\Controllers\Api\Customer\AuthController::class, 'resetPassword']);
+        Route::get('/verify-email/{id}/{hash}', [App\Http\Controllers\Api\Customer\AuthController::class, 'verifyEmail'])
+            ->name('customer.verification.verify');
+
+        // Account Deletion (Public - for Google Play policy)
+        Route::post('/delete-account', [App\Http\Controllers\Api\Customer\AuthController::class, 'deleteAccount'])
+            ->middleware('throttle:5,1');
+    });
+
+    // Protected Routes
+    Route::middleware(['auth:sanctum', 'customer.auth'])->group(function () {
+
+        // Authentication (Protected)
+        Route::prefix('auth')->group(function () {
+            Route::post('/logout', [App\Http\Controllers\Api\Customer\AuthController::class, 'logout']);
+            Route::post('/resend-verification', [App\Http\Controllers\Api\Customer\AuthController::class, 'resendVerification']);
+
+            // OTP Routes
+            Route::post('/send-otp', [App\Http\Controllers\Api\Customer\AuthController::class, 'sendOtp'])
+                ->middleware('throttle:5,1'); // 5 attempts per minute
+            Route::post('/verify-otp', [App\Http\Controllers\Api\Customer\AuthController::class, 'verifyOtp'])
+                ->middleware('throttle:10,1'); // 10 attempts per minute
+            Route::get('/otp-status', [App\Http\Controllers\Api\Customer\AuthController::class, 'getOtpStatus']);
+        });
+
+        // Profile Routes
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\Customer\ProfileController::class, 'show']);
+            Route::put('/', [App\Http\Controllers\Api\Customer\ProfileController::class, 'update']);
+            Route::post('/change-password', [App\Http\Controllers\Api\Customer\ProfileController::class, 'changePassword']);
+            Route::post('/profile-image', [App\Http\Controllers\Api\Customer\ProfileController::class, 'uploadProfileImage']);
+            Route::delete('/profile-image', [App\Http\Controllers\Api\Customer\ProfileController::class, 'deleteProfileImage']);
+        });
+
+        // Order Routes
+        Route::prefix('orders')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\Customer\OrderController::class, 'index']);
+            Route::get('/{id}', [App\Http\Controllers\Api\Customer\OrderController::class, 'show']);
+            Route::get('/{id}/details', [App\Http\Controllers\Api\Customer\OrderController::class, 'details']);
+        });
+
+        // Balance Routes
+        Route::prefix('balance')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\Customer\BalanceController::class, 'show']);
+            Route::get('/transactions', [App\Http\Controllers\Api\Customer\BalanceController::class, 'transactions']);
+            Route::get('/breakdown', [App\Http\Controllers\Api\Customer\BalanceController::class, 'breakdown']);
+            Route::get('/unpaid-orders', [App\Http\Controllers\Api\Customer\BalanceController::class, 'unpaidOrders']);
+            Route::get('/unpaid-invoices', [App\Http\Controllers\Api\Customer\BalanceController::class, 'unpaidInvoices']);
+            Route::post('/refresh', [App\Http\Controllers\Api\Customer\BalanceController::class, 'refreshBalance']);
+        });
+
+        // Notification Routes
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\Customer\NotificationController::class, 'index']);
+            Route::put('/{id}/read', [App\Http\Controllers\Api\Customer\NotificationController::class, 'markAsRead']);
+            Route::post('/mark-all-read', [App\Http\Controllers\Api\Customer\NotificationController::class, 'markAllAsRead']);
+        });
+
+        // Statistics Routes
+        Route::get('/stats', [App\Http\Controllers\Api\Customer\StatsController::class, 'index']);
+
+        // Tracking Routes
+        Route::prefix('tracking')->group(function () {
+            Route::post('/search', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'searchByTrackingNumber']);
+            Route::get('/search', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'searchByTrackingNumber']);
+            Route::post('/validate', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateTrackingNumber']);
+            Route::get('/validate', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateTrackingNumber']);
+        });
+    });
+
+    // Public Tracking Routes (لا تحتاج تسجيل دخول)
+    Route::prefix('tracking')->group(function () {
+        Route::post('/search-public', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'searchByTrackingNumber']);
+        Route::get('/search-public', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'searchByTrackingNumber']);
+        Route::post('/validate-public', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateTrackingNumber']);
+        Route::get('/validate-public', [App\Http\Controllers\Api\ShipmentTrackingController::class, 'validateTrackingNumber']);
     });
 });

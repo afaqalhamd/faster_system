@@ -336,6 +336,14 @@
                                                             <br><small>{{ __('sale.deducted_on') }}: {{ $order->inventory_deducted_at->format('Y-m-d H:i:s') }}</small>
                                                         @endif
                                                     </div>
+                                                @elseif($order->inventory_status === 'restored')
+                                                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                                        <i class="bx bx-refresh"></i>
+                                                        <strong>{{ __('app.inventory_status') }}:</strong> {{ __('sale.inventory_restored') }}
+                                                        @if($order->post_delivery_action)
+                                                            <br><small>{{ __('app.reason') }}: {{ __('sale.' . strtolower($order->post_delivery_action)) }} {{ __('app.after_delivery') }}</small>
+                                                        @endif
+                                                    </div>
                                                 @endif
 
                                                 @if($order->inventory_status === 'pending' && auth()->user()->can('sale.order.manual.inventory.deduction'))

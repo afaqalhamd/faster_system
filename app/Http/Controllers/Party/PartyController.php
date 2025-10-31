@@ -254,7 +254,7 @@ class PartyController extends Controller
          * */
         $isWholesaleCustomer = $request->input('is_wholesale_customer');
 
-        $data = Party::query()->where('party_type', $partyType);
+        $data = Party::with('user')->where('party_type', $partyType);
         return DataTables::of($data)
                     ->filter(function ($query) use ($request, $isWholesaleCustomer) {
                         if ($request->has('search')) {
@@ -390,15 +390,16 @@ class PartyController extends Controller
         $search = request('search');
         $partyType = request('party_type');
 
-        $parties = Party::with('currency')->where(function($query) use ($search) {
+        $parties = Party::with('currency')
+                    ->select('id', 'first_name', 'last_name', 'mobile', 'is_wholesale_customer', 'to_pay', 'to_receive', 'currency_id')
+                    ->where('party_type', $partyType)
+                    ->where(function($query) use ($search) {
                         $query->where('first_name', 'LIKE', "%{$search}%")
                               ->orWhere('last_name', 'LIKE', "%{$search}%")
                               ->orWhere('mobile', 'LIKE', "%{$search}%")
                               ->orWhere('phone', 'LIKE', "%{$search}%")
                               ->orWhere('email', 'LIKE', "%{$search}%");
                     })
-                    ->select('id', 'first_name', 'last_name', 'mobile', 'is_wholesale_customer', 'to_pay', 'to_receive', 'currency_id')
-                    ->where('party_type', $partyType)
                     ->limit(8)
                     ->get();
 

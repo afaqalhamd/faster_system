@@ -73,5 +73,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'check.party.permission' => \App\Http\Middleware\CheckPartyTypePermission::class,//Custom
         'delivery.auth' => \App\Http\Middleware\DeliveryAuthMiddleware::class,//Custom
+        'customer.auth' => \App\Http\Middleware\EnsureUserIsCustomer::class,//Custom - Customer authentication
     ];
 }

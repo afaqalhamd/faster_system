@@ -13,5 +13,6 @@ enum General:string{
     case INVOICE_LIST           = 'INVOICE_LIST';
     case PARTY_INVOICE_LIST     = 'PARTY_INVOICE_LIST';
     case PARTY_BALANCE_AFTER_ADJUSTMENT     = 'PARTY_BALANCE_AFTER_ADJUSTMENT';
+    case SALE_ORDER             = 'SALE_ORDER';
 
 }

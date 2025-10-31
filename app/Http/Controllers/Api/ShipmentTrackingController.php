@@ -551,4 +551,246 @@ class ShipmentTrackingController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Search for shipment trackingby tracking number for customers
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function searchByTrackingNumber(Request $request): JsonResponse
+    {
+        try {
+            // Validate the request
+            $validator = Validator::make($request->all(), [
+                'tracking_number' => 'required|string|min:8|max:50',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Support both POST JSON and GET query parameters
+            $trackingNumber = $request->input('tracking_number') ?? $request->query('tracking_number');
+
+            // Clean and normalize tracking number
+            $cleanTrackingNumber = strtoupper(str_replace([' ', '-', '_'], '', $trackingNumber));
+
+            // Search for shipment tracking by tracking number or waybill number
+            $tracking = ShipmentTracking::with([
+                'saleOrder' => function($query) {
+                    $query->select('id', 'order_code', 'party_id', 'order_status', 'grand_total', 'created_at');
+                },
+                'saleOrder.party' => function($query) {
+                    $query->select('id', 'first_name', 'email', 'phone');
+                },
+                'carrier' => function($query) {
+                    $query->select('id', 'name', 'phone', 'email');
+                },
+                'trackingEvents' => function($query) {
+                    $query->orderBy('event_date', 'desc')->orderBy('created_at', 'desc');
+                },
+                'documents'
+            ])
+            ->where(function($query) use ($cleanTrackingNumber, $trackingNumber) {
+                $query->where('tracking_number', 'LIKE', '%' . $cleanTrackingNumber . '%')
+                      ->orWhere('waybill_number', 'LIKE', '%' . $cleanTrackingNumber . '%')
+                      ->orWhere('tracking_number', 'LIKE', '%' . $trackingNumber . '%')
+                      ->orWhere('waybill_number', 'LIKE', '%' . $trackingNumber . '%');
+            })
+            ->first();
+
+            if (!$tracking) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No shipment found with this tracking number',
+                    'error_code' => 'TRACKING_NOT_FOUND'
+                ], 404);
+            }
+
+            // Check if user is authenticated and has access to this shipment
+            $user = Auth::guard('sanctum')->user();
+            if ($user && $tracking->saleOrder && $tracking->saleOrder->party_id !== $user->id) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You do not have access to this shipment',
+                    'error_code' => 'ACCESS_DENIED'
+                ], 403);
+            }
+
+            // Format the response data
+            $responseData = [
+                'tracking_info' => [
+                    'id' => $tracking->id,
+                    'tracking_number' => $tracking->tracking_number,
+                    'waybill_number' => $tracking->waybill_number,
+                    'status' => $tracking->status,
+                    'estimated_delivery_date' => $tracking->estimated_delivery_date,
+                    'actual_delivery_date' => $tracking->actual_delivery_date,
+                    'tracking_url' => $tracking->tracking_url,
+                    'notes' => $tracking->notes,
+                    'created_at' => $tracking->created_at,
+                    'updated_at' => $tracking->updated_at,
+                ],
+                'order_info' => $tracking->saleOrder ? [
+                    'id' => $tracking->saleOrder->id,
+                    'order_code' => $tracking->saleOrder->order_code,
+                    'status' => $tracking->saleOrder->order_status,
+                    'total_amount' => $tracking->saleOrder->grand_total,
+                    'order_date' => $tracking->saleOrder->created_at,
+                ] : null,
+                'customer_info' => $tracking->saleOrder && $tracking->saleOrder->party ? [
+                    'name' => $tracking->saleOrder->party->first_name,
+                    'email' => $tracking->saleOrder->party->email,
+                    'phone' => $tracking->saleOrder->party->phone,
+                ] : null,
+                'carrier_info' => $tracking->carrier ? [
+                    'name' => $tracking->carrier->name,
+                    'phone' => $tracking->carrier->phone,
+                    'email' => $tracking->carrier->email,
+                ] : null,
+                'tracking_events' => $tracking->trackingEvents->map(function($event) {
+                    return [
+                        'id' => $event->id,
+                        'event_date' => $event->event_date,
+                        'location' => $event->location,
+                        'status' => $event->status,
+                        'description' => $event->description,
+                        'signature' => $event->signature,
+                        'proof_image_url' => $event->proof_image_url,
+                        'latitude' => $event->latitude,
+                        'longitude' => $event->longitude,
+                        'created_at' => $event->created_at,
+                    ];
+                }),
+                'documents' => $tracking->documents->map(function($document) {
+                    return [
+                        'id' => $document->id,
+                        'document_type' => $document->document_type,
+                        'file_name' => $document->file_name,
+                        'file_url' => $document->file_url,
+                        'notes' => $document->notes,
+                        'uploaded_at' => $document->created_at,
+                    ];
+                }),
+                'statistics' => [
+                    'total_events' => $tracking->trackingEvents->count(),
+                    'latest_event' => $tracking->trackingEvents->first() ? [
+                        'date' => $tracking->trackingEvents->first()->event_date,
+                        'location' => $tracking->trackingEvents->first()->location,
+                        'description' => $tracking->trackingEvents->first()->description,
+                    ] : null,
+                    'has_documents' => $tracking->documents->count() > 0,
+                    'is_delivered' => in_array($tracking->status, ['delivered', 'completed']),
+                ]
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Shipment tracking found successfully',
+                'data' => $responseData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to search shipment tracking: ' . $e->getMessage(),
+                'error_code' => 'SEARCH_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate tracking number format for customer search
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function validateTrackingNumber(Request $request): JsonResponse
+    {
+        try {
+            // Support both POST JSON and GET query parameters
+            $trackingNumber = $request->input('tracking_number') ?? $request->query('tracking_number');
+
+            if (empty($trackingNumber)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Tracking number is required',
+                    'valid' => false
+                ], 422);
+            }
+
+            // Clean the tracking number
+            $cleanNumber = strtoupper(str_replace([' ', '-', '_'], '', $trackingNumber));
+
+            // Check minimum length
+            if (strlen($cleanNumber) < 8) {
+                return response()->json([
+                    'status' => true,
+                    'valid' => false,
+                    'message' => 'Tracking number must be at least 8 characters long'
+                ]);
+            }
+
+            // Check maximum length
+            if (strlen($cleanNumber) > 50) {
+                return response()->json([
+                    'status' => true,
+                    'valid' => false,
+                    'message' => 'Tracking number must not exceed 50 characters'
+                ]);
+            }
+
+            // Common tracking number patterns
+            $patterns = [
+                '/^[A-Z]{2}\d{9}[A-Z]{2}$/',           // International format (e.g., RR123456789US)
+                '/^\d{12,22}$/',                        // Numeric only (12-22 digits)
+                '/^[A-Z0-9]{10,30}$/',                  // Alphanumeric (10-30 characters)
+                '/^1Z[A-Z0-9]{16}$/',                   // UPS format
+                '/^\d{4}\s?\d{4}\s?\d{4}\s?\d{4}$/',   // 16 digits with optional spaces
+                '/^[A-Z]{3}\d{8,12}$/',                // Carrier prefix + numbers
+                '/^TN\d{8,15}$/',                       // Tracking Number format
+            ];
+
+            $isValid = false;
+            $matchedPattern = null;
+
+            foreach ($patterns as $index => $pattern) {
+                if (preg_match($pattern, $cleanNumber)) {
+                    $isValid = true;
+                    $matchedPattern = $index + 1;
+                    break;
+                }
+            }
+
+            // Additional validation for specific formats
+            if (!$isValid) {
+                // Check if it contains at least some numbers and letters
+                if (preg_match('/^[A-Z0-9]{8,}$/', $cleanNumber)) {
+                    $isValid = true;
+                    $matchedPattern = 'generic';
+                }
+            }
+
+            return response()->json([
+                'status' => true,
+                'valid' => $isValid,
+                'message' => $isValid ? 'Tracking number format is valid' : 'Invalid tracking number format',
+                'pattern_matched' => $matchedPattern,
+                'cleaned_number' => $cleanNumber
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to validate tracking number: ' . $e->getMessage(),
+                'valid' => false
+            ], 500);
+        }
+    }
+
 }

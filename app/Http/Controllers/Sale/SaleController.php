@@ -1283,7 +1283,26 @@ class SaleController extends Controller
                 return $row->sales_status;
             })
             ->addColumn('inventory_status', function ($row) {
-                return $row->inventory_status;
+                $status = $row->inventory_status ?? 'pending';
+
+                // Determine badge class and status text based on inventory status
+                switch ($status) {
+                    case 'deducted':
+                        $badgeClass = 'bg-success';
+                        $statusText = __('sale.inventory_deducted');
+                        break;
+                    case 'restored':
+                        $badgeClass = 'bg-info';
+                        $statusText = __('sale.inventory_restored');
+                        break;
+                    case 'pending':
+                    default:
+                        $badgeClass = 'bg-warning';
+                        $statusText = __('sale.reserved');
+                        break;
+                }
+
+                return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
             })
             ->addColumn('post_delivery_action', function ($row) {
                 return $row->post_delivery_action;
@@ -1357,7 +1376,7 @@ class SaleController extends Controller
                         </div>';
                 return $actionBtn;
             })
-            ->rawColumns(['action', 'payment_status'])
+            ->rawColumns(['action', 'payment_status', 'inventory_status'])
             ->make(true);
     }
 

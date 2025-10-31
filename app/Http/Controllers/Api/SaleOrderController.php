@@ -8,22 +8,31 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Services\PaymentTransactionService;
 use App\Services\SaleOrderStatusService;
+use App\Services\PartyNotificationService;
 
 class SaleOrderController extends Controller
 {
     protected $paymentTransactionService;
     protected $saleOrderStatusService;
+    protected $partyNotificationService;
 
     /**
      * Create a new controller instance.
      *
      * @param PaymentTransactionService $paymentTransactionService
+     * @param SaleOrderStatusService $saleOrderStatusService
+     * @param PartyNotificationService $partyNotificationService
      * @return void
      */
-    public function __construct(PaymentTransactionService $paymentTransactionService, SaleOrderStatusService $saleOrderStatusService)
+    public function __construct(
+        PaymentTransactionService $paymentTransactionService,
+        SaleOrderStatusService $saleOrderStatusService,
+        PartyNotificationService $partyNotificationService
+    )
     {
         $this->paymentTransactionService = $paymentTransactionService;
         $this->saleOrderStatusService = $saleOrderStatusService;
+        $this->partyNotificationService = $partyNotificationService;
     }
 
     /**
@@ -66,6 +75,22 @@ class SaleOrderController extends Controller
         }
 
         $saleOrder = SaleOrder::create($request->all());
+
+        // إرسال إشعار للعميل عند إنشاء طلب جديد
+        try {
+            $notificationResult = $this->partyNotificationService->sendNewOrderNotification($saleOrder);
+
+            \Log::info('Party notification result after order creation', [
+                'sale_order_id' => $saleOrder->id,
+                'notification_result' => $notificationResult
+            ]);
+        } catch (\Exception $e) {
+            // تسجيل الخطأ دون إيقاف عملية إنشاء الطلب
+            \Log::error('Failed to send party notification after order creation', [
+                'sale_order_id' => $saleOrder->id,
+                'error' => $e->getMessage()
+            ]);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -341,7 +366,7 @@ class SaleOrderController extends Controller
             ], 403);
         }
 
-        $query = SaleOrder::with(['party', 'carrier'])
+        $query = SaleOrder::with(['party', 'carrier', 'shipmentTracking.carrier'])
             ->where('carrier_id', $user->carrier_id)
             ->whereIn('order_status', ['Delivery', 'POD', 'Returned', 'Cancelled']);
 
@@ -359,9 +384,47 @@ class SaleOrderController extends Controller
             $query->where('order_date', '<=', $request->date_to);
         }
 
+        // Apply search filter for order code if provided
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+
+            // Log search request for debugging
+            \Log::info('Delivery Orders Search Request', [
+                'search_term' => $searchTerm,
+                'user_id' => $user->id,
+                'carrier_id' => $user->carrier_id,
+                'total_orders_before_search' => $query->count()
+            ]);
+
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('order_code', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('prefix_code', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('count_id', 'LIKE', '%' . $searchTerm . '%');
+            });
+
+            // Log search results count
+            \Log::info('Delivery Orders Search Results', [
+                'search_term' => $searchTerm,
+                'matching_orders' => $query->count()
+            ]);
+        }
+
+        // Order by created_at in descending order to show newest orders first
+        $query->orderBy('created_at', 'desc');
+
         // Implement pagination
         $perPage = $request->get('per_page', 15);
         $saleOrders = $query->paginate($perPage);
+
+        // Additional debugging for search responses
+        if ($request->has('search') && !empty($request->search)) {
+            \Log::info('Final Search Results', [
+                'search_term' => $request->search,
+                'total_results' => $saleOrders->total(),
+                'current_page_count' => $saleOrders->count(),
+                'sample_order_codes' => $saleOrders->pluck('order_code')->take(5)->toArray()
+            ]);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -391,11 +454,11 @@ class SaleOrderController extends Controller
         // Optimize query for mobile by selecting only necessary fields
         $saleOrder = SaleOrder::select([
                 'id', 'order_code', 'order_date', 'due_date', 'grand_total',
-                'paid_amount', 'order_status', 'party_id', 'carrier_id',
-                'created_at', 'updated_at'
+                'paid_amount', 'shipping_charge', 'order_status', 'party_id', 'carrier_id',
+                'created_at', 'updated_at','note'
             ])
             ->with([
-                'party:id,first_name,last_name,shipping_address,phone,email',
+                'party:id,first_name,last_name,shipping_address,billing_address,phone,mobile,email',
                 'itemTransaction:id,transaction_id,transaction_type,item_id,quantity,unit_price,total',
                 'itemTransaction.item:id,name,sku',
                 'carrier:id,name'
@@ -439,6 +502,21 @@ class SaleOrderController extends Controller
             ], 403);
         }
 
+        // Calculate order statistics for the carrier
+        $statistics = [
+            'completed_count' => SaleOrder::where('carrier_id', $user->carrier_id)
+                ->where('order_status', 'POD')
+                ->count(),
+            'returned_count' => SaleOrder::where('carrier_id', $user->carrier_id)
+                ->where('order_status', 'Returned')
+                ->count(),
+            'cancelled_count' => SaleOrder::where('carrier_id', $user->carrier_id)
+                ->where('order_status', 'Cancelled')
+                ->count(),
+            'total_orders' => SaleOrder::where('carrier_id', $user->carrier_id)
+                ->count(),
+        ];
+
         // Create response data with user and carrier information
         $responseData = [
             'id' => $user->id,
@@ -455,7 +533,9 @@ class SaleOrderController extends Controller
             'fc_token' => $user->fc_token,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
-            'carrier' => $user->carrier
+            'carrier' => $user->carrier,
+            'avatar_url' => $user->avatar ? url('/api/getimage/' . $user->avatar) : null,
+            'statistics' => $statistics
         ];
 
         return response()->json([

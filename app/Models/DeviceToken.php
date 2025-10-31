@@ -12,7 +12,15 @@ class DeviceToken extends Model
         'user_id',
         'token',
         'device_type',
+        'app_version',
+        'device_info',
+        'last_used_at',
         'is_active'
+    ];
+
+    protected $casts = [
+        'last_used_at' => 'datetime',
+        'is_active' => 'boolean'
     ];
 
     /**

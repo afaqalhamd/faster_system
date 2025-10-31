@@ -267,7 +267,10 @@ class ShipmentTrackingService
             // Add tracking ID to data
             $data['shipment_tracking_id'] = $tracking->id;
 
-            // Handle proof image upload if provided
+            // Validate data BEFORE processing the image
+            $this->validateEventData($data);
+
+            // Handle proof image upload if provided (AFTER validation)
             $proofImagePath = null;
             if (isset($data['proof_image']) && $data['proof_image']) {
                 $image = $data['proof_image'];
@@ -276,9 +279,6 @@ class ShipmentTrackingService
                 $proofImagePath = $image->storeAs($directory, $filename, 'public');
                 $data['proof_image'] = $proofImagePath;
             }
-
-            // Validate data
-            $this->validateEventData($data);
 
             DB::beginTransaction();
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,6 +39,11 @@ class PaymentTransaction extends Model
         'reference_no',
         'note',
         'payment_from_unique_code',
+        'is_reversal',
+        'original_payment_id',
+        'reversal_reason',
+        'reversed_at',
+        'reversed_by',
     ];
 
     /**
@@ -117,5 +123,49 @@ class PaymentTransaction extends Model
     public function chequeTransaction(): HasOne
     {
         return $this->hasOne(ChequeTransaction::class, 'payment_transaction_id');
+    }
+     /**
+     * العلاقة مع المعاملة الأصلية للاسترداد - Relationship with original payment for reversal
+     * @return BelongsTo
+     */
+    public function originalPayment(): BelongsTo
+    {
+        return $this->belongsTo(PaymentTransaction::class, 'original_payment_id');
+    }
+
+    /**
+     * المعاملات العكسية لهذه المعاملة - Reversal transactions for this payment
+     * @return HasMany
+     */
+    public function reversalPayments(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class, 'original_payment_id');
+    }
+
+    /**
+     * المستخدم الذي قام بالاسترداد - User who performed the reversal
+     * @return BelongsTo
+     */
+    public function reversedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by');
+    }
+
+    /**
+     * تحقق من كون المعاملة مُستردة - Check if payment is reversed
+     * @return bool
+     */
+    public function isReversed(): bool
+    {
+        return $this->reversalPayments()->exists();
+    }
+
+    /**
+     * احصل على إجمالي المبلغ المُسترد - Get total reversed amount
+     * @return float
+     */
+    public function getTotalReversedAmount(): float
+    {
+        return abs($this->reversalPayments()->sum('amount'));
     }
 }

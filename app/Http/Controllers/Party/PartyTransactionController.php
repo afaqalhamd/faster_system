@@ -147,7 +147,65 @@ class PartyTransactionController extends Controller
         }
 
 
-        // 3. Sales
+        // 3. Sale Orders
+        $saleOrders = \App\Models\Sale\SaleOrder::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
+                        $query->when($fromDate, function ($q) use ($fromDate) {
+                            return $q->where('transaction_date', '>=', $fromDate);
+                        })
+                        ->when($toDate, function ($q) use ($toDate) {
+                            return $q->where('transaction_date', '<=', $toDate);
+                        });
+                    }])
+                    ->where('party_id', $party->id)
+                    ->where(function ($query) use ($fromDate, $toDate) {
+                        $query->when($fromDate, function ($q) use ($fromDate) {
+                            return $q->where('order_date', '>=', $fromDate)
+                                     ->orWhereHas('paymentTransaction', function ($q) use ($fromDate) {
+                                         $q->where('transaction_date', '>=', $fromDate);
+                                     });
+                        })
+                        ->when($toDate, function ($q) use ($toDate) {
+                            return $q->where('order_date', '<=', $toDate)
+                                     ->orWhereHas('paymentTransaction', function ($q) use ($toDate) {
+                                         $q->where('transaction_date', '<=', $toDate);
+                                     });
+                        });
+                    })
+                    ->get();
+        foreach ($saleOrders as $saleOrder) {
+            $status = match (true) {
+                            $saleOrder->paid_amount == 0 => 'Unpaid',
+                            $saleOrder->paid_amount < $saleOrder->grand_total => 'Partial',
+                            default => 'Paid',
+                        };
+
+            $allTransactions->push([
+                'transaction_type' => "Sale Order ({$saleOrder->order_code})",
+                'transaction_date' => $saleOrder->order_date,
+                'status' => $status,
+                'payment_type' => '',
+                'amount' => $saleOrder->grand_total,
+                'created_by' => $saleOrder->created_by,
+                'created_at' => $saleOrder->created_at,
+                'note'=> '',
+            ]);
+
+            // Sale Order Payments
+            foreach ($saleOrder->paymentTransaction as $payment) {
+                $allTransactions->push([
+                    'transaction_type' => 'Sale Order Payment ('. $payment->transaction->order_code.')',
+                    'transaction_date' => $payment->transaction_date,
+                    'status' => 'Completed',
+                    'payment_type' => $payment->paymentType->name,
+                    'amount' => -$payment->amount, // Negative as it's a payment
+                    'created_by' => $payment->created_by,
+                    'created_at' => $payment->created_at,
+                    'note'=> $payment->note,
+                ]);
+            }
+        }
+
+        // 4. Sales
         $sales = Sale::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
                         $query->when($fromDate, function ($q) use ($fromDate) {
                             return $q->where('transaction_date', '>=', $fromDate);
@@ -190,7 +248,7 @@ class PartyTransactionController extends Controller
                 'note'=> '',
             ]);
 
-            // 4. Sales Payments
+            // 5. Sales Payments
             foreach ($sale->paymentTransaction as $payment) {
                 $allTransactions->push([
                     'transaction_type' => 'Sale Payment ('. $payment->transaction->sale_code.')',
@@ -205,7 +263,7 @@ class PartyTransactionController extends Controller
             }
         }
 
-        // 5. Sales Returns
+        // 6. Sales Returns
         $saleReturns = SaleReturn::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
                                     $query->when($fromDate, function ($q) use ($fromDate) {
                                         return $q->where('transaction_date', '>=', $fromDate);
@@ -242,7 +300,7 @@ class PartyTransactionController extends Controller
                 'note'=>'',
             ]);
 
-            // 5. Sales Return Payments
+            // 7. Sales Return Payments
             foreach ($return->paymentTransaction as $payment) {
                 $allTransactions->push([
                     'transaction_type' => 'Sale Return Payment',
@@ -257,7 +315,7 @@ class PartyTransactionController extends Controller
             }
         }
 
-        // 3. Purchases
+        // 8. Purchases
         $purchases = Purchase::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
                                 $query->when($fromDate, function ($q) use ($fromDate) {
                                     return $q->where('transaction_date', '>=', $fromDate);
@@ -300,7 +358,7 @@ class PartyTransactionController extends Controller
                 'note'=>'',
             ]);
 
-            // 4. Purchase Payments
+            // 9. Purchase Payments
             foreach ($purchase->paymentTransaction as $payment) {
                 $allTransactions->push([
                     'transaction_type' => 'Purchase Payment ('. $payment->transaction->purchase_code.')',
@@ -315,7 +373,7 @@ class PartyTransactionController extends Controller
             }
         }
 
-        // 5. Purchase Returns
+        // 10. Purchase Returns
         $purchaseReturns = PurchaseReturn::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
                                             $query->when($fromDate, function ($q) use ($fromDate) {
                                                 return $q->where('transaction_date', '>=', $fromDate);
@@ -367,7 +425,7 @@ class PartyTransactionController extends Controller
             }
         }
 
-        // 6. Quotation
+        // 11. Quotation
         $quotations = Quotation::with(['paymentTransaction' => function ($query) use ($fromDate, $toDate) {
             $query->when($fromDate, function ($q) use ($fromDate) {
                 return $q->where('transaction_date', '>=', $fromDate);
@@ -404,7 +462,7 @@ class PartyTransactionController extends Controller
                 'note'=>'',
             ]);
 
-            // 6. Quotation Payments
+            // 12. Quotation Payments
             // foreach ($quotation->paymentTransaction as $payment) {
             //     $allTransactions->push([
             //     'transaction_type' => 'Quotation Payment',
@@ -478,11 +536,27 @@ class PartyTransactionController extends Controller
 
             $balance = $this->partyService->getPartyBalance($party->id);
 
-            $model = $party->party_type == 'customer' ? Sale::class : Purchase::class;
-            $preparedData = $model::with('party')->where('party_id', $partyId)
-                                ->whereRaw('grand_total - paid_amount > 0')
-                                ->get();
+            // Determine model based on party type
+            if($party->party_type == 'customer'){
+                // Get both Sales and Sale Orders for customers
+                $sales = Sale::with('party')
+                            ->where('party_id', $partyId)
+                            ->whereRaw('grand_total - paid_amount > 0')
+                            ->get();
 
+                $saleOrders = \App\Models\Sale\SaleOrder::with('party')
+                            ->where('party_id', $partyId)
+                            ->whereRaw('grand_total - paid_amount > 0')
+                            ->get();
+
+                $preparedData = $sales->concat($saleOrders);
+            }else{
+                // For suppliers, only get Purchases
+                $preparedData = Purchase::with('party')
+                            ->where('party_id', $partyId)
+                            ->whereRaw('grand_total - paid_amount > 0')
+                            ->get();
+            }
 
             if($preparedData->count() == 0){
                 throw new \Exception('No Records Found!!');
@@ -491,11 +565,24 @@ class PartyTransactionController extends Controller
             $recordsArray = [];
 
             foreach ($preparedData as $data) {
-                $transactionDate = $data->party->party_type == 'customer' ? $data->sale_date : $data->purchase_date;
-                $transactionCode = $data->party->party_type == 'customer' ? $data->sale_code : $data->purchase_code;
+                // Determine transaction date and code based on model type
+                if($data instanceof \App\Models\Sale\SaleOrder){
+                    $transactionDate = $data->order_date;
+                    $transactionCode = $data->order_code;
+                    $modelType = 'SaleOrder';
+                }elseif($data instanceof \App\Models\Sale\Sale){
+                    $transactionDate = $data->sale_date;
+                    $transactionCode = $data->sale_code;
+                    $modelType = 'Sale';
+                }else{
+                    $transactionDate = $data->purchase_date;
+                    $transactionCode = $data->purchase_code;
+                    $modelType = 'Purchase';
+                }
 
                 $recordsArray[] = [
                                     'id'                    => $data->id,
+                                    'model_type'            => $modelType,
                                     'transaction_date'       => $this->toUserDateFormat($transactionDate),
                                     'invoice_or_bill_code'  => $transactionCode,
                                     'grand_total'           => $this->formatWithPrecision($data->grand_total, comma:false),
@@ -610,10 +697,28 @@ class PartyTransactionController extends Controller
                         continue;
                     }
 
+                    // Determine model type from request
+                    $modelType = $request->input('model_type')[$recordId] ?? 'Sale';
+
                     if ($party->party_type == 'customer') {
-                        $this->validateModel($mainModel = Sale::find($recordId), $partyId, 'Invoice', $amount);
+                        // Handle both Sale and SaleOrder
+                        if($modelType == 'SaleOrder'){
+                            $mainModel = \App\Models\Sale\SaleOrder::find($recordId);
+                            $documentType = 'Sale Order';
+                            $codeField = 'order_code';
+                        }else{
+                            $mainModel = Sale::find($recordId);
+                            $documentType = 'Invoice';
+                            $codeField = 'sale_code';
+                        }
+
+                        $this->validateModel($mainModel, $partyId, $documentType, $amount, $codeField);
                     } else {
-                        $this->validateModel($mainModel = Purchase::find($recordId), $partyId, 'Bill', $amount);
+                        $mainModel = Purchase::find($recordId);
+                        $documentType = 'Bill';
+                        $codeField = 'purchase_code';
+
+                        $this->validateModel($mainModel, $partyId, $documentType, $amount, $codeField);
                     }
 
                     //Now Record Payments
@@ -622,8 +727,8 @@ class PartyTransactionController extends Controller
                         'amount'                    => $amount,
                         'payment_type_id'           => $paymentTypeId,
                         'reference_no'              => $receiptNo,
-                        'note'                      => $paymentNote,
-                        'payment_from_unique_code'  => General::PARTY_INVOICE_LIST->value,//Saving from party-list page
+                        'note'                      => 'Adjusted from Party Manual Payment',
+                        'payment_from_unique_code'  => General::PARTY_BALANCE_AFTER_ADJUSTMENT->value,
                     ];
 
                     if(!$transaction = $this->paymentTransactionService->recordPayment($mainModel, $paymentsArray)){
@@ -631,8 +736,8 @@ class PartyTransactionController extends Controller
                     }
 
                     /**
-                     * Update Sale Model
-                     * Total Paid Amunt
+                     * Update Model
+                     * Total Paid Amount
                      * */
                     if(!$this->paymentTransactionService->updateTotalPaidAmountInModel($mainModel)){
                         throw new \Exception(__('payment.failed_to_update_paid_amount'));
@@ -714,22 +819,24 @@ class PartyTransactionController extends Controller
      * @param \Illuminate\Database\Eloquent\Model|null $model
      * @param int $partyId
      * @param string $documentType
+     * @param float $amount
+     * @param string $codeField
      * @throws \Exception
      */
-    function validateModel($model, $partyId, $documentType, $amount)
+    function validateModel($model, $partyId, $documentType, $amount, $codeField = 'sale_code')
     {
         $balance = $model->grand_total - $model->paid_amount;
         if ($model) {
             if ($model->party_id != $partyId) {
-                throw new \Exception($documentType . ' Code ' . $model->sale_code . ' does not belong to this party!');
+                throw new \Exception($documentType . ' Code ' . $model->$codeField . ' does not belong to this party!');
             }
 
             if ($model->grand_total == $model->paid_amount) {
-                throw new \Exception($documentType . ' Code ' . $model->sale_code . ' payment is already completed!');
+                throw new \Exception($documentType . ' Code ' . $model->$codeField . ' payment is already completed!');
             }
 
             if ($amount > $balance) {
-                throw new \Exception($documentType . ' Code ' . $model->sale_code . ' payment exceeds the total!');
+                throw new \Exception($documentType . ' Code ' . $model->$codeField . ' payment exceeds the total!');
             }
         }
     }

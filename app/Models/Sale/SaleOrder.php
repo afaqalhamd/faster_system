@@ -224,4 +224,14 @@ class SaleOrder extends Model
         return $this->hasMany(ShipmentTracking::class, 'sale_order_id');
     }
 
+    /**
+     * Define the relationship to get the latest shipment tracking.
+     *
+     * @return HasOne
+     */
+    public function shipmentTracking(): HasOne
+    {
+        return $this->hasOne(ShipmentTracking::class, 'sale_order_id')->latestOfMany();
+    }
+
 }

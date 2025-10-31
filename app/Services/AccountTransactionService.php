@@ -20,7 +20,7 @@ class AccountTransactionService{
 
 	public function __construct()
 	{
-		//$this->allAccounts = Account::all();
+		$this->allAccounts = Account::all();
 	}
 
 	public function expenseAccountTransaction(Expense $modelName) : bool
@@ -339,7 +339,7 @@ class AccountTransactionService{
 
 	}
 
-	public function getAccountId($uniqueCode = null, $expenseCategoryId = null, $paymentTypeBankId = null)
+	public function getAccountId($uniqueCode = null, $expenseCategoryId = null, $paymentTypeBankId = null, $partyId = null)
 	{
 		if($uniqueCode){
 			//uniqueCode
@@ -349,9 +349,29 @@ class AccountTransactionService{
 			//paymentTypeBankId
 			$account = $this->allAccounts->firstWhere('payment_type_bank_id', $paymentTypeBankId);
 		}
+		else if($partyId){
+			//partyId
+			$account = $this->allAccounts->firstWhere('party_id', $partyId);
+
+			// If party account doesn't exist, create it
+			if(!$account){
+				$party = \App\Models\Party\Party::find($partyId);
+				if($party){
+					$partyName = trim($party->first_name . ' ' . $party->last_name);
+					$this->createOrUpdateAccountOfParty($partyId, $partyName, $party->party_type);
+					// Refresh accounts list
+					$this->allAccounts = Account::all();
+					$account = $this->allAccounts->firstWhere('party_id', $partyId);
+				}
+			}
+		}
 		else{
 			//expenseCategoryId
 			$account = $this->allAccounts->firstWhere('expense_category_id', $expenseCategoryId);
+		}
+
+		if(!$account){
+			throw new \Exception("Account not found for the given criteria");
 		}
 
 		return $account->id;
@@ -377,11 +397,6 @@ class AccountTransactionService{
      * */
     public function createOrUpdateAccountOfParty($partyId, $partyName, $partyType)
     {
-    	/**
-    	 * Disabled account
-    	 * */
-    	return true;
-
     	DB::beginTransaction();
     	try{
 	    		$account = Account::where('party_id', $partyId)->first();
@@ -390,19 +405,86 @@ class AccountTransactionService{
 		            $account->save();
 		        }else{
 		            $uniqueCode = (strtoupper($partyType) == 'CUSTOMER') ? AccountUniqueCode::SUNDRY_DEBTORS->value : AccountUniqueCode::SUNDRY_CREDITORS->value;
+		            $accountGroup = AccountGroup::where('unique_code', $uniqueCode)->first();
+
+		            if(!$accountGroup){
+		                throw new \Exception("Account group not found for unique code: " . $uniqueCode);
+		            }
+
 		            Account::create([
 		                'name'  => $partyName,
-		                'group_id'  => AccountGroup::where('unique_code', $uniqueCode)->first()->id,
-		                'description'  => 'Children of Sundry Debtors',
+		                'group_id'  => $accountGroup->id,
+		                'description'  => 'Children of ' . ($uniqueCode == AccountUniqueCode::SUNDRY_DEBTORS->value ? 'Sundry Debtors' : 'Sundry Creditors'),
 		                'party_id'  => $partyId,
 		                'is_deletable'  => 0,
 		            ]);
 		        }
     	} catch (\Exception $e) {
     			DB::rollback();
-                return false;
+                throw $e;
         }
         DB::commit();
+        return true;
+    }
+
+    /**
+     * Record account transactions for SaleOrder
+     * Similar to purchaseOrderAccountTransaction but for sales
+     *
+     * @param \App\Models\Sale\SaleOrder $modelName
+     * @return bool
+     */
+    public function saleOrderAccountTransaction(\App\Models\Sale\SaleOrder $modelName): bool
+    {
+        $payments = $modelName->paymentTransaction()->with('paymentType')->get();
+
+        if($payments->count() > 0){
+            foreach($payments as $payment){
+                $paymentTypeName = strtoupper($payment->paymentType->name);
+
+                if(PaymentTypesUniqueCode::CASH->value == $paymentTypeName){
+                    //get cash account id
+                    //Debit (receiving money)
+                    $accountId = $this->getAccountId(uniqueCode: AccountUniqueCode::CASH_IN_HAND->value);
+                }
+                else if(PaymentTypesUniqueCode::CHEQUE->value == $paymentTypeName){
+                    //get cheque account id
+                    //Debit (receiving cheque)
+                    $accountId = $this->getAccountId(uniqueCode: AccountUniqueCode::UNDEPOSITED_CHEQUES->value);
+                }else{
+                    //else payment type account id
+                    //Debit (receiving in bank)
+                    $accountId = $this->getAccountId(paymentTypeBankId: $payment->payment_type_id);
+                }
+
+                $transaction = [
+                    'transaction_date' => $payment->transaction_date,
+                    'account_id' => $accountId,
+                    'debit_amount' => $payment->amount,
+                ];
+
+                if(!$payment->accountTransaction()->create($transaction)){
+                    return false;
+                }
+
+                $this->calculateAccounts($transaction['account_id']);
+            }
+
+            //Record Invoice Total only if payment exists
+            //Credit (customer owes us - using specific party account)
+            $transaction = [
+                'transaction_date' => $modelName->order_date,
+                'account_id' => $this->getAccountId(partyId: $modelName->party_id),
+                'credit_amount' => $modelName->grand_total,
+            ];
+
+            if(!$modelName->accountTransaction()->create($transaction)){
+                return false;
+            }
+
+            $this->calculateAccounts($transaction['account_id']);
+        }
+
         return true;
     }
 }

@@ -65,6 +65,11 @@ return [
             'model' => App\Models\User::class,
         ],
 
+        'parties' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Party\Party::class,
+        ],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',

@@ -1,0 +1,1 @@
+<button type="<?php echo e($type); ?>" id='<?php echo e($buttonId); ?>' class="btn btn-<?php echo e($class); ?>"><?php echo e($text); ?></button><?php /**PATH C:\xampp\htdocs\faster_system\resources\views/components/button.blade.php ENDPATH**/ ?>

@@ -200,4 +200,27 @@ class ItemTransactionController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Get transaction details by ID (alias for show method).
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTransactionDetails($id)
+    {
+        return $this->show($id);
+    }
+
+    /**
+     * Get item transactions by item ID (alias for getTransactionsByItem).
+     *
+     * @param  int  $id
+     * @param  Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getItemTransactions($id, Request $request)
+    {
+        return $this->getTransactionsByItem($id, $request);
+    }
 }

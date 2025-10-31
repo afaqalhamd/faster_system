@@ -58,6 +58,7 @@ return [
 
 
     'download'              => 'تحميل',
+    'download_app'          => 'تحميل التطبيق',
     'create_group'          => 'إنشاء مجموعة',
     'group_name'            => 'اسم المجموعة',
     'group_list'            => 'قائمة المجموعات',
@@ -326,7 +327,10 @@ return [
     'initial'                           => 'ابتدائي',
         'total_items' =>' عدد المنتجات :',
         'inventory_status'=>'حالة المخزون :',
-
+    'reason' => 'السبب',
+    'after_delivery' => 'بعد التسليم',
+    'page_not_found' => 'الصفحة غير موجودة',
+    'page_under_construction' => 'الصفحة قيد الإنشاء',
 
 
 ];
